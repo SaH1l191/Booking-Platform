@@ -1,0 +1,14 @@
+const path = require('path');
+require('ts-node').register({
+  transpileOnly: true,
+  compilerOptions: {
+    module: 'commonjs'
+  }
+});
+
+module.exports = {
+  config: path.resolve('./src/config/sequelize.config.js'),
+  modelsPath: path.resolve('./src/db/models'),
+  seedersPath: path.resolve('./src/db/seeders'),
+  migrationsPath: path.resolve('./src/db/migrations'),
+};
