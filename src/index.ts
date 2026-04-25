@@ -1,19 +1,25 @@
-import express from 'express' 
-import { loadEnv } from './config/index.ts'
-import v1Router from './router/v1/index.ts'
-import { appErrorHandler } from './middlewares/error.middleware.ts'
+import express from "express";
+import logger from "./config/logger";
+import { serverConfig } from "./config";
+import { appErrorHandler } from "./middlewares/error.middleware";
+import v1Router from "./routers/v1/index.router";
+import sequelize from "./db/models/sequelize";
+import Hotel from "./db/models/hotel";
 
-loadEnv()
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-const app = express()
-app.use(express.json())
+app.use(express.json());
+app.use('/api/v1', v1Router);
+app.use(appErrorHandler)
 
-app.use('/api/v1',v1Router)
+app.listen(PORT, async () => {
+  logger.info(`Server is running on http://localhost:${serverConfig.PORT}`);
+  logger.info(`Press Ctrl+C to stop the server.`);
 
-
-app.use(appErrorHandler); 
-
-app.listen(3000, () => {
-    console.log('Server started on port 3000')
-})
-
+  try{
+    await sequelize.authenticate();  
+  }catch (error ){
+    logger.error('Unable to connect to the database:', error);
+  }
+}); 

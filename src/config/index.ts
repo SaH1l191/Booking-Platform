@@ -1,25 +1,31 @@
+ 
 import dotenv from 'dotenv';
 
 type ServerConfig = {
     PORT: number
 }
 
-export function loadEnv() {
+type DBConfig = { 
+    DB_HOST :string ,
+    DB_USER :string ,
+    DB_PASSWORD :string ,
+    DB_NAME :string 
+}
+
+function loadEnv() {
     dotenv.config();
     console.log(`Environment variables loaded`);
 }
 
-loadEnv(); 
+loadEnv();
 
-export const dbConfig = {
-    development: { 
-        username : process.env.DB_USER,
-        password : process.env.DB_PASSWORD,
-        database : process.env.DB_NAME,
-        host : process.env.DB_HOST,
-        dialect : process.env.DB_DIALECT,
-    },
-}
 export const serverConfig: ServerConfig = {
-    PORT: Number(process.env.PORT) || 3000
+    PORT: Number(process.env.PORT) || 3001
+};
+
+export const dbConfig: DBConfig = {
+    DB_HOST: process.env.DB_HOST!,
+    DB_USER: process.env.DB_USER!,
+    DB_PASSWORD: process.env.DB_PASSWORD!,
+    DB_NAME: process.env.DB_NAME!  
 };

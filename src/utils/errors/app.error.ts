@@ -2,6 +2,8 @@
 export interface AppError extends Error {
     statusCode: number;
 }
+
+
 export class InternalServerError implements AppError {
     statusCode: number;
     message: string;
@@ -12,7 +14,6 @@ export class InternalServerError implements AppError {
         this.name = "InternalServerError";
     }
 }
-
 
 
 export class BadRequestError implements AppError {
@@ -38,7 +39,6 @@ export class NotFoundError implements AppError {
     }
 }
 
-
 export class UnauthorizedError implements AppError {
     statusCode: number;
     message: string;
@@ -49,7 +49,6 @@ export class UnauthorizedError implements AppError {
         this.name = "UnauthorizedError";
     }
 }
-
 
 
 
@@ -64,6 +63,7 @@ export class ForbiddenError implements AppError {
     }
 }
 
+
 export class ConflictError implements AppError {
     statusCode: number;
     message: string;
@@ -74,6 +74,7 @@ export class ConflictError implements AppError {
         this.name = "ConflictError";
     }
 }
+
 export class NotImplementedError implements AppError {
     statusCode: number;
     message: string;
