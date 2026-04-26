@@ -1,0 +1,73 @@
+import { serialize } from "node:v8"
+
+pnpm i sequelize 
+pnpm i mysql2
+pnpx sequelize-cli init 
+
+create migration file : 
+pnpx sequelize-cli migration:generate --name create-hotel-rool 
+pnpm run migrate
+
+
+
+functional requirements : 
+list hotels / filter hotels by city / filter hotels by price range / filter hotels by rating / sort hotels by price / sort hotels by rating / search hotels by name
+make reservations 
+see details of restrau
+
+non functional requirements :
+no double booking 
+concurrent booking 
+peak hotel seraching > peak hotel booking ( read heavy > write heavy )
+
+eg : 10k hotels -> each hotel has 100 rooms -> 1 million rooms
+1b -> MAU ,  DAU=> 1%  of MAU   -> 10 million DAU -> 100k concurrent users 
+
+10M dau => atleast 10 queries per user 
+total search  queries => 10M * 10 => 100 million queries per second
+search query per sec (qps) -> 100m/10^5 => 1000 qps
+10^5 is seconds approx in a day ( 24*60*60 = 86400 ~ 10^5)
+peak load -> 10x peak -> 10^4 (qps) request 
+
+write requests 
+50% hotels are booked -> 2 night stay 
+0.5M bookings per day /2 => 250k write requests per day
+peak load 2x of it => 500k write requests per day => 5 qps booking 
+
+//the system expects 250,000 write requests per day, not because of “every 2 days”, but because each booking spans 2 nights.
+
+
+
+//idempotency booking methods : 
+Client-generated idempotency keys (most common)
+Request deduplication by payload hash
+Server-generated idempotency token
+Idempotency via unique constraints / primary keys
+Combination of time window + client ID
+
+In-memory Cache (Redis, Memcached)
+Database (Persistent Storage)
+Hybrid Approaches (e.g., Redis + Database)
+
+locks :
+problems : 
+dirty read  (reading uncommitted data)
+non repeatable read (data changes between reads)
+phantom read (new rows appear in subsequent reads)
+
+Enforcing ACID properties 
+
+
+SQL mechanisms : 
+isolatioin levels :
+read uncommitted (allows dirty reads, non-repeatable reads, and phantom reads)
+read committed( prevents dirty reads but allows non-repeatable reads and phantom reads)
+repeatable read (prevents dirty reads and non-repeatable reads but allows phantom reads)
+serializable (prevents dirty reads, non-repeatable reads, and phantom reads)
+
+pessimistic locking :
+SELECT ... FOR UPDATE (locks selected rows until transaction completes) (read committed + lock on row (prevting update))
+
+
+optimistic locking : 
+versioning (using a version number or timestamp to detect concurrent modifications)

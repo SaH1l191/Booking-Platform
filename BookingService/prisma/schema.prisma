@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model sequelizemeta {
+  name String @id @unique(map: "name") @db.VarChar(255)
+}
+
+model Booking {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(255)
+  address      String    @db.VarChar(255)
+  location     String    @db.VarChar(255)
+  created_at   DateTime? @db.DateTime(0)
+  updated_at   DateTime? @db.DateTime(0)
+  rating       Decimal?  @db.Decimal(3, 2)
+  rating_count Int?
+}

@@ -1,8 +1,0 @@
-
-pnpm i sequelize 
-pnpm i mysql2
-pnpx sequelize-cli init 
-
-create migration file : 
-pnpx sequelize-cli migration:generate --name create-hotel-rool 
-pnpm run migrate
