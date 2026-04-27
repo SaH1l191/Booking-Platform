@@ -51,8 +51,8 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  sequelizemeta: 'sequelizemeta',
-  Booking: 'Booking'
+  Booking: 'Booking',
+  IdempotencyKey: 'IdempotencyKey'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -71,25 +71,30 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
-export const SequelizemetaScalarFieldEnum = {
-  name: 'name'
-} as const
-
-export type SequelizemetaScalarFieldEnum = (typeof SequelizemetaScalarFieldEnum)[keyof typeof SequelizemetaScalarFieldEnum]
-
-
 export const BookingScalarFieldEnum = {
   id: 'id',
-  name: 'name',
-  address: 'address',
-  location: 'location',
+  userId: 'userId',
+  hotelId: 'hotelId',
   created_at: 'created_at',
   updated_at: 'updated_at',
-  rating: 'rating',
-  rating_count: 'rating_count'
+  bookingAmount: 'bookingAmount',
+  status: 'status',
+  totalGuests: 'totalGuests'
 } as const
 
 export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeof BookingScalarFieldEnum]
+
+
+export const IdempotencyKeyScalarFieldEnum = {
+  id: 'id',
+  key: 'key',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  finalized: 'finalized',
+  bookingId: 'bookingId'
+} as const
+
+export type IdempotencyKeyScalarFieldEnum = (typeof IdempotencyKeyScalarFieldEnum)[keyof typeof IdempotencyKeyScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -100,13 +105,6 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-export const sequelizemetaOrderByRelevanceFieldEnum = {
-  name: 'name'
-} as const
-
-export type sequelizemetaOrderByRelevanceFieldEnum = (typeof sequelizemetaOrderByRelevanceFieldEnum)[keyof typeof sequelizemetaOrderByRelevanceFieldEnum]
-
-
 export const NullsOrder = {
   first: 'first',
   last: 'last'
@@ -115,11 +113,9 @@ export const NullsOrder = {
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
-export const BookingOrderByRelevanceFieldEnum = {
-  name: 'name',
-  address: 'address',
-  location: 'location'
+export const IdempotencyKeyOrderByRelevanceFieldEnum = {
+  key: 'key'
 } as const
 
-export type BookingOrderByRelevanceFieldEnum = (typeof BookingOrderByRelevanceFieldEnum)[keyof typeof BookingOrderByRelevanceFieldEnum]
+export type IdempotencyKeyOrderByRelevanceFieldEnum = (typeof IdempotencyKeyOrderByRelevanceFieldEnum)[keyof typeof IdempotencyKeyOrderByRelevanceFieldEnum]
 

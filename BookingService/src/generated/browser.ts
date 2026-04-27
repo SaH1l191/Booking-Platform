@@ -18,12 +18,12 @@ export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
 /**
- * Model sequelizemeta
- * 
- */
-export type sequelizemeta = Prisma.sequelizemetaModel
-/**
  * Model Booking
  * 
  */
 export type Booking = Prisma.BookingModel
+/**
+ * Model IdempotencyKey
+ * 
+ */
+export type IdempotencyKey = Prisma.IdempotencyKeyModel

@@ -19,3 +19,22 @@ npx prisma migrate dev --name init
 npx prisma generate
 npx prisma studio
 npx prisma db pull
+
+
+
+Why Locking is Only Necessary on confirmBookingService and Not createBookingService
+a. createBookingService — No Conflicts Expected (New Records)
+Operation Type: The createBookingService is responsible for creating new bookings and generating idempotency keys.
+Concurrency in createBooking: The creation of a booking is a new record in the database, so there’s no risk of concurrent updates to the same record (i.e., no race conditions). Multiple users can create new bookings simultaneously without interfering with each other.
+Example: User A and User B can both create bookings for different hotels or even for the same hotel at the same time. There’s no conflict because the system creates new records, not updates existing ones.
+No Need for Locking: There’s no need to lock anything because:
+You are adding a new booking record and idempotency key.
+Each new booking is independent of others, so there’s no chance for two users to modify the same booking simultaneously.
+b. confirmBookingService — Potential Conflicts (Modifying Existing Records)
+Operation Type: The confirmBookingService modifies existing records (the booking and idempotency key).
+Concurrency in confirmBooking: When a booking is confirmed, we are updating existing records (the Booking and IdempotencyKey). This can lead to race conditions if two users attempt to confirm the same booking at the same time.
+Example: Two users (User A and User B) can both attempt to confirm the same booking simultaneously, passing the idempotency check and attempting to update the status of the same booking.
+Without locking, both users could update the booking status to "CONFIRMED" at the same time, which can cause inconsistencies or unintended side effects (e.g., confirming the booking twice, overwriting data, etc.).
+Why Locking is Necessary:
+FOR UPDATE Lock: By using the FOR UPDATE lock, we prevent other transactions from modifying the same IdempotencyKey record while the current transaction is ongoing. This ensures that only one process can confirm a booking at any given time, even if two requests try to confirm it simultaneously.
+The lock prevents race conditions and ensures that once the booking is confirmed and the idempotency key is finalized, no other process can interfere with the booking’s confirmation.

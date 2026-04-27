@@ -28,94 +28,102 @@ export type AggregateBooking = {
 
 export type BookingAvgAggregateOutputType = {
   id: number | null
-  rating: runtime.Decimal | null
-  rating_count: number | null
+  userId: number | null
+  hotelId: number | null
+  bookingAmount: number | null
+  totalGuests: number | null
 }
 
 export type BookingSumAggregateOutputType = {
   id: number | null
-  rating: runtime.Decimal | null
-  rating_count: number | null
+  userId: number | null
+  hotelId: number | null
+  bookingAmount: number | null
+  totalGuests: number | null
 }
 
 export type BookingMinAggregateOutputType = {
   id: number | null
-  name: string | null
-  address: string | null
-  location: string | null
+  userId: number | null
+  hotelId: number | null
   created_at: Date | null
   updated_at: Date | null
-  rating: runtime.Decimal | null
-  rating_count: number | null
+  bookingAmount: number | null
+  status: $Enums.BookingStatus | null
+  totalGuests: number | null
 }
 
 export type BookingMaxAggregateOutputType = {
   id: number | null
-  name: string | null
-  address: string | null
-  location: string | null
+  userId: number | null
+  hotelId: number | null
   created_at: Date | null
   updated_at: Date | null
-  rating: runtime.Decimal | null
-  rating_count: number | null
+  bookingAmount: number | null
+  status: $Enums.BookingStatus | null
+  totalGuests: number | null
 }
 
 export type BookingCountAggregateOutputType = {
   id: number
-  name: number
-  address: number
-  location: number
+  userId: number
+  hotelId: number
   created_at: number
   updated_at: number
-  rating: number
-  rating_count: number
+  bookingAmount: number
+  status: number
+  totalGuests: number
   _all: number
 }
 
 
 export type BookingAvgAggregateInputType = {
   id?: true
-  rating?: true
-  rating_count?: true
+  userId?: true
+  hotelId?: true
+  bookingAmount?: true
+  totalGuests?: true
 }
 
 export type BookingSumAggregateInputType = {
   id?: true
-  rating?: true
-  rating_count?: true
+  userId?: true
+  hotelId?: true
+  bookingAmount?: true
+  totalGuests?: true
 }
 
 export type BookingMinAggregateInputType = {
   id?: true
-  name?: true
-  address?: true
-  location?: true
+  userId?: true
+  hotelId?: true
   created_at?: true
   updated_at?: true
-  rating?: true
-  rating_count?: true
+  bookingAmount?: true
+  status?: true
+  totalGuests?: true
 }
 
 export type BookingMaxAggregateInputType = {
   id?: true
-  name?: true
-  address?: true
-  location?: true
+  userId?: true
+  hotelId?: true
   created_at?: true
   updated_at?: true
-  rating?: true
-  rating_count?: true
+  bookingAmount?: true
+  status?: true
+  totalGuests?: true
 }
 
 export type BookingCountAggregateInputType = {
   id?: true
-  name?: true
-  address?: true
-  location?: true
+  userId?: true
+  hotelId?: true
   created_at?: true
   updated_at?: true
-  rating?: true
-  rating_count?: true
+  bookingAmount?: true
+  status?: true
+  totalGuests?: true
   _all?: true
 }
 
@@ -207,13 +215,13 @@ export type BookingGroupByArgs<ExtArgs extends runtime.Types.Extensions.Internal
 
 export type BookingGroupByOutputType = {
   id: number
-  name: string
-  address: string
-  location: string
+  userId: number
+  hotelId: number
   created_at: Date | null
   updated_at: Date | null
-  rating: runtime.Decimal | null
-  rating_count: number | null
+  bookingAmount: number
+  status: $Enums.BookingStatus
+  totalGuests: number
   _count: BookingCountAggregateOutputType | null
   _avg: BookingAvgAggregateOutputType | null
   _sum: BookingSumAggregateOutputType | null
@@ -241,25 +249,26 @@ export type BookingWhereInput = {
   OR?: Prisma.BookingWhereInput[]
   NOT?: Prisma.BookingWhereInput | Prisma.BookingWhereInput[]
   id?: Prisma.IntFilter<"Booking"> | number
-  name?: Prisma.StringFilter<"Booking"> | string
-  address?: Prisma.StringFilter<"Booking"> | string
-  location?: Prisma.StringFilter<"Booking"> | string
+  userId?: Prisma.IntFilter<"Booking"> | number
+  hotelId?: Prisma.IntFilter<"Booking"> | number
   created_at?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
   updated_at?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
-  rating?: Prisma.DecimalNullableFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: Prisma.IntNullableFilter<"Booking"> | number | null
+  bookingAmount?: Prisma.IntFilter<"Booking"> | number
+  status?: Prisma.EnumBookingStatusFilter<"Booking"> | $Enums.BookingStatus
+  totalGuests?: Prisma.IntFilter<"Booking"> | number
+  idempotencyKey?: Prisma.XOR<Prisma.IdempotencyKeyNullableScalarRelationFilter, Prisma.IdempotencyKeyWhereInput> | null
 }
 
 export type BookingOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  address?: Prisma.SortOrder
-  location?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  hotelId?: Prisma.SortOrder
   created_at?: Prisma.SortOrderInput | Prisma.SortOrder
   updated_at?: Prisma.SortOrderInput | Prisma.SortOrder
-  rating?: Prisma.SortOrderInput | Prisma.SortOrder
-  rating_count?: Prisma.SortOrderInput | Prisma.SortOrder
-  _relevance?: Prisma.BookingOrderByRelevanceInput
+  bookingAmount?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  totalGuests?: Prisma.SortOrder
+  idempotencyKey?: Prisma.IdempotencyKeyOrderByWithRelationInput
 }
 
 export type BookingWhereUniqueInput = Prisma.AtLeast<{
@@ -267,24 +276,25 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.BookingWhereInput | Prisma.BookingWhereInput[]
   OR?: Prisma.BookingWhereInput[]
   NOT?: Prisma.BookingWhereInput | Prisma.BookingWhereInput[]
-  name?: Prisma.StringFilter<"Booking"> | string
-  address?: Prisma.StringFilter<"Booking"> | string
-  location?: Prisma.StringFilter<"Booking"> | string
+  userId?: Prisma.IntFilter<"Booking"> | number
+  hotelId?: Prisma.IntFilter<"Booking"> | number
   created_at?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
   updated_at?: Prisma.DateTimeNullableFilter<"Booking"> | Date | string | null
-  rating?: Prisma.DecimalNullableFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: Prisma.IntNullableFilter<"Booking"> | number | null
+  bookingAmount?: Prisma.IntFilter<"Booking"> | number
+  status?: Prisma.EnumBookingStatusFilter<"Booking"> | $Enums.BookingStatus
+  totalGuests?: Prisma.IntFilter<"Booking"> | number
+  idempotencyKey?: Prisma.XOR<Prisma.IdempotencyKeyNullableScalarRelationFilter, Prisma.IdempotencyKeyWhereInput> | null
 }, "id">
 
 export type BookingOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  address?: Prisma.SortOrder
-  location?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  hotelId?: Prisma.SortOrder
   created_at?: Prisma.SortOrderInput | Prisma.SortOrder
   updated_at?: Prisma.SortOrderInput | Prisma.SortOrder
-  rating?: Prisma.SortOrderInput | Prisma.SortOrder
-  rating_count?: Prisma.SortOrderInput | Prisma.SortOrder
+  bookingAmount?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  totalGuests?: Prisma.SortOrder
   _count?: Prisma.BookingCountOrderByAggregateInput
   _avg?: Prisma.BookingAvgOrderByAggregateInput
   _max?: Prisma.BookingMaxOrderByAggregateInput
@@ -297,158 +307,145 @@ export type BookingScalarWhereWithAggregatesInput = {
   OR?: Prisma.BookingScalarWhereWithAggregatesInput[]
   NOT?: Prisma.BookingScalarWhereWithAggregatesInput | Prisma.BookingScalarWhereWithAggregatesInput[]
   id?: Prisma.IntWithAggregatesFilter<"Booking"> | number
-  name?: Prisma.StringWithAggregatesFilter<"Booking"> | string
-  address?: Prisma.StringWithAggregatesFilter<"Booking"> | string
-  location?: Prisma.StringWithAggregatesFilter<"Booking"> | string
+  userId?: Prisma.IntWithAggregatesFilter<"Booking"> | number
+  hotelId?: Prisma.IntWithAggregatesFilter<"Booking"> | number
   created_at?: Prisma.DateTimeNullableWithAggregatesFilter<"Booking"> | Date | string | null
   updated_at?: Prisma.DateTimeNullableWithAggregatesFilter<"Booking"> | Date | string | null
-  rating?: Prisma.DecimalNullableWithAggregatesFilter<"Booking"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: Prisma.IntNullableWithAggregatesFilter<"Booking"> | number | null
+  bookingAmount?: Prisma.IntWithAggregatesFilter<"Booking"> | number
+  status?: Prisma.EnumBookingStatusWithAggregatesFilter<"Booking"> | $Enums.BookingStatus
+  totalGuests?: Prisma.IntWithAggregatesFilter<"Booking"> | number
 }
 
 export type BookingCreateInput = {
-  name: string
-  address: string
-  location: string
+  userId: number
+  hotelId: number
   created_at?: Date | string | null
   updated_at?: Date | string | null
-  rating?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: number | null
+  bookingAmount: number
+  status?: $Enums.BookingStatus
+  totalGuests: number
+  idempotencyKey?: Prisma.IdempotencyKeyCreateNestedOneWithoutBookingInput
 }
 
 export type BookingUncheckedCreateInput = {
   id?: number
-  name: string
-  address: string
-  location: string
+  userId: number
+  hotelId: number
   created_at?: Date | string | null
   updated_at?: Date | string | null
-  rating?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: number | null
+  bookingAmount: number
+  status?: $Enums.BookingStatus
+  totalGuests: number
+  idempotencyKey?: Prisma.IdempotencyKeyUncheckedCreateNestedOneWithoutBookingInput
 }
 
 export type BookingUpdateInput = {
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  location?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.IntFieldUpdateOperationsInput | number
+  hotelId?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updated_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  rating?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  bookingAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  totalGuests?: Prisma.IntFieldUpdateOperationsInput | number
+  idempotencyKey?: Prisma.IdempotencyKeyUpdateOneWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  location?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.IntFieldUpdateOperationsInput | number
+  hotelId?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updated_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  rating?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  bookingAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  totalGuests?: Prisma.IntFieldUpdateOperationsInput | number
+  idempotencyKey?: Prisma.IdempotencyKeyUncheckedUpdateOneWithoutBookingNestedInput
 }
 
 export type BookingCreateManyInput = {
   id?: number
-  name: string
-  address: string
-  location: string
+  userId: number
+  hotelId: number
   created_at?: Date | string | null
   updated_at?: Date | string | null
-  rating?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: number | null
+  bookingAmount: number
+  status?: $Enums.BookingStatus
+  totalGuests: number
 }
 
 export type BookingUpdateManyMutationInput = {
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  location?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.IntFieldUpdateOperationsInput | number
+  hotelId?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updated_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  rating?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  bookingAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  totalGuests?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type BookingUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  location?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.IntFieldUpdateOperationsInput | number
+  hotelId?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updated_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  rating?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  rating_count?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-}
-
-export type BookingOrderByRelevanceInput = {
-  fields: Prisma.BookingOrderByRelevanceFieldEnum | Prisma.BookingOrderByRelevanceFieldEnum[]
-  sort: Prisma.SortOrder
-  search: string
+  bookingAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  totalGuests?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type BookingCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  address?: Prisma.SortOrder
-  location?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  hotelId?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
-  rating?: Prisma.SortOrder
-  rating_count?: Prisma.SortOrder
+  bookingAmount?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  totalGuests?: Prisma.SortOrder
 }
 
 export type BookingAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  rating?: Prisma.SortOrder
-  rating_count?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  hotelId?: Prisma.SortOrder
+  bookingAmount?: Prisma.SortOrder
+  totalGuests?: Prisma.SortOrder
 }
 
 export type BookingMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  address?: Prisma.SortOrder
-  location?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  hotelId?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
-  rating?: Prisma.SortOrder
-  rating_count?: Prisma.SortOrder
+  bookingAmount?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  totalGuests?: Prisma.SortOrder
 }
 
 export type BookingMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  address?: Prisma.SortOrder
-  location?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  hotelId?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
-  rating?: Prisma.SortOrder
-  rating_count?: Prisma.SortOrder
+  bookingAmount?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  totalGuests?: Prisma.SortOrder
 }
 
 export type BookingSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  rating?: Prisma.SortOrder
-  rating_count?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  hotelId?: Prisma.SortOrder
+  bookingAmount?: Prisma.SortOrder
+  totalGuests?: Prisma.SortOrder
 }
 
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
-}
-
-export type NullableDecimalFieldUpdateOperationsInput = {
-  set?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  increment?: runtime.Decimal | runtime.DecimalJsLike | number | string
-  decrement?: runtime.Decimal | runtime.DecimalJsLike | number | string
-  multiply?: runtime.Decimal | runtime.DecimalJsLike | number | string
-  divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
-}
-
-export type NullableIntFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
+export type BookingNullableScalarRelationFilter = {
+  is?: Prisma.BookingWhereInput | null
+  isNot?: Prisma.BookingWhereInput | null
 }
 
 export type IntFieldUpdateOperationsInput = {
@@ -459,46 +456,134 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
+export type EnumBookingStatusFieldUpdateOperationsInput = {
+  set?: $Enums.BookingStatus
+}
+
+export type BookingCreateNestedOneWithoutIdempotencyKeyInput = {
+  create?: Prisma.XOR<Prisma.BookingCreateWithoutIdempotencyKeyInput, Prisma.BookingUncheckedCreateWithoutIdempotencyKeyInput>
+  connectOrCreate?: Prisma.BookingCreateOrConnectWithoutIdempotencyKeyInput
+  connect?: Prisma.BookingWhereUniqueInput
+}
+
+export type BookingUpdateOneWithoutIdempotencyKeyNestedInput = {
+  create?: Prisma.XOR<Prisma.BookingCreateWithoutIdempotencyKeyInput, Prisma.BookingUncheckedCreateWithoutIdempotencyKeyInput>
+  connectOrCreate?: Prisma.BookingCreateOrConnectWithoutIdempotencyKeyInput
+  upsert?: Prisma.BookingUpsertWithoutIdempotencyKeyInput
+  disconnect?: Prisma.BookingWhereInput | boolean
+  delete?: Prisma.BookingWhereInput | boolean
+  connect?: Prisma.BookingWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BookingUpdateToOneWithWhereWithoutIdempotencyKeyInput, Prisma.BookingUpdateWithoutIdempotencyKeyInput>, Prisma.BookingUncheckedUpdateWithoutIdempotencyKeyInput>
+}
+
+export type BookingCreateWithoutIdempotencyKeyInput = {
+  userId: number
+  hotelId: number
+  created_at?: Date | string | null
+  updated_at?: Date | string | null
+  bookingAmount: number
+  status?: $Enums.BookingStatus
+  totalGuests: number
+}
+
+export type BookingUncheckedCreateWithoutIdempotencyKeyInput = {
+  id?: number
+  userId: number
+  hotelId: number
+  created_at?: Date | string | null
+  updated_at?: Date | string | null
+  bookingAmount: number
+  status?: $Enums.BookingStatus
+  totalGuests: number
+}
+
+export type BookingCreateOrConnectWithoutIdempotencyKeyInput = {
+  where: Prisma.BookingWhereUniqueInput
+  create: Prisma.XOR<Prisma.BookingCreateWithoutIdempotencyKeyInput, Prisma.BookingUncheckedCreateWithoutIdempotencyKeyInput>
+}
+
+export type BookingUpsertWithoutIdempotencyKeyInput = {
+  update: Prisma.XOR<Prisma.BookingUpdateWithoutIdempotencyKeyInput, Prisma.BookingUncheckedUpdateWithoutIdempotencyKeyInput>
+  create: Prisma.XOR<Prisma.BookingCreateWithoutIdempotencyKeyInput, Prisma.BookingUncheckedCreateWithoutIdempotencyKeyInput>
+  where?: Prisma.BookingWhereInput
+}
+
+export type BookingUpdateToOneWithWhereWithoutIdempotencyKeyInput = {
+  where?: Prisma.BookingWhereInput
+  data: Prisma.XOR<Prisma.BookingUpdateWithoutIdempotencyKeyInput, Prisma.BookingUncheckedUpdateWithoutIdempotencyKeyInput>
+}
+
+export type BookingUpdateWithoutIdempotencyKeyInput = {
+  userId?: Prisma.IntFieldUpdateOperationsInput | number
+  hotelId?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  updated_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bookingAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  totalGuests?: Prisma.IntFieldUpdateOperationsInput | number
+}
+
+export type BookingUncheckedUpdateWithoutIdempotencyKeyInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  userId?: Prisma.IntFieldUpdateOperationsInput | number
+  hotelId?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  updated_at?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bookingAmount?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus
+  totalGuests?: Prisma.IntFieldUpdateOperationsInput | number
+}
+
 
 
 export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  name?: boolean
-  address?: boolean
-  location?: boolean
+  userId?: boolean
+  hotelId?: boolean
   created_at?: boolean
   updated_at?: boolean
-  rating?: boolean
-  rating_count?: boolean
+  bookingAmount?: boolean
+  status?: boolean
+  totalGuests?: boolean
+  idempotencyKey?: boolean | Prisma.Booking$idempotencyKeyArgs<ExtArgs>
 }, ExtArgs["result"]["booking"]>
 
 
 
 export type BookingSelectScalar = {
   id?: boolean
-  name?: boolean
-  address?: boolean
-  location?: boolean
+  userId?: boolean
+  hotelId?: boolean
   created_at?: boolean
   updated_at?: boolean
-  rating?: boolean
-  rating_count?: boolean
+  bookingAmount?: boolean
+  status?: boolean
+  totalGuests?: boolean
 }
 
-export type BookingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "address" | "location" | "created_at" | "updated_at" | "rating" | "rating_count", ExtArgs["result"]["booking"]>
+export type BookingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "hotelId" | "created_at" | "updated_at" | "bookingAmount" | "status" | "totalGuests", ExtArgs["result"]["booking"]>
+export type BookingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  idempotencyKey?: boolean | Prisma.Booking$idempotencyKeyArgs<ExtArgs>
+}
 
 export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Booking"
-  objects: {}
+  objects: {
+    idempotencyKey: Prisma.$IdempotencyKeyPayload<ExtArgs> | null
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
-    name: string
-    address: string
-    location: string
+    userId: number
+    hotelId: number
     created_at: Date | null
     updated_at: Date | null
-    rating: runtime.Decimal | null
-    rating_count: number | null
+    bookingAmount: number
+    status: $Enums.BookingStatus
+    totalGuests: number
   }, ExtArgs["result"]["booking"]>
   composites: {}
 }
@@ -839,6 +924,7 @@ readonly fields: BookingFieldRefs;
  */
 export interface Prisma__BookingClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  idempotencyKey<T extends Prisma.Booking$idempotencyKeyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$idempotencyKeyArgs<ExtArgs>>): Prisma.Prisma__IdempotencyKeyClient<runtime.Types.Result.GetResult<Prisma.$IdempotencyKeyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -869,13 +955,13 @@ export interface Prisma__BookingClient<T, Null = never, ExtArgs extends runtime.
  */
 export interface BookingFieldRefs {
   readonly id: Prisma.FieldRef<"Booking", 'Int'>
-  readonly name: Prisma.FieldRef<"Booking", 'String'>
-  readonly address: Prisma.FieldRef<"Booking", 'String'>
-  readonly location: Prisma.FieldRef<"Booking", 'String'>
+  readonly userId: Prisma.FieldRef<"Booking", 'Int'>
+  readonly hotelId: Prisma.FieldRef<"Booking", 'Int'>
   readonly created_at: Prisma.FieldRef<"Booking", 'DateTime'>
   readonly updated_at: Prisma.FieldRef<"Booking", 'DateTime'>
-  readonly rating: Prisma.FieldRef<"Booking", 'Decimal'>
-  readonly rating_count: Prisma.FieldRef<"Booking", 'Int'>
+  readonly bookingAmount: Prisma.FieldRef<"Booking", 'Int'>
+  readonly status: Prisma.FieldRef<"Booking", 'BookingStatus'>
+  readonly totalGuests: Prisma.FieldRef<"Booking", 'Int'>
 }
     
 
@@ -892,6 +978,10 @@ export type BookingFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Omit specific fields from the Booking
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
   /**
    * Filter, which Booking to fetch.
    */
@@ -911,6 +1001,10 @@ export type BookingFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Extension
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
+  /**
    * Filter, which Booking to fetch.
    */
   where: Prisma.BookingWhereUniqueInput
@@ -928,6 +1022,10 @@ export type BookingFindFirstArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Omit specific fields from the Booking
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
   /**
    * Filter, which Booking to fetch.
    */
@@ -977,6 +1075,10 @@ export type BookingFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Extensions
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
+  /**
    * Filter, which Booking to fetch.
    */
   where?: Prisma.BookingWhereInput
@@ -1024,6 +1126,10 @@ export type BookingFindManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Omit specific fields from the Booking
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
   /**
    * Filter, which Bookings to fetch.
    */
@@ -1073,6 +1179,10 @@ export type BookingCreateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
+  /**
    * The data needed to create a Booking.
    */
   data: Prisma.XOR<Prisma.BookingCreateInput, Prisma.BookingUncheckedCreateInput>
@@ -1101,6 +1211,10 @@ export type BookingUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    * Omit specific fields from the Booking
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
   /**
    * The data needed to update a Booking.
    */
@@ -1142,6 +1256,10 @@ export type BookingUpsertArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
+  /**
    * The filter to search for the Booking to update in case it exists.
    */
   where: Prisma.BookingWhereUniqueInput
@@ -1168,6 +1286,10 @@ export type BookingDeleteArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
+  /**
    * Filter which Booking to delete.
    */
   where: Prisma.BookingWhereUniqueInput
@@ -1188,6 +1310,25 @@ export type BookingDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
 }
 
 /**
+ * Booking.idempotencyKey
+ */
+export type Booking$idempotencyKeyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the IdempotencyKey
+   */
+  select?: Prisma.IdempotencyKeySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the IdempotencyKey
+   */
+  omit?: Prisma.IdempotencyKeyOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.IdempotencyKeyInclude<ExtArgs> | null
+  where?: Prisma.IdempotencyKeyWhereInput
+}
+
+/**
  * Booking without action
  */
 export type BookingDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1199,4 +1340,8 @@ export type BookingDefaultArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Omit specific fields from the Booking
    */
   omit?: Prisma.BookingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BookingInclude<ExtArgs> | null
 }
