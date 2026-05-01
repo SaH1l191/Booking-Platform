@@ -1,0 +1,16 @@
+
+functional: 
+diff typees of notifications supported 
+10M mail/day 
+
+
+non functional : 
+dont need it immediately but never lost
+high availability
+
+
+mails per sec : totalmails/total seconds of day => 10^7 / 10^5 => 100 notifications per second 
+peak traffic : 5 times of normal traffic => 500 notifications per second => 500qps 
+
+
+
