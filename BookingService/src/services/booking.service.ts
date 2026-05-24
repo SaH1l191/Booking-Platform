@@ -1,10 +1,11 @@
 import { serverConfig } from "../config";
-import { redlock } from "../config/redis.config";
+import { redlock } from '../config/redis.config';
 import { CreateBookingDTO } from "../dto/booking.dto";
 import { prisma } from "../prisma/client";
-import { confirmBooking, createBooking, createIdempotencyKey, finalizeIdempotencyKey, getIdempotencyKey } from "../repositories/booking.repository";
+import { confirmBooking, conflictBooking, createBookingRecord, createIdempotencyKey, finalizeIdempotencyKey, getIdempotencyKey } from "../repositories/booking.repository";
 import { BadRequestError, InternalServerError, NotFoundError } from "../utils/errors/app.error";
 import { generateIdempotencyKey } from "../utils/generateIdempotencyKey";
+import { Prisma } from "@prisma/client";
 
 
 //usera,userb books hotel -> usera hits first then lock it for 4minutes for usera to perform booking 
@@ -13,27 +14,57 @@ export async function createBookingService(
 ) {
 
     const ttl = serverConfig.LOCK_TTL;
-    const bookingResource = `hotel:${createBookingDTO.hotelId}`;
-    console.log("Acquired lock on Booking resource : ", bookingResource);
+    const bookingResource = `hotel:${createBookingDTO.hotelId}:room${createBookingDTO.roomId}`; 
+    // Unique resource identifier:hotel room
+    let lock
 
     try {
-        await redlock.acquire([bookingResource], ttl);
-        const booking = await createBooking({
-            userId: createBookingDTO.userId,
-            hotelId: createBookingDTO.hotelId,
-            totalGuests: createBookingDTO.totalGuests,
-            bookingAmount: createBookingDTO.bookingAmount,
-        });
+        lock = await redlock.acquire([bookingResource], ttl);
+        console.log("Acquired lock on Booking resource : ", bookingResource);
+ 
+        return await prisma.$transaction(
+            async (tx: Prisma.TransactionClient) => {
 
-        const idempotencyKey = await generateIdempotencyKey(); 
-        await createIdempotencyKey(idempotencyKey, booking.id);
+                //existingCheckout <= newCheckin OR existingCheckin >= newCheckout  ( non overlapping condition)
+                // overlapping condition : existingCheckin < newCheckout AND existingCheckout > newCheckin (demorgans law)
+                const conflictingBooking = await conflictBooking(tx,createBookingDTO)
+                if (conflictingBooking) {
+                    throw new BadRequestError("Selected room is not available for the chosen dates");
+                }
 
-        return {
-            bookingId: booking.id,
-            idempotencyKey: idempotencyKey,
-        };
+                const booking = await createBookingRecord(tx, {
+                    userId: createBookingDTO.userId,
+                    hotelId: createBookingDTO.hotelId,
+                    roomId: createBookingDTO.roomId,
+                    
+                    totalGuests: createBookingDTO.totalGuests,
+                    bookingAmount: createBookingDTO.bookingAmount,
+                    checkIn: new Date(createBookingDTO.checkIn),
+                    checkOut: new Date(createBookingDTO.checkOut),
+                });
+
+                const idempotencyKey = await generateIdempotencyKey();
+                await createIdempotencyKey(tx,idempotencyKey, booking.id);
+
+                return {
+                    bookingId: booking.id,
+                    idempotencyKey: idempotencyKey,
+                };
+
+            }
+        )
+
     } catch (error) {
-        throw new InternalServerError('Failed to acquire lock for booking resource');
+        console.error("Booking service failed:", error);
+        throw error
+    } finally {
+        if (lock) {
+            try {
+                await lock.release();
+            } catch (error) {
+                console.error("Failed to release lock for booking resource : ", bookingResource, "Error : ", error);
+            }
+        }
     }
 }
 

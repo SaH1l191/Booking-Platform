@@ -2,9 +2,10 @@ import type { IdempotencyKey, Prisma } from "@prisma/client";
 import { prisma } from "../prisma/client";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import { validate as isValidUUID } from "uuid";
- 
-export async function createIdempotencyKey(key: string, bookingId: number) {
-    const idempotencyKey = await prisma.idempotencyKey.create({
+import { CreateBookingDTO } from "../dto/booking.dto";
+
+export async function createIdempotencyKey(tx: Prisma.TransactionClient, key: string, bookingId: number) {
+    const idempotencyKey = await tx.idempotencyKey.create({
         data: {
             key: key,
             booking: {
@@ -15,20 +16,20 @@ export async function createIdempotencyKey(key: string, bookingId: number) {
         }
     })
     return idempotencyKey
-} 
-export async function getIdempotencyKey(tx:Prisma.TransactionClient,key: string) {
+}
+export async function getIdempotencyKey(tx: Prisma.TransactionClient, key: string) {
 
-    if(!isValidUUID(key)) {
+    if (!isValidUUID(key)) {
         throw new BadRequestError("Invalid idempotency key format");
     }
 
     const idempotencyKey: Array<IdempotencyKey> = await tx.$queryRaw`SELECT * FROM "IdempotencyKey" WHERE key = ${key} FOR UPDATE`
-    if(!idempotencyKey || idempotencyKey.length === 0) {
+    if (!idempotencyKey || idempotencyKey.length === 0) {
         throw new NotFoundError("Idempotency key not found");
     }
     console.log("Idempotency key : ", idempotencyKey);
     return await tx.idempotencyKey.findUnique({
-        where: { key },  
+        where: { key },
     });
 }
 
@@ -77,4 +78,46 @@ export async function finalizeIdempotencyKey(tx: Prisma.TransactionClient, key: 
 export async function createBooking(bookingInput: Prisma.BookingCreateInput) {
     const booking = await prisma.booking.create({ data: bookingInput });
     return booking
+}
+
+export async function conflictBooking(tx: Prisma.TransactionClient, createBookingDTO: CreateBookingDTO) {
+    return await tx.booking.findFirst({
+        where: {
+            hotelId: createBookingDTO.hotelId,
+                roomId: createBookingDTO.roomId,
+            
+            status: {
+                in: ['CONFIRMED', ] //not considering pending bookings as they can be blocked unless released or finalized
+            },
+            AND: [
+                {
+                    checkIn: {
+                        lt: createBookingDTO.checkOut
+                    }
+                },
+                {
+                    checkOut: {
+                        gt: createBookingDTO.checkIn
+                    }
+                }
+            ]
+        }
+    });
+}
+export async function createBookingRecord(
+    tx: Prisma.TransactionClient,
+    input: {
+        userId: number;
+        hotelId: number;
+
+        roomId: number;
+        totalGuests: number;
+        bookingAmount: number;
+        checkIn: Date;
+        checkOut: Date;
+    }
+) {
+    return tx.booking.create({
+        data: input,
+    });
 }

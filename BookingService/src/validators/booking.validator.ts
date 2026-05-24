@@ -10,5 +10,8 @@ export const createBookingSchema = z.object({
     hotelId : z.number({message : "Hotel ID must be a number"}),
     totalGuests : z.number({message : "Total guests must be a number"})
     .min(1, {message : "Total guests must be at least 1"}),
-    bookingAmount : z.number({message : "Booking amount must be a number"}).min(1,{message : "Booking amount must be greater than 0"})
+    bookingAmount : z.number({message : "Booking amount must be a number"}).min(1,{message : "Booking amount must be greater than 0"}),
+    roomId : z.number({message : "Room ID must be a number"}),
+    checkIn : z.string(),
+    checkOut : z.string(),
 })

@@ -9,8 +9,13 @@ datasource db {
 
 model Booking {
   id      Int @id @default(autoincrement())
+
   userId  Int
   hotelId Int
+  roomId  Int
+
+  checkIn DateTime
+  checkOut DateTime
 
   created_at DateTime? @db.DateTime(0)
   updated_at DateTime? @db.DateTime(0)

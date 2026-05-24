@@ -1,5 +1,5 @@
 import IORedis, { Redis } from 'ioredis';
-import Redlock from 'redlock';
+import Redlock from "redlock";
 import { serverConfig } from '.';
  
 function connectToRedis() {
