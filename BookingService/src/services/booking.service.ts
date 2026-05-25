@@ -1,7 +1,7 @@
 import { serverConfig } from "../config/index.js";
 import { redlock } from '../config/redis.config';
 import { CreateBookingDTO } from "../dto/booking.dto.js";
-import { prisma } from "../prisma/client.js";
+import { prisma } from "../lib/prisma.js";
 import { confirmBooking, conflictBooking, createBookingRecord, createIdempotencyKey, finalizeIdempotencyKey, getIdempotencyKey } from "../repositories/booking.repository.js";
 import { BadRequestError, InternalServerError, NotFoundError } from "../utils/errors/app.error.js";
 import { generateIdempotencyKey } from "../utils/generateIdempotencyKey.js";
@@ -18,7 +18,7 @@ export async function createBookingService(
     // Unique resource identifier:hotel room
     let lock: any
 
-    try {
+    try { 
         lock = await redlock.acquire([bookingResource], ttl);
         console.log("Acquired lock on Booking resource : ", bookingResource);
 
@@ -42,7 +42,7 @@ export async function createBookingService(
                     checkIn: new Date(createBookingDTO.checkIn),
                     checkOut: new Date(createBookingDTO.checkOut),
                     expiresAt: new Date(
-                        Date.now() + ttl
+                        Date.now() + serverConfig.BOOKING_EXPIRY_MS
                     )
                 });
 

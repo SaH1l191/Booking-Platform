@@ -1,17 +1,18 @@
-import { prisma } from "../prisma/client.js"; 
+import { prisma } from "../lib/prisma"; 
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error.js";
 import { validate as isValidUUID } from "uuid";
 import { CreateBookingDTO } from "../dto/booking.dto.js";
 
 export async function createIdempotencyKey(tx: any, key: string, bookingId: number) {
-    const idempotencyKey = await tx.idempotencyKey.create({
+    const idempotencyKey = await tx.idempotencykey.create({
         data: {
             key: key,
             booking: {
                 connect: {
                     id: bookingId
                 }
-            }
+            },
+            updatedAt: new Date()
         }
     })
     return idempotencyKey
@@ -33,7 +34,7 @@ export async function getIdempotencyKey(tx: any, key: string) {
         throw new NotFoundError("Idempotency key not found");
     }
     console.log("Idempotency key : ", idempotencyKey);
-    return await tx.idempotencyKey.findUnique({
+    return await tx.idempotencykey.findUnique({
         where: { key },
     });
 }
@@ -70,7 +71,7 @@ export async function cancelBooking(tx: any, bookingId: number) {
 }
 
 export async function finalizeIdempotencyKey(tx: any, key: string) {
-    const idempotencyKey = await tx.idempotencyKey.update({
+    const idempotencyKey = await tx.idempotencykey.update({
         where: {
             key
         }, data: {

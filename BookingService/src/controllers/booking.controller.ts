@@ -12,7 +12,7 @@ export async function  createBookingHandler(req:Request, res : Response) {
 
 //race conditions can happen here 
 export async function confirmBookingHandler(req:Request, res : Response) {
-    const idempotencyKeyParam = req.params.idempotencyKey;
+    const idempotencyKeyParam = req.params.idempotencyKey; 
     const idempotencyKey = 
     Array.isArray(idempotencyKeyParam)
         ? idempotencyKeyParam[0]: 
