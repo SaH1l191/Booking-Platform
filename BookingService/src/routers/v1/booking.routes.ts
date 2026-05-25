@@ -1,8 +1,8 @@
 
 import express from 'express';
-import { validateSchemaBody } from '../../validators';
-import { createBookingSchema } from '../../validators/booking.validator'; 
-import { confirmBookingHandler, createBookingHandler } from '../../controllers/booking.controller';
+import { validateSchemaBody } from '../../validators/index.js';
+import { createBookingSchema } from '../../validators/booking.validator.js'; 
+import { confirmBookingHandler, createBookingHandler } from '../../controllers/booking.controller.js';
 
 
 const bookingRouter = express.Router(); 

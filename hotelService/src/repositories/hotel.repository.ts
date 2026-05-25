@@ -1,4 +1,4 @@
-import logger from "../config/logger"
+import logger from "../config/logger" 
 import Hotel from "../db/models/hotel";
 import { createHotelDto } from "../dto/hotel.dto";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
@@ -27,7 +27,11 @@ export async function getHotelById(hotelId: number){
 } 
 
 export async function getAllHotels(){
-    const hotels = await Hotel.findAll();
+    const hotels = await Hotel.findAll({
+        where : {
+            deletedAt: null
+        }
+    });
     logger.info(`Found ${hotels.length} hotels.`);
     return hotels;
 }
@@ -52,6 +56,8 @@ export async function deleteHotel(hotelId: number) {
     if (!hotel) {
         throw new BadRequestError("Hotel not found");
     }
-    await hotel.destroy();
+    hotel.deletedAt = new Date();
+    await hotel.save();
+    logger.info("Hotel soft-deleted:", hotel.toJSON());
     return hotel;
 }

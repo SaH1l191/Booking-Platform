@@ -1,4 +1,4 @@
-import { confirmBookingService, createBookingService } from '../services/booking.service';
+import { confirmBookingService, createBookingService } from '../services/booking.service.js';
 import { Request, Response } from 'express';
 
 

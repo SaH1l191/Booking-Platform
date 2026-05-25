@@ -2,7 +2,7 @@
 
 
 import express from 'express'
-import bookingRouter from './booking.routes';
+import bookingRouter from './booking.routes.js';
 
 
 const v1Router = express.Router();

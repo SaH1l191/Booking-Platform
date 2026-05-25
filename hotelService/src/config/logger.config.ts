@@ -1,5 +1,5 @@
 import winston from "winston";
-import DailyRotateFile from "winston-daily-rotate-file";
+// Daily rotate file transport disabled (dependency unavailable)
 
 const logger = winston.createLogger({
     format: winston.format.combine(
@@ -16,13 +16,7 @@ const logger = winston.createLogger({
         })
     ),
     transports: [
-        new winston.transports.Console(),
-        new DailyRotateFile({
-            filename: "logs/%DATE%-app.log", 
-            datePattern: "YYYY-MM-DD", 
-            maxSize: "20m", 
-            maxFiles: "14d", 
-        })
+        new winston.transports.Console()
     ]
 });
 

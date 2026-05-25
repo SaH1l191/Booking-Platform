@@ -1,6 +1,6 @@
 import IORedis, { Redis } from 'ioredis';
 import Redlock from "redlock";
-import { serverConfig } from '.';
+import { serverConfig } from "./index.js";
  
 function connectToRedis() {
     try {

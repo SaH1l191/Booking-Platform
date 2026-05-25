@@ -1,7 +1,6 @@
 {
   "name": "airbnb",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
@@ -10,9 +9,6 @@
     "migrate": "sequelize-cli db:migrate",
     "rollback": "sequelize-cli db:migrate:undo"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "commonjs",
   "dependencies": {
     "@types/dotenv": "^8.2.3",
@@ -23,7 +19,7 @@
     "winston": "^3.19.0",
     "zod": "^4.3.6"
   },
-  "devDependencies": {
+  "devDependencies": { 
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "nodemon": "^3.1.14",

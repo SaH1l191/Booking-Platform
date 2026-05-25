@@ -1,11 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "rootDir": ".", 
     "outDir": "./dist",
     "esModuleInterop": true,
+    "strict": true,
     "types": ["node"], 
     "skipLibCheck": true
-  }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "prisma.config.ts"]
 }

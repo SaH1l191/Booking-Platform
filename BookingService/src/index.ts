@@ -1,8 +1,8 @@
 import express  from "express";
 import dotenv from "dotenv";
-import { appErrorHandler } from "./middlewares/error.middleware";
-import v1Router from "./routers/v1/routes";
-import { serverConfig } from "./config";
+import { appErrorHandler } from "./middlewares/error.middleware.js";
+import v1Router from "./routers/v1/routes.js";
+import { serverConfig } from "./config/index.js";
 dotenv.config();
 
 const app = express();
