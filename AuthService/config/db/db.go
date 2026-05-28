@@ -15,7 +15,7 @@ func SetupDB() (*sql.DB, error) {
 	cfg.Passwd = env.GetEnv("DB_PASSWORD", "root")
 	cfg.Net = env.GetEnv("DB_NET", "tcp")
 	cfg.Addr = env.GetEnv("DB_ADDR", "127.0.0.1:3306")
-	cfg.DBName = env.GetEnv("DB_NAME", "auth_dev")
+	cfg.DBName = env.GetEnv("DB_NAME", "auth_db")
 
 	fmt.Printf("Connecting to database with config: %+v\n", cfg)
 

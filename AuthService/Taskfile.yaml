@@ -1,0 +1,17 @@
+version: '3'
+
+vars:
+  DB_DSN: root:password@tcp(127.0.0.1:3306)/auth_db
+
+tasks:
+  migrate-up:
+    cmds:
+      - goose -dir db/migrations mysql "{{.DB_DSN}}" up
+
+  migrate-down:
+    cmds:
+      - goose -dir db/migrations mysql "{{.DB_DSN}}" down
+
+
+# task migrate-up
+# task migrate-down

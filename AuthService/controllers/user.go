@@ -6,19 +6,27 @@ import (
 	"goAuth/dto"
 	"goAuth/services"
 	"net/http"
+
+	"github.com/go-chi/chi"
 )
 
 type UserController struct {
 	UserService services.UserServiceImpl
 }
 
-func NewUserController(userService services.UserServiceImpl) UserController {
-	return UserController{UserService: userService}
+func NewUserController(userService services.UserServiceImpl) *UserController {
+	return &UserController{UserService: userService}
 }
 
 func (uc *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 
-	payload := r.Context().Value("payload").(dto.CreateUserRequestDTO)
+	var payload dto.CreateUserRequestDTO 
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
 	fmt.Println("payload in controller ", payload)
 	user, err := uc.UserService.CreateUser(&payload)
 	if err != nil {
@@ -44,7 +52,7 @@ func (uc *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 func (uc *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Fetching user by id ")
-	userId := r.URL.Query().Get("id")
+	userId := chi.URLParam(r,"id")
 
 	if userId == "" {
 		w.Header().Set("Content-Type", "application/json")
@@ -89,9 +97,14 @@ func (uc *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("logging in user....")
-	payload := r.Context().Value("payload").(dto.LoginUserRequestDTO)
-	fmt.Println("payload in login controller ", payload)
+
+	payload := dto.LoginUserRequestDTO{} 
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	fmt.Println("logging in user....")  
 
 	jwtToken, err := uc.UserService.LoginUser(&payload)
 	if err != nil {
@@ -104,6 +117,11 @@ func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	if jwtToken == "" {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

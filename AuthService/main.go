@@ -5,10 +5,12 @@ import (
 	config "goAuth/config/env" 
 )
 
-
-func main() {
+func main() { 
 	config.Load()
 	cfg := app.NewConfig()
 	app := app.NewApp(cfg) 
-	app.Run(); 
+	if err := app.Run(); err != nil {
+		panic(err)
+	}
 }
+//migrations : goose -dir db/migrations mysql $env:DB_DSN up

@@ -48,10 +48,10 @@ func (u *UserRepository) GetByID(id string) (*models.User, error) {
 }
 
 func (u *UserRepository) GetByEmail(email string) (*models.User, error) {
-	query := "SELECT id,username,email,created_at,updated_at FROM users WHERE email = ?"
+	query := "SELECT id,username,email,password,created_at,updated_at FROM users WHERE email = ?"
 	row := u.db.QueryRow(query, email)
 	user := &models.User{}
-	if err := row.Scan(&user.Id, &user.Username, &user.Email, &user.CreatedAt, &user.UpdatedAt); err != nil {
+	if err := row.Scan(&user.Id, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		fmt.Printf("Error fetching user by email: %v\n", err)
 		return nil, err
 	}

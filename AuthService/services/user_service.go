@@ -2,10 +2,13 @@ package services
 
 import (
 	"fmt"
+	"goAuth/config/env"
 	db "goAuth/db/repositories"
 	"goAuth/dto"
 	"goAuth/models"
 	"goAuth/utils"
+ 
+	"github.com/golang-jwt/jwt/v5" 
 )
 
 type UserServiceImpl struct {
@@ -55,13 +58,18 @@ func (u *UserServiceImpl) LoginUser(payload *dto.LoginUserRequestDTO) (string, e
 		return "", fmt.Errorf("no user found with email: %s", email)
 	}
 
-	isPasswordValid  := utils.CheckPasswordHash(password, user.Password)
+	isPasswordValid := utils.CheckPasswordHash(password, user.Password)
 	if !isPasswordValid {
 		fmt.Println("Password does not match")
-		return "", nil
-	} 
+		return "", fmt.Errorf("invalid password")
+	}
 
-	// fmt.Println("JWT Token:", tokenString)
-
-	return "tokenString", nil
+	jwtPayload := jwt.MapClaims{
+		"email":    user.Email,
+		"username": user.Username,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtPayload)
+	tokenString, err := token.SignedString([]byte(env.GetEnv("JWT_SECRET", "secret")))
+	fmt.Println("JWT Token:", tokenString)
+	return tokenString, nil
 }

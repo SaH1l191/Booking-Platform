@@ -22,7 +22,7 @@ type Config struct {
 
 func NewConfig() *Config {
 	port := env.GetEnv("PORT", ":8080")
-	return &Config{Addr: port}
+	return &Config{Addr: ":" + port}
 }
 
 func NewApp(cf *Config) *App {
@@ -39,14 +39,17 @@ func (app *App) Run() error {
 	ur := repo.NewUserRepository(db)
 	us := services.NewUserServiceImpl(ur)
 	uc := controllers.NewUserController(us)
-	
+
 	uRouter := router.NewUserRouter(uc)
+	pingRouter := &router.PingRouter{}
 	server := &http.Server{
 		Addr:         app.Config.Addr,
-		Handler:      router.SetupRouter(uRouter),
+		Handler:      router.SetupRouter(uRouter,pingRouter),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 	fmt.Printf("Starting server on %s\n", app.Config.Addr)
-	return server.ListenAndServe()
+	err = server.ListenAndServe() 
+	fmt.Println("ListenAndServe returned:", err) 
+	return err
 }

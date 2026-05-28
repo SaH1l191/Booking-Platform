@@ -6,14 +6,15 @@ import (
 )
 
 type Route interface {
-	Register(*chi.Mux)
+	Register(r chi.Router)
 }
 
-func SetupRouter(UserRouter Route) *chi.Mux {
+func SetupRouter(UserRouter Route,pingRouter Route) chi.Router {
 	chiRouter := chi.NewRouter()
 	chiRouter.Use(middleware.Logger) // built in logger middleware
 
 	UserRouter.Register(chiRouter)
+	pingRouter.Register(chiRouter)
 
 	return chiRouter
 }

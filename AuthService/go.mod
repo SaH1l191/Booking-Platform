@@ -11,4 +11,5 @@ require (
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/go-chi/chi v1.5.5
+	github.com/golang-jwt/jwt/v5 v5.3.1
 )
