@@ -79,7 +79,9 @@ func (u *UserServiceImpl) LoginUser(payload *dto.LoginUserRequestDTO) (dto.AuthT
 func (u *UserServiceImpl) generateAccessToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"email":    user.Email,
+		"userId": user.Id,
 		"username": user.Username,
+		"type":     "access",
 		"exp":      time.Now().Add(15 * time.Minute).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -90,6 +92,7 @@ func (u *UserServiceImpl) generateAccessToken(user *models.User) (string, error)
 func (u *UserServiceImpl) generateRefreshToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"email":    user.Email,
+		"userId":   user.Id,
 		"username": user.Username,
 		"exp":      time.Now().Add(7 * 24 * time.Hour).Unix(),
 		"type":     "refresh",

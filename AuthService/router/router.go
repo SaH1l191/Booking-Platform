@@ -10,13 +10,12 @@ type Route interface {
 	Register(r chi.Router)
 }
 
-func SetupRouter(UserRouter Route, pingRouter Route) chi.Router {
+func SetupRouter(UserRouter Route) chi.Router {
 	chiRouter := chi.NewRouter()
 	chiRouter.Use(middleware.Logger) // built in logger middleware
 	// chiRouter.Use(middlewares.RequestValidator)
 	chiRouter.Use(middlewares.RateLimitMiddleware)
-	UserRouter.Register(chiRouter)
-	pingRouter.Register(chiRouter)
+	UserRouter.Register(chiRouter) 
 
 	return chiRouter
 }

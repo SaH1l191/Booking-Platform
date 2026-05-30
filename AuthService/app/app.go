@@ -40,11 +40,10 @@ func (app *App) Run() error {
 	us := services.NewUserServiceImpl(ur)
 	uc := controllers.NewUserController(us)
 
-	uRouter := router.NewUserRouter(uc)
-	pingRouter := &router.PingRouter{}
+	uRouter := router.NewUserRouter(uc) 
 	server := &http.Server{
 		Addr:         app.Config.Addr,
-		Handler:      router.SetupRouter(uRouter,pingRouter),
+		Handler:      router.SetupRouter(uRouter),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}

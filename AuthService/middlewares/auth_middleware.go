@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"context"
+	"fmt"
 	env "goAuth/config/env"
 	"net/http"
 	"strings"
@@ -31,24 +32,35 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		claims := jwt.MapClaims{}
-		_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method")
+			}
 			return []byte(env.GetEnv("JWT_SECRET", "secret")), nil
 		})
-		if err != nil {
+		if err != nil || !token.Valid {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
 
-		userId, okId := claims["username"]
-		userEmail, okEmail := claims["email"]
+		tokenType, ok := claims["type"].(string)
+		if !ok || tokenType != "access" {
+			http.Error(w, "Invalid access token", http.StatusUnauthorized)
+			return
+		}
 
-		if !okEmail || !okId {
+		userID, okID := claims["userId"]
+		username, okUsername := claims["username"]
+		email, okEmail := claims["email"]
+
+		if !okEmail || !okID || !okUsername {
 			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "userID", userId)
-		ctx = context.WithValue(ctx, "email", userEmail)
+		ctx := context.WithValue(r.Context(), "userID", userID)
+		ctx = context.WithValue(ctx, "email", email)
+		ctx = context.WithValue(ctx, "username", username)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

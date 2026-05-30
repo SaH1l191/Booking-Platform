@@ -6,7 +6,6 @@ import (
 	"goAuth/services"
 	"goAuth/utils"
 	"net/http"
-
 	"github.com/go-chi/chi"
 	"github.com/golang-jwt/jwt/v5"
 	env "goAuth/config/env"
@@ -69,7 +68,7 @@ func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.SetAuthCookies(w, tokens.AccessToken, tokens.RefreshToken)
+	utils.SetAuthCookies(r, w, tokens.AccessToken, tokens.RefreshToken)
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User logged in successfully", tokens)
 }
@@ -136,7 +135,7 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.SetAuthCookies(w, newTokens.AccessToken, newTokens.RefreshToken)
+	utils.SetAuthCookies(r, w, newTokens.AccessToken, newTokens.RefreshToken)
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Token refreshed successfully", newTokens)
 }
@@ -151,4 +150,10 @@ func (uc *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Users fetched successfully", users)
 	fmt.Println("Users fetched in controller ", users)
+}
+
+func (uc *UserController) LogoutUser(w http.ResponseWriter, r *http.Request) {
+	utils.ClearAuthCookies(w)
+
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User logged out successfully", nil)
 }
