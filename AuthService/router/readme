@@ -1,0 +1,138 @@
+What happens if context is not used?
+
+Without context, the middleware cannot easily pass data to downstream handlers.
+
+You would have a few alternatives:
+
+1. Re-parse the request body in the controller
+
+Middleware validates:
+
+var payload dto.CreateUserRequestDTO
+json.NewDecoder(r.Body).Decode(&payload)
+
+Controller decodes again:
+
+json.NewDecoder(r.Body).Decode(&payload)
+
+Problem:
+
+r.Body is a stream.
+Once read, it's consumed.
+The controller will get EOF.
+
+Example:
+
+middleware -> reads body -> stream exhausted
+controller -> reads body -> EOF
+
+This is one reason context is commonly used.
+
+2. Store data in global variables
+var payload dto.CreateUserRequestDTO
+
+Very bad idea.
+
+Multiple requests run concurrently:
+
+Request A
+Request B
+Request C
+
+They would overwrite each other's data.
+
+3. Put custom fields on a custom request type
+
+Possible but not idiomatic with Go's net/http.
+
+Context is the standard mechanism.
+
+How streams are related
+
+The request body:
+
+r.Body
+
+is an io.ReadCloser, which is a stream.
+
+Think of a stream like water flowing through a pipe:
+
+JSON Body
+    |
+    V
++----------+
+| r.Body   |
++----------+
+
+When middleware reads:
+
+body, _ := io.ReadAll(r.Body)
+
+the stream moves to the end:
+
+[consumed]
+
+If the controller tries:
+
+io.ReadAll(r.Body)
+
+it gets:
+
+EOF
+
+because the data has already been read.
+
+That's why middleware often:
+
+Reads and validates the stream.
+Converts JSON into a struct.
+Stores the struct in the context.
+Controller retrieves it from the context.
+Request Body Stream
+        |
+        V
+Middleware
+  - decode JSON
+  - validate
+  - put payload in Context
+        |
+        V
+Controller
+  - get payload from Context
+  - no need to read stream again
+Another important use of Context: cancellation
+
+Context is not only for passing values.
+
+Suppose a client disconnects while a database query is running.
+
+ctx := r.Context()
+
+db.QueryContext(ctx, query)
+
+When the client closes the connection:
+
+Client disconnected
+        |
+        V
+Context cancelled
+        |
+        V
+Database query stopped
+
+Without context:
+
+db.Query(query)
+
+the database might continue working even though nobody is waiting for the result.
+
+This becomes very important for:
+
+Database queries
+HTTP calls to other services
+Goroutines
+
+So in Go web applications, context.Context serves two major purposes:
+
+Passing request-scoped data (like your validated payload).
+Propagating cancellation, deadlines, and timeouts through the entire request chain.

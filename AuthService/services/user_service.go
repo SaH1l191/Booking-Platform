@@ -2,13 +2,14 @@ package services
 
 import (
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"goAuth/config/env"
 	db "goAuth/db/repositories"
 	"goAuth/dto"
 	"goAuth/models"
 	"goAuth/utils"
- 
-	"github.com/golang-jwt/jwt/v5" 
+	"strconv"
+	"time"
 )
 
 type UserServiceImpl struct {
@@ -43,33 +44,93 @@ func (u *UserServiceImpl) CreateUser(payload *dto.CreateUserRequestDTO) (*models
 	return user, nil
 }
 
-func (u *UserServiceImpl) LoginUser(payload *dto.LoginUserRequestDTO) (string, error) {
-
+func (u *UserServiceImpl) LoginUser(payload *dto.LoginUserRequestDTO) (dto.AuthTokens, error) {
 	email := payload.Email
 	password := payload.Password
 
 	user, err := u.userRepo.GetByEmail(email)
 	if err != nil {
 		fmt.Println("Error fetching user by email:", err)
-		return "", err
+		return dto.AuthTokens{}, err
 	}
 	if user == nil {
 		fmt.Println("No user found with the given email")
-		return "", fmt.Errorf("no user found with email: %s", email)
+		return dto.AuthTokens{}, fmt.Errorf("no user found with email: %s", email)
 	}
 
-	isPasswordValid := utils.CheckPasswordHash(password, user.Password)
-	if !isPasswordValid {
+	if !utils.CheckPasswordHash(password, user.Password) {
 		fmt.Println("Password does not match")
-		return "", fmt.Errorf("invalid password")
+		return dto.AuthTokens{}, fmt.Errorf("invalid password")
 	}
 
-	jwtPayload := jwt.MapClaims{
+	accessToken, err := u.generateAccessToken(user)
+	if err != nil {
+		return dto.AuthTokens{}, err
+	}
+	refreshToken, err := u.generateRefreshToken(user)
+	if err != nil {
+		return dto.AuthTokens{}, err
+	}
+
+	return dto.AuthTokens{AccessToken: accessToken, RefreshToken: refreshToken}, nil
+}
+
+
+func (u *UserServiceImpl) generateAccessToken(user *models.User) (string, error) {
+	claims := jwt.MapClaims{
 		"email":    user.Email,
 		"username": user.Username,
+		"exp":      time.Now().Add(15 * time.Minute).Unix(),
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtPayload)
-	tokenString, err := token.SignedString([]byte(env.GetEnv("JWT_SECRET", "secret")))
-	fmt.Println("JWT Token:", tokenString)
-	return tokenString, nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(env.GetEnv("JWT_SECRET", "secret")))
+}
+
+
+func (u *UserServiceImpl) generateRefreshToken(user *models.User) (string, error) {
+	claims := jwt.MapClaims{
+		"email":    user.Email,
+		"username": user.Username,
+		"exp":      time.Now().Add(7 * 24 * time.Hour).Unix(),
+		"type":     "refresh",
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(env.GetEnv("JWT_REFRESH_SECRET", "refresh_secret")))
+}
+
+
+func (u *UserServiceImpl) GetUserByEmail(email string) (*models.User, error) {
+    return u.userRepo.GetByEmail(email)
+}
+
+func (u *UserServiceImpl) DeleteUser(idStr string) error {
+    id, err := strconv.ParseInt(idStr, 10, 64)
+    if err != nil {
+        return fmt.Errorf("invalid user ID: %w", err)
+    }
+    return u.userRepo.DeleteByID(id)
+}
+
+
+func (u *UserServiceImpl) RefreshTokens(email string) (dto.AuthTokens, error) {
+    user, err := u.userRepo.GetByEmail(email)
+    if err != nil {
+        return dto.AuthTokens{}, err
+    }
+    if user == nil {
+        return dto.AuthTokens{}, fmt.Errorf("user not found for email: %s", email)
+    }
+    access, err := u.generateAccessToken(user)
+    if err != nil {
+        return dto.AuthTokens{}, err
+    }
+    refresh, err := u.generateRefreshToken(user)
+    if err != nil {
+        return dto.AuthTokens{}, err
+    }
+    return dto.AuthTokens{AccessToken: access, RefreshToken: refresh}, nil
+}
+
+func (u *UserServiceImpl) GetAllUsers() ([]*models.User, error) {
+    return u.userRepo.GetAll(0)
 }

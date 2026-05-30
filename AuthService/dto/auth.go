@@ -1,15 +1,39 @@
-package dto 
+package dto
 
+import (
+	"github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
+)
 
 type CreateUserRequestDTO struct {
-	Username string `json:"username" validate:"required,min=3,max=50"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
+func (dto *CreateUserRequestDTO) Validate() error {
+	return validation.ValidateStruct(dto,
+		validation.Field(&dto.Username, validation.Required, validation.Length(5, 50)),
+		validation.Field(&dto.Email, validation.Required, is.Email),
+		validation.Field(&dto.Password, validation.Required, validation.Length(6, 0)),
+	)
+}
 
 type LoginUserRequestDTO struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
+
+func (dto *LoginUserRequestDTO) Validate() error {
+    return validation.ValidateStruct(dto,
+        validation.Field(&dto.Email, validation.Required, is.Email),
+        validation.Field(&dto.Password, validation.Required, validation.Length(6, 0)),
+    )
+}
+
+type AuthTokens struct {
+    AccessToken  string `json:"accessToken"`
+    RefreshToken string `json:"refreshToken"`
+}
+	
 

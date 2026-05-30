@@ -1,0 +1,24 @@
+# Environment variables
+.env 
+
+# Build outputs
+bin/
+dist/
+build/
+
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+ 
+# Temporary files
+tmp/
+*.tmp
+ 
+# Air live reload  
+.air.toml
+
+# Generated files
+*.out

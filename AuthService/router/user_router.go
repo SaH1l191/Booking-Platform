@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/go-chi/chi"
 	"goAuth/controllers"
+	"goAuth/middlewares"
 )
 
 type UserRouter struct {
@@ -15,10 +16,12 @@ func NewUserRouter(userController *controllers.UserController) *UserRouter {
 
 func (ur *UserRouter) Register(chiRouter chi.Router) {
 	chiRouter.Route("/users", func(r chi.Router) {
-		r.Get("/{id}", ur.userController.GetUserByID)
-		r.Post("/signup", ur.userController.CreateUser)
-		r.Post("/login", ur.userController.LoginUser)
-		// r.Delete("/users/{id}", ur.userController.DeleteUser)
+		r.With(middlewares.JWTAuthMiddleware).Get("/{id}", ur.userController.GetUserByID)
+		r.With(middlewares.CreateUserRequestValidator).Post("/signup", ur.userController.CreateUser)
+		r.With(middlewares.LoginUserRequestValidator).Post("/login", ur.userController.LoginUser)
+		
+		r.Post("/refresh", ur.userController.RefreshToken)
+		r.With(middlewares.JWTAuthMiddleware).Delete("/{id}", ur.userController.DeleteUser)
+		r.Get("/", ur.userController.GetAllUsers)
 	})
-
 }

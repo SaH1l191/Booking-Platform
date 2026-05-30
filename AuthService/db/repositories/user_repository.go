@@ -99,6 +99,6 @@ func (u *UserRepository) GetAll(id int64) ([]*models.User, error) {
 		fmt.Println("Error with rows:", err)
 		return nil, err
 	}
-
 	return users, nil
 }
+ 
