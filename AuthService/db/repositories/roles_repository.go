@@ -5,23 +5,24 @@ import (
 	"goAuth/models"
 )
 
-type RolesRepository interface {
+type RoleRepository interface {
 	GetRoleById(id int64) (*models.Role, error)
 	GetRoleByName(name string) (*models.Role, error)
 	GetAllRoles() ([]*models.Role, error)
-	UpdateRole(id int64, name, description string) error
+	UpdateRole(id int64, name, description string) (*models.Role, error)
 	DeleteRoleById(id int64) error
+	CreateRole(name, description string) (*models.Role, error)
 }
 
-type RoleRepository struct {
+type RoleRepositoryImpl struct {
 	db *sql.DB
 }
 
-func NewRoleRepository(db *sql.DB) *RoleRepository {
-	return &RoleRepository{db: db}
+func NewRoleRepository(db *sql.DB) RoleRepository {
+	return &RoleRepositoryImpl{db: db}
 }
 
-func (r *RoleRepository) GetRoleById(id int64) (*models.Role, error) {
+func (r *RoleRepositoryImpl) GetRoleById(id int64) (*models.Role, error) {
 	query := "SELECT id,name,description,created_at,updated_at FROM roles WHERE id = ?"
 	row := r.db.QueryRow(query, id)
 	role := &models.Role{}
@@ -32,7 +33,7 @@ func (r *RoleRepository) GetRoleById(id int64) (*models.Role, error) {
 	return role, nil
 }
 
-func (r *RoleRepository) GetRoleByName(name string) (*models.Role, error) {
+func (r *RoleRepositoryImpl) GetRoleByName(name string) (*models.Role, error) {
 	query := "SELECT id,name,description,created_at,updated_at FROM roles WHERE name = ?"
 	row := r.db.QueryRow(query, name)
 	role := &models.Role{}
@@ -42,7 +43,7 @@ func (r *RoleRepository) GetRoleByName(name string) (*models.Role, error) {
 	return role, nil
 }
 
-func (r *RoleRepository) GetAllRoles(name string) ([]*models.Role, error) {
+func (r *RoleRepositoryImpl) GetAllRoles() ([]*models.Role, error) {
 	query := "SELECT id,name,description,created_at,updated_at FROM roles"
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -64,7 +65,7 @@ func (r *RoleRepository) GetAllRoles(name string) ([]*models.Role, error) {
 	return roles, nil
 }
 
-func (r *RoleRepository) CreateRole(name string, description string) (*models.Role, error) {
+func (r *RoleRepositoryImpl) CreateRole(name string, description string) (*models.Role, error) {
 	query := "INSERT INTO roles (name, description, created_at, updated_at) VALUES (?, ?, NOW(), NOW())"
 	res, err := r.db.Exec(query, name, description)
 	if err != nil {
@@ -83,7 +84,7 @@ func (r *RoleRepository) CreateRole(name string, description string) (*models.Ro
 	}, nil
 }
 
-func (r *RoleRepository) UpdateRole(id int64, name string, description string) (*models.Role, error) {
+func (r *RoleRepositoryImpl) UpdateRole(id int64, name string, description string) (*models.Role, error) {
 	query := "UPDATE roles SET name = ?, description = ?, updated_at = NOW() WHERE id = ?"
 	res, err := r.db.Exec(query, name, description, id)
 	if err != nil {
@@ -101,7 +102,7 @@ func (r *RoleRepository) UpdateRole(id int64, name string, description string) (
 	return r.GetRoleById(id)
 }
 
-func (r *RoleRepository) DeleteRoleById(id int64) error {
+func (r *RoleRepositoryImpl) DeleteRoleById(id int64) error {
 	query := "DELETE FROM roles WHERE id = ?"
 	res, err := r.db.Exec(query, id)
 	if err != nil {

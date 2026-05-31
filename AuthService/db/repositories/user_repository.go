@@ -101,4 +101,3 @@ func (u *UserRepository) GetAll(id int64) ([]*models.User, error) {
 	}
 	return users, nil
 }
- 

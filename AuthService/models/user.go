@@ -1,21 +1,20 @@
-package models 
-
+package models
 
 type User struct {
-	Id int64
-	Username string
-	Email string
-	Password string
+	Id        int64
+	Username  string
+	Email     string
+	Password  string
 	CreatedAt string
 	UpdatedAt string
 }
 
 type Role struct {
-	Id int64
-	Name string
+	Id          int64
+	Name        string
 	Description string
-	CreatedAt string
-	UpdatedAt string
+	CreatedAt   string
+	UpdatedAt   string
 }
 type Permission struct {
 	Id          int64
@@ -27,3 +26,10 @@ type Permission struct {
 	UpdatedAt   string
 }
 
+type RolePermission struct {
+	Id           int64
+	RoleId       int64
+	PermissionId int64
+	CreatedAt    string
+	UpdatedAt    string
+}

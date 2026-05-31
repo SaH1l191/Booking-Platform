@@ -136,3 +136,37 @@ So in Go web applications, context.Context serves two major purposes:
 
 Passing request-scoped data (like your validated payload).
 Propagating cancellation, deadlines, and timeouts through the entire request chain.
+
+
+
+DI in golang
+
+Without DI (bad coupling)
+type RoleService struct {
+    repo RoleRepositoryImpl
+}
+
+func NewRoleService() *RoleService {
+    return &RoleService{
+        repo: RoleRepositoryImpl{db: db}, //  creating dependency inside
+    }
+}
+
+Problems:
+
+tightly coupled to MySQL implementation
+hard to test
+hard to swap DB
+With DI (your correct direction)
+type RoleService struct {
+    repo RoleRepository
+}
+
+func NewRoleService(repo RoleRepository) *RoleService {
+    return &RoleService{repo: repo}
+}
+
+Now:
+
+ Service does NOT care how repo is built
+ It only cares what repo can do
