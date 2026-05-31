@@ -12,6 +12,10 @@ tasks:
     cmds:
       - goose -dir db/migrations mysql "{{.DB_DSN}}" down
 
+  migrate-create:
+    cmds:
+      - goose -dir db/migrations create {{.CLI_ARGS | default "migration"}} sql
+      
 
 # task migrate-up
 # task migrate-down

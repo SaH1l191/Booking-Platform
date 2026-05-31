@@ -1,0 +1,14 @@
+-- +goose Up
+SELECT 'up SQL query';
+CREATE TABLE IF NOT EXISTS permissions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    resource VARCHAR(100) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+-- +goose Down
+SELECT 'down SQL query';
+DROP TABLE IF EXISTS permissions;

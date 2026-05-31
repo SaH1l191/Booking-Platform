@@ -17,3 +17,13 @@ type Role struct {
 	CreatedAt string
 	UpdatedAt string
 }
+type Permission struct {
+	Id          int64
+	Name        string
+	Description string
+	Resource    string
+	Action      string
+	CreatedAt   string
+	UpdatedAt   string
+}
+
