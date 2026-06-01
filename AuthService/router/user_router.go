@@ -19,12 +19,14 @@ func (ur *UserRouter) Register(chiRouter chi.Router) {
 		r.With(middlewares.JWTAuthMiddleware).Get("/{id}", ur.userController.GetUserByID)
 		r.With(middlewares.CreateUserRequestValidator).Post("/signup", ur.userController.CreateUser)
 		r.With(middlewares.LoginUserRequestValidator).Post("/login", ur.userController.LoginUser)
-		
-		r.With(middlewares.JWTAuthMiddleware).Post("/refresh", ur.userController.RefreshToken)
+		 
 		r.With(middlewares.JWTAuthMiddleware).Delete("/{id}", ur.userController.DeleteUser)
 		// Logout clears cookies (no auth required)
 		r.Post("/logout", ur.userController.LogoutUser)
 		r.Get("/", ur.userController.GetAllUsers)
+		// Allow both POST and GET for token refresh
+		r.With(middlewares.JWTAuthMiddleware).Post("/refresh", ur.userController.RefreshToken)
+		r.With(middlewares.JWTAuthMiddleware).Get("/refresh", ur.userController.RefreshToken)
 		r.With(middlewares.JWTAuthMiddleware).Post("/logout",ur.userController.LogoutUser)
 	})
 }

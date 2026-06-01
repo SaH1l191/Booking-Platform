@@ -7,6 +7,7 @@ import (
 	env "goAuth/config/env"
 	repo "goAuth/db/repositories"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,27 +16,18 @@ import (
 func JWTAuthMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-        // ----- Extract token -----
-        authHeader := r.Header.Get("Authorization")
         tokenString := ""
-        if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
-            tokenString = strings.TrimPrefix(authHeader, "Bearer ")
-        }
-        if tokenString == "" {
-            if cookie, err := r.Cookie("access_token"); err == nil {
-                tokenString = cookie.Value
-            }
-        }
+		if cookie, err := r.Cookie("access_token"); err == nil {
+			tokenString = cookie.Value
+		}
         tokenString = strings.TrimSpace(tokenString)
         if tokenString == "" {
             http.Error(w, "Missing token", http.StatusUnauthorized)
             return
         }
 
-        // ----- Parse token -----
         claims := jwt.MapClaims{}
         token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-            // Ensure token is signed with HMAC
             if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
                 return nil, fmt.Errorf("unexpected signing method")
             }
@@ -46,15 +38,15 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
             return
         }
 		
+		fmt.Println("Token claims:", claims)
 
-        // ----- Validate claim types -----
-        // token must be an access token
+   
         if typ, ok := claims["type"].(string); !ok || typ != "access" {
             http.Error(w, "Invalid access token", http.StatusUnauthorized)
             return
         }
 
-        // required claims
+      
         userIDRaw, okID := claims["userId"]
         usernameRaw, okUsername := claims["username"]
         emailRaw, okEmail := claims["email"]
@@ -63,7 +55,7 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
             return
         }
 		
-        // ----- Normalise userId to string -----
+    
         var userIDStr string
         switch v := userIDRaw.(type) {
         case float64:
@@ -78,13 +70,12 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
             return
         }
 
-        // Ensure username and email are strings (they should already be)
         username, _ := usernameRaw.(string)
         email, _ := emailRaw.(string)
 
-        // Store values in context – keep both "userID" (legacy) and "userId" for other code
-        ctx := context.WithValue(r.Context(), "userID", userIDStr) // legacy key used by Require*Roles
-        ctx = context.WithValue(ctx, "userId", userIDStr)      // key used by proxy utils
+        
+        ctx := context.WithValue(r.Context(), "userID", userIDStr)
+        ctx = context.WithValue(ctx, "userId", userIDStr)     
         ctx = context.WithValue(ctx, "email", email)
         ctx = context.WithValue(ctx, "username", username)
 
@@ -94,78 +85,87 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
 
 	
 func RequireAllRoles(requiredRoles ...string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			val := r.Context().Value("userID")
-			userId, ok := val.(int64)
-			if !ok {
-				http.Error(w, "invalid userID in context", http.StatusUnauthorized)
-				return
-			}
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            // userID is stored as a string in the context by JWTAuthMiddleware
+            val := r.Context().Value("userID")
+            userIDStr, ok := val.(string)
+            if !ok {
+                http.Error(w, "invalid userID in context", http.StatusUnauthorized)
+                return
+            }
+            userId, err := strconv.ParseInt(userIDStr, 10, 64)
+            if err != nil {
+                http.Error(w, "invalid userID format", http.StatusUnauthorized)
+                return
+            }
 
-			dbConn, err := config.SetupDB()
-			if err != nil {
-				http.Error(w, "Database connection error"+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			urr := repo.NewUserRoleRepository(dbConn)
+            dbConn, err := config.SetupDB()
+            if err != nil {
+                http.Error(w, "Database connection error"+err.Error(), http.StatusInternalServerError)
+                return
+            }
+            urr := repo.NewUserRoleRepository(dbConn)
 
-			hasAllRoles, err := urr.HasAllRoles(userId, requiredRoles)
+            hasAllRoles, err := urr.HasAllRoles(userId, requiredRoles)
 
-			fmt.Println("userid", userId, "roles", requiredRoles, "hasAllRoles", hasAllRoles)
-			if err != nil {
-				http.Error(w, "Error checking user roles: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
+            fmt.Println("userid", userId, "roles", requiredRoles, "hasAllRoles", hasAllRoles)
+            if err != nil {
+                http.Error(w, "Error checking user roles: "+err.Error(), http.StatusInternalServerError)
+                return
+            }
 
-			if !hasAllRoles {
-				http.Error(w, "Forbidden: You do not have the required roles", http.StatusForbidden)
-				return
-			}
+            if !hasAllRoles {
+                http.Error(w, "Forbidden: You do not have the required roles", http.StatusForbidden)
+                return
+            }
 
-			fmt.Println("User has all required roles:", requiredRoles)
+            fmt.Println("User has all required roles:", requiredRoles)
 
-			next.ServeHTTP(w, r)
-
-		})
-	}
+            next.ServeHTTP(w, r)
+        })
+    }
 }
 
 func RequireAnyRole(requiredRoles ...string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            // userID is stored as a string in the context by JWTAuthMiddleware
+            val := r.Context().Value("userID")
+            userIDStr, ok := val.(string)
+            if !ok {
+                http.Error(w, "invalid userID in context", http.StatusUnauthorized)
+                return
+            }
+            userId, err := strconv.ParseInt(userIDStr, 10, 64)
+            if err != nil {
+                http.Error(w, "invalid userID format", http.StatusUnauthorized)
+                return
+            }
 
-			val := r.Context().Value("userID")
-			userId, ok := val.(int64)
-			if !ok {
-				http.Error(w, "invalid userID in context", http.StatusUnauthorized)
-				return
-			}
+            dbConn, err := config.SetupDB()
+            if err != nil {
+                http.Error(w, "Database connection error"+err.Error(), http.StatusInternalServerError)
+                return
+            }
+            urr := repo.NewUserRoleRepository(dbConn)
 
-			dbConn, err := config.SetupDB()
-			if err != nil {
-				http.Error(w, "Database connection error"+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			urr := repo.NewUserRoleRepository(dbConn)
+            hasAnyRole, err := urr.HasAnyRole(userId, requiredRoles)
 
-			hasAnyRole, err := urr.HasAnyRole(userId, requiredRoles)
+            fmt.Println("userid", userId, "roles", requiredRoles, "hasAnyRole", hasAnyRole)
+            if err != nil {
+                http.Error(w, "Error checking user roles: "+err.Error(), http.StatusInternalServerError)
+                return
+            }
 
-			fmt.Println("userid", userId, "roles", requiredRoles, "hasAnyRole", hasAnyRole)
-			if err != nil {
-				http.Error(w, "Error checking user roles: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
+            if !hasAnyRole {
+                http.Error(w, "Forbidden: You do not have the required roles", http.StatusForbidden)
+                return
+            }
 
-			if !hasAnyRole {
-				http.Error(w, "Forbidden: You do not have the required roles", http.StatusForbidden)
-				return
-			}
+            fmt.Println("User has any of the required roles:", requiredRoles)
 
-			fmt.Println("User has any of the required roles:", requiredRoles)
-
-			next.ServeHTTP(w, r)
-
-		})
-	}
+            next.ServeHTTP(w, r)
+        })
+    }
 }
