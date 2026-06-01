@@ -104,7 +104,7 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	claims := jwt.MapClaims{}
 	_, err = jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(env.GetEnv("JWT_REFRESH_SECRET", "refresh_secret")), nil
+		return []byte(env.GetEnv("JWT_REFRESH_SECRET", "secret")), nil
 	})
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid refresh token", err)

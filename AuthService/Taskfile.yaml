@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 vars:
   DB_DSN: root:password@tcp(127.0.0.1:3306)/auth_db
@@ -15,7 +15,11 @@ tasks:
   migrate-create:
     cmds:
       - goose -dir db/migrations create {{.CLI_ARGS | default "migration"}} sql
-      
 
+  seed-up:
+
+  seed-reset:
+    cmds:
+      
 # task migrate-up
 # task migrate-down

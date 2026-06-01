@@ -85,7 +85,7 @@ func (u *UserServiceImpl) generateAccessToken(user *models.User) (string, error)
 		"exp":      time.Now().Add(15 * time.Minute).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(env.GetEnv("JWT_SECRET", "secret")))
+	return token.SignedString([]byte(env.GetEnv("JWT_ACCESS_SECRET", "secret")))
 }
 
 
@@ -98,7 +98,7 @@ func (u *UserServiceImpl) generateRefreshToken(user *models.User) (string, error
 		"type":     "refresh",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(env.GetEnv("JWT_REFRESH_SECRET", "refresh_secret")))
+	return token.SignedString([]byte(env.GetEnv("JWT_REFRESH_SECRET", "secret")))
 }
 
 

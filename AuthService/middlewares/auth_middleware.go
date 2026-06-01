@@ -1,81 +1,105 @@
 package middlewares
 
-import ( 
+import (
 	"context"
 	"fmt"
 	config "goAuth/config/db"
 	env "goAuth/config/env"
 	repo "goAuth/db/repositories"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 func JWTAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		authHeader := r.Header.Get("Authorization")
-		tokenString := ""
-		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
-			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
-		}
+        // ----- Extract token -----
+        authHeader := r.Header.Get("Authorization")
+        tokenString := ""
+        if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+            tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+        }
+        if tokenString == "" {
+            if cookie, err := r.Cookie("access_token"); err == nil {
+                tokenString = cookie.Value
+            }
+        }
+        tokenString = strings.TrimSpace(tokenString)
+        if tokenString == "" {
+            http.Error(w, "Missing token", http.StatusUnauthorized)
+            return
+        }
 
-		if tokenString == "" {
-			if cookie, err := r.Cookie("access_token"); err == nil {
-				tokenString = cookie.Value
-			}
-		}
+        // ----- Parse token -----
+        claims := jwt.MapClaims{}
+        token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+            // Ensure token is signed with HMAC
+            if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+                return nil, fmt.Errorf("unexpected signing method")
+            }
+            return []byte(env.GetEnv("JWT_ACCESS_SECRET", "secret")), nil
+        })
+        if err != nil || !token.Valid {
+            http.Error(w, "Invalid token", http.StatusUnauthorized)
+            return
+        }
+		
 
-		if tokenString == "" {
-			http.Error(w, "Missing token", http.StatusUnauthorized)
-			return
-		}
+        // ----- Validate claim types -----
+        // token must be an access token
+        if typ, ok := claims["type"].(string); !ok || typ != "access" {
+            http.Error(w, "Invalid access token", http.StatusUnauthorized)
+            return
+        }
 
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method")
-			}
-			return []byte(env.GetEnv("JWT_SECRET", "secret")), nil
-		})
-		if err != nil || !token.Valid {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
-		}
+        // required claims
+        userIDRaw, okID := claims["userId"]
+        usernameRaw, okUsername := claims["username"]
+        emailRaw, okEmail := claims["email"]
+        if !okID || !okUsername || !okEmail {
+            http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+            return
+        }
+		
+        // ----- Normalise userId to string -----
+        var userIDStr string
+        switch v := userIDRaw.(type) {
+        case float64:
+            // JWT numeric claims are float64; format without fraction
+            userIDStr = fmt.Sprintf("%.0f", v)
+        case int64, int, uint64:
+            userIDStr = fmt.Sprintf("%d", v)
+        case string:
+            userIDStr = v
+        default:
+            http.Error(w, "Unsupported userId type in token", http.StatusUnauthorized)
+            return
+        }
 
-		tokenType, ok := claims["type"].(string)
-		if !ok || tokenType != "access" {
-			http.Error(w, "Invalid access token", http.StatusUnauthorized)
-			return
-		}
+        // Ensure username and email are strings (they should already be)
+        username, _ := usernameRaw.(string)
+        email, _ := emailRaw.(string)
 
-		userID, okID := claims["userId"]
-		username, okUsername := claims["username"]
-		email, okEmail := claims["email"]
+        // Store values in context – keep both "userID" (legacy) and "userId" for other code
+        ctx := context.WithValue(r.Context(), "userID", userIDStr) // legacy key used by Require*Roles
+        ctx = context.WithValue(ctx, "userId", userIDStr)      // key used by proxy utils
+        ctx = context.WithValue(ctx, "email", email)
+        ctx = context.WithValue(ctx, "username", username)
 
-		if !okEmail || !okID || !okUsername {
-			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), "userID", userID)
-		ctx = context.WithValue(ctx, "email", email)
-		ctx = context.WithValue(ctx, "username", username)
-
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
 }
 
+	
 func RequireAllRoles(requiredRoles ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-			userIdStr := r.Context().Value("userID").(string)
-			userId, err := strconv.ParseInt(userIdStr, 10, 64)
-			if err != nil {
-				http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
+			val := r.Context().Value("userID")
+			userId, ok := val.(int64)
+			if !ok {
+				http.Error(w, "invalid userID in context", http.StatusUnauthorized)
 				return
 			}
 
@@ -111,10 +135,10 @@ func RequireAnyRole(requiredRoles ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			userIdStr := r.Context().Value("userID").(string)
-			userId, err := strconv.ParseInt(userIdStr, 10, 64)
-			if err != nil {
-				http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
+			val := r.Context().Value("userID")
+			userId, ok := val.(int64)
+			if !ok {
+				http.Error(w, "invalid userID in context", http.StatusUnauthorized)
 				return
 			}
 
@@ -145,5 +169,3 @@ func RequireAnyRole(requiredRoles ...string) func(http.Handler) http.Handler {
 		})
 	}
 }
-
-

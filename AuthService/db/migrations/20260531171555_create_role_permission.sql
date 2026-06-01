@@ -13,10 +13,3 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 SELECT 'down SQL query';
 DROP TABLE IF EXISTS role_permissions;
 
-
--- INSERT INTO role_permissions (role_id, permission_id) 
--- SELECT 1, id FROM permissions; -- Assuming role_id 1 is 'admin', admin has all permissions
-
--- INSERT INTO role_permissions (role_id, permission_id)
--- SELECT 2, id FROM permissions where name IN ('user:read');
-

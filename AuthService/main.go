@@ -14,3 +14,7 @@ func main() {
 	}
 }
 //migrations : goose -dir db/migrations mysql $env:DB_DSN up
+
+
+//MFA,Signup-Email-Verification , Audit logging
+// Health‑check & metrics – expose /health and Prometheus metrics (request latency, error rates, token issuance)

@@ -14,18 +14,3 @@ SELECT 'down SQL query';
 DROP TABLE IF EXISTS permissions;
 
 
-
--- seeder data
--- INSERT INTO permissions (name, description, resource, action) VALUES
--- ('user:read', 'Permission to read user data', 'user', 'read'),
--- ('user:write', 'Permission to write user data', 'user', 'write'),
--- ('user:delete', 'Permission to delete user data', 'user', 'delete'),
--- ('role:read', 'Permission to read role data', 'role', 'read'),
--- ('role:write', 'Permission to write role data', 'role', 'write'),
--- ('role:delete', 'Permission to delete role data', 'role', 'delete'),
--- ('role:manage', 'Permission to manage roles', 'role', 'manage'),
--- ('permission:read', 'Permission to read permissions', 'permission', 'read'),
--- ('permission:write', 'Permission to write permissions', 'permission', 'write'),
--- ('permission:delete', 'Permission to delete permissions', 'permission', 'delete'),
--- ('permission:manage', 'Permission to manage permissions', 'permission', 'manage');
-

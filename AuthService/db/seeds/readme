@@ -1,0 +1,13 @@
+distribution:
+
+Role	        Users
+admin	        admin
+hotel_manager	alice, bob, charlie, david, eva
+customer	    remaining 21 users
+
+And:
+
+Role	        Permissions
+admin	        all 15 permissions
+hotel_manager	hotel/profile/booking management permissions
+customer	    booking/review/profile permissions

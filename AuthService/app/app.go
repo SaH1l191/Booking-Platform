@@ -40,15 +40,25 @@ func (app *App) Run() error {
 	us := services.NewUserServiceImpl(ur)
 	uc := controllers.NewUserController(us)
 
-	uRouter := router.NewUserRouter(uc) 
+	roleRepo := repo.NewRoleRepository(db)
+	rolePermRepo := repo.NewRolePermissionRepository(db)
+	userRoleRepo := repo.NewUserRoleRepository(db)
+
+	roleService := services.NewRoleService(roleRepo, rolePermRepo, userRoleRepo)
+
+	roleController := controllers.NewRoleController(roleService)
+
+	userRouter := router.NewUserRouter(uc)
+	roleRouter := router.NewRoleRouter(roleController)
+
 	server := &http.Server{
 		Addr:         app.Config.Addr,
-		Handler:      router.SetupRouter(uRouter),
+		Handler:      router.SetupRouter(userRouter, roleRouter),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 	fmt.Printf("Starting server on %s\n", app.Config.Addr)
-	err = server.ListenAndServe() 
-	fmt.Println("ListenAndServe returned:", err) 
+	err = server.ListenAndServe()
+	fmt.Println("ListenAndServe returned:", err)
 	return err
 }
