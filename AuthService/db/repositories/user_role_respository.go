@@ -135,41 +135,46 @@ func (u *UserRoleRepositoryImpl) HasRole(userId int64, roleName string) (bool, e
 func (u *UserRoleRepositoryImpl) HasAllRoles(userId int64, roleNames []string) (bool, error) {
 
 	if len(roleNames) == 0 {
-		return true, nil 
+		return true, nil
 	}
 
-	query := `
-		SELECT COUNT(*) = ?
-		FROM user_roles ur
-		INNER JOIN roles r ON ur.role_id = r.id
-		WHERE ur.user_id = ? AND r.name IN (?)
-		GROUP BY ur.user_id`
+	placeholders := strings.Repeat("?,", len(roleNames))
+	placeholders = placeholders[:len(placeholders)-1] // removing the last trailing comma of last indx
+ 
+	query := fmt.Sprintf(`
+		 SELECT COUNT(DISTINCT r.name)
+    FROM user_roles ur
+    INNER JOIN roles r ON ur.role_id = r.id
+    WHERE ur.user_id = ? AND r.name IN (%s)`, placeholders)
 
-	roleNamesStr := strings.Join(roleNames, ",")
+	args := make([]interface{}, 0, len(roleNames)+1)
+	args = append(args, userId)
 
-	row := u.db.QueryRow(query, len(roleNames), userId, roleNamesStr)
+	for _, role := range roleNames {
+		args = append(args, role)
+	}
 
-	var hasAllRoles bool
-	if err := row.Scan(&hasAllRoles); err != nil {
+	var count int
+	if err := u.db.QueryRow(query, args...).Scan(&count); err != nil {
 		if err == sql.ErrNoRows {
-			return false, nil // No roles found for the user
+			return false, nil 
 		}
-		return false, err // Return any other error
+		return false, err 
 	}
 
-	return hasAllRoles, nil
+	return count == len(roleNames), nil
 }
 
 func (u *UserRoleRepositoryImpl) HasAnyRole(userId int64, roleNames []string) (bool, error) {
 
 	if len(roleNames) == 0 {
-		return true, nil 
+		return true, nil
 	}
 	placeholders := strings.Repeat("?,", len(roleNames))
 	placeholders = placeholders[:len(placeholders)-1]
 	query := fmt.Sprintf("SELECT COUNT(*) > 0 FROM user_roles ur  INNER JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.name IN (%s)", placeholders)
 
-	// Create args slice with userId first, then all roleNames
+	
 	args := make([]interface{}, 0, 1+len(roleNames))
 	args = append(args, userId)
 	for _, roleName := range roleNames {
@@ -181,12 +186,10 @@ func (u *UserRoleRepositoryImpl) HasAnyRole(userId int64, roleNames []string) (b
 	var hasAnyRole bool
 	if err := row.Scan(&hasAnyRole); err != nil {
 		if err == sql.ErrNoRows {
-			return false, nil // No roles found for the user
+			return false, nil 
 		}
-		return false, err // Return any other error
-	}
-
-	fmt.Println("hasAnyRole", hasAnyRole)
-
+		return false, err 
+	}  
+	fmt.Println("hasAnyRole", hasAnyRole) 
 	return hasAnyRole, nil
 }

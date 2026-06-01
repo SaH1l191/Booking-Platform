@@ -1,7 +1,9 @@
 package router
 
 import (
-	"goAuth/controllers" 
+	"goAuth/controllers"
+	"goAuth/middlewares"
+
 	"github.com/go-chi/chi"
 )
 
@@ -16,22 +18,22 @@ func NewRoleRouter(_roleController *controllers.RoleController) *RoleRouter {
 }
 
 
-// todo : =
-//add validators , middlewares , view user role repository from 77 , fix error in 135 
+ 
+
 func (rr *RoleRouter) Register(r chi.Router) {
 
 	// Role Crud
 	r.Get("/roles/{id}", rr.roleController.GetRoleById)
 	r.Get("/roles", rr.roleController.GetAllRoles)
-	// r.With(middlewares.CreateRoleRequestValidator).Post("/roles", rr.roleController.CreateRole)
-	// r.With(middlewares.UpdateRoleRequestValidator).Put("/roles/{id}", rr.roleController.UpdateRole)
+	r.With(middlewares.CreateRoleRequestValidator).Post("/roles", rr.roleController.CreateRole)
+	r.With(middlewares.UpdateRoleRequestValidator).Put("/roles/{id}", rr.roleController.UpdateRole)
 	r.Delete("/roles/{id}", rr.roleController.DeleteRole)
 
 
 	// Role permissions operations
 	r.Get("/roles/{id}/permissions", rr.roleController.GetRolePermissions)
-	// r.With(middlewares.AssignPermissionRequestValidator).Post("/roles/{id}/permissions", rr.roleController.AssignPermissionToRole)
-	// r.With(middlewares.RemovePermissionRequestValidator).Delete("/roles/{id}/permissions", rr.roleController.RemovePermissionFromRole)
+	r.With(middlewares.AssignPermissionRequestValidator).Post("/roles/{id}/permissions", rr.roleController.AssignPermissionToRole)
+	r.With(middlewares.RemovePermissionRequestValidator).Delete("/roles/{id}/permissions", rr.roleController.RemovePermissionFromRole)
 	r.Get("/role-permissions", rr.roleController.GetAllRolePermissions)
-	// r.With(middlewares.JWTAuthMiddleware, middlewares.RequireAllRoles("admin")).Post("/roles/{userId}/assign/{roleId}", rr.roleController.AssignRoleToUser)
+	r.With(middlewares.JWTAuthMiddleware, middlewares.RequireAllRoles("admin")).Post("/roles/{userId}/assign/{roleId}", rr.roleController.AssignRoleToUser)
 }

@@ -37,19 +37,61 @@ type AuthTokens struct {
 }
 	  
 type CreateRoleRequestDTO struct {
-	Name        string `json:"name" validate:"required,min=2,max=50"`
-	Description string `json:"description" validate:"required,min=5,max=200"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+func (dto *CreateRoleRequestDTO) Validate() error {
+	return validation.ValidateStruct(dto,
+		validation.Field(&dto.Name,
+			validation.Required,
+			validation.Length(2, 50),
+		),
+		validation.Field(&dto.Description,
+			validation.Required,
+			validation.Length(5, 200),
+		),
+	)
 }
 
 type UpdateRoleRequestDTO struct {
-	Name        string `json:"name" validate:"required,min=2,max=50"`
-	Description string `json:"description" validate:"required,min=5,max=200"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+func (dto *UpdateRoleRequestDTO) Validate() error {
+	return validation.ValidateStruct(dto,
+		validation.Field(&dto.Name,
+			validation.Required,
+			validation.Length(2, 50),
+		),
+		validation.Field(&dto.Description,
+			validation.Required,
+			validation.Length(5, 200),
+		),
+	)
 }
 
 type AssignPermissionRequestDTO struct {
-	PermissionId int64 `json:"permission_id" validate:"required"`
+	PermissionId int64 `json:"permission_id"`
+}
+
+func (dto *AssignPermissionRequestDTO) Validate() error {
+	return validation.ValidateStruct(dto,
+		validation.Field(&dto.PermissionId,
+			validation.Required,
+		),
+	)
 }
 
 type RemovePermissionRequestDTO struct {
-	PermissionId int64 `json:"permission_id" validate:"required"`
+	PermissionId int64 `json:"permission_id"`
+}
+
+func (dto *RemovePermissionRequestDTO) Validate() error {
+	return validation.ValidateStruct(dto,
+		validation.Field(&dto.PermissionId,
+			validation.Required,
+		),
+	)
 }
