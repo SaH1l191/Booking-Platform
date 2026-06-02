@@ -7,11 +7,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func Load() {
+func Load() error {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Printf("Error loading .env file: %v\n", err)
+		return fmt.Errorf("error loading .env file: %w", err)
 	}
+	return nil
 }
 
 func GetEnv(key string , defaultValue string) string {
