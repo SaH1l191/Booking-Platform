@@ -12,12 +12,22 @@ import (
 	"time"
 )
 
+type UserService interface {
+	GetUserById(id string) (*models.User, error)
+	CreateUser(payload *dto.CreateUserRequestDTO) (*models.User, error)
+	LoginUser(payload *dto.LoginUserRequestDTO) (dto.AuthTokens, error)
+	GetUserByEmail(email string) (*models.User, error)
+	DeleteUser(idStr string) error
+	RefreshTokens(email string) (dto.AuthTokens, error)
+	GetAllUsers() ([]*models.User, error)
+}
+
 type UserServiceImpl struct {
 	userRepo db.UserRepository
 }
 
-func NewUserServiceImpl(userRepo db.UserRepository) UserServiceImpl {
-	return UserServiceImpl{userRepo: userRepo}
+func NewUserServiceImpl(userRepo db.UserRepository) UserService {
+	return &UserServiceImpl{userRepo: userRepo}
 }
 
 func (u *UserServiceImpl) GetUserById(id string) (*models.User, error) {

@@ -1,0 +1,116 @@
+version: "3.9"
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: booking-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:7-alpine
+    container_name: booking-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  auth-service:
+    build:
+      context: ./AuthService
+    container_name: auth-service
+    depends_on:
+      - mysql
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+
+      DBName: auth_db
+      DB_ADDR: mysql:3306
+      DB_USER: root
+      DB_PASSWORD: password
+      DB_NET: tcp
+
+      DB_DSN: root:password@tcp(mysql:3306)/auth_db
+
+      JWT_ACCESS_SECRET: secret
+      JWT_REFRESH_SECRET: secret
+
+  booking-service:
+    build:
+      context: ./BookingService
+    container_name: booking-service
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "3002:3001"
+    environment:
+      PORT: 3001
+
+      DATABASE_URL: mysql://sahil:password@mysql:3306/airbnb_development1
+
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: sahil
+      DB_PASSWORD: password
+      DB_NAME: airbnb_development1
+
+      REDIS_SERVER_URL: redis://redis:6379
+
+      LOCK_TTL: 900000
+      BOOKING_EXPIRY_MS: 900000
+
+  hotel-service:
+    build:
+      context: ./hotelService
+    container_name: hotel-service
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "3003:3000"
+    environment:
+      PORT: 3000
+
+      DB_USER: sahil
+      DB_PASSWORD: password
+      DB_HOST: mysql
+      DB_DATABASE: airbnb_development
+
+      REDIS_SERVER_URL: redis://redis:6379
+
+      LOCK_TTL: 900000
+
+  notification-service:
+    build:
+      context: ./NotificationService
+    container_name: notification-service
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "3004:3000"
+    environment:
+      PORT: 3000
+
+      DB_USER: sahil
+      DB_PASSWORD: password
+      DB_HOST: mysql
+      DB_DATABASE: airbnb_development
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      MAIL_USER: ${MAIL_USER}
+      MAIL_PASS: ${MAIL_PASS}
+
+volumes:
+  mysql_data:

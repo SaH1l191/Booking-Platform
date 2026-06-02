@@ -10,5 +10,11 @@ const sequelize = new Sequelize({
     username : dbConfig.DB_USER,
     password : dbConfig.DB_PASSWORD,
     database : 'airbnb_development', 
+    pool : {
+        max : 5,
+        min : 0,
+        acquire : 30000,
+        idle : 10000
+    }
 })
 export default sequelize;

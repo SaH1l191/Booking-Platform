@@ -25,6 +25,14 @@ export async function createBookingService(
         return await prisma.$transaction(
             async (tx: any) => {
 
+
+
+                //1.query hotel-ROOM Availability [level- 1]    
+                
+
+                //2.if available -> booking queries its own availability [level-2] and creates booking  
+
+
                 //existingCheckout <= newCheckin OR existingCheckin >= newCheckout  ( non overlapping condition)
                 // overlapping condition : existingCheckin < newCheckout AND existingCheckout > newCheckin (demorgans law)
                 const conflictingBooking = await conflictBooking(tx, createBookingDTO)

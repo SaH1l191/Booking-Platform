@@ -14,3 +14,4 @@ app.use(appErrorHandler);
 app.listen(serverConfig.port, () => {
   console.log(`Server running on port ${serverConfig.port}`);
 });  
+//docker run -d --name my-redis -p 6379:6379 redis:latest   
