@@ -30,6 +30,10 @@ RoomCategory.init(
     sequelize,
     timestamps: true,
     underscored: true, 
+    indexes: [ 
+      { fields: ['hotel_id', 'room_type'] },
+      { fields: ['hotel_id', 'deleted_at'] }
+    ]
   }
 );
 

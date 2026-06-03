@@ -1,21 +1,20 @@
 import winston from "winston";  
 
 const logger = winston.createLogger({
+    level: 'info',
     format: winston.format.combine(
-        winston.format.timestamp({ format: "MM-DD-YYYY HH:mm:ss"  }),  
-        winston.format.json(),  
-        winston.format.printf( ({  level, message, timestamp, ...data }) => {
-            const output = { 
-                level,
-                message, 
-                timestamp,  
-                data 
-            };
-            return JSON.stringify(output);
+        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+        winston.format.colorize(),
+        winston.format.printf(({ level, message, timestamp, ...data }) => {
+            let log = `${timestamp} [${level}]: ${message}`;
+            if (Object.keys(data).length > 0) {
+                log += ` ${JSON.stringify(data)}`;
+            }
+            return log;
         })
     ),
     transports: [
-        new winston.transports.Console(), 
+        new winston.transports.Console(),
     ]
 });
 

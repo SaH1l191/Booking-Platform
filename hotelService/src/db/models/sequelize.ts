@@ -9,7 +9,7 @@ const sequelize = new Sequelize({
     host : dbConfig.DB_HOST,
     username : dbConfig.DB_USER,
     password : dbConfig.DB_PASSWORD,
-    database : 'airbnb_development', 
+    database : dbConfig.DB_NAME, 
     pool : {
         max : 5,
         min : 0,

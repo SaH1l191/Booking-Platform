@@ -12,6 +12,12 @@ const app = express();
 const PORT = serverConfig.PORT;
 
 app.use(express.json());
+
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`, { query: req.query, body: req.body });
+  next();
+});
+
 app.use("/api/v1", v1Router);
 
 app.use(appErrorHandler);

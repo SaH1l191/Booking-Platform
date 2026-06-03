@@ -1,7 +1,10 @@
-export type createHotelDto ={
+export type createHotelDto = {
     name: string;
     address: string;
     location: string;
-    rating: number;
-    ratingCount: number;
+    latitude?: number;
+    longitude?: number;
+    coordinates?: any;
+    rating?: number;
+    ratingCount?: number;
 }

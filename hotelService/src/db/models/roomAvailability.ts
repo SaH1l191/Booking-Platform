@@ -29,6 +29,11 @@ RoomAvailability.init(
     timestamps: true,
     underscored: true,
     paranoid: true,
+    indexes: [
+      { fields: ['room_id', 'date'], unique: true },
+      { fields: ['room_id', 'deleted_at'] },
+      { fields: ['date', 'status'] }
+    ]
   }
 );
 
