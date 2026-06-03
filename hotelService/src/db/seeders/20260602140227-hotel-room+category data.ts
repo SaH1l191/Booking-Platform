@@ -17,6 +17,8 @@ module.exports = {
         name: "Grand Hotel",
         address: "123 Main St",
         location: "New York",
+        latitude: 40.7128,
+        longitude: -74.0060,
         rating: 4.5,
         rating_count: 120,
         created_at: now,
@@ -27,6 +29,8 @@ module.exports = {
         name: "Seaside Resort",
         address: "456 Ocean Ave",
         location: "Miami",
+        latitude: 25.7617,
+        longitude: -80.1918,
         rating: 4.8,
         rating_count: 210,
         created_at: now,
@@ -37,6 +41,8 @@ module.exports = {
         name: "Mountain Lodge",
         address: "789 Pine Road",
         location: "Denver",
+        latitude: 39.7392,
+        longitude: -104.9903,
         rating: 4.2,
         rating_count: 90,
         created_at: now,
@@ -47,6 +53,8 @@ module.exports = {
         name: "City Center Inn",
         address: "321 Downtown Blvd",
         location: "Chicago",
+        latitude: 41.8781,
+        longitude: -87.6298,
         rating: 4.0,
         rating_count: 90,
         created_at: now,
@@ -93,7 +101,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // Seaside Resort categories (hotel_id: 2)
       {
         id: 5,
@@ -131,7 +139,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // Mountain Lodge categories (hotel_id: 3)
       {
         id: 9,
@@ -169,7 +177,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // City Center Inn categories (hotel_id: 4)
       {
         id: 13,
@@ -267,7 +275,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // DOUBLE rooms (room_category_id: 2) - rooms 107-110
       {
         id: 7,
@@ -305,7 +313,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // SUITE rooms (room_category_id: 3) - rooms 111-112
       {
         id: 11,
@@ -325,7 +333,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // FAMILY rooms (room_category_id: 4) - rooms 113-115
       {
         id: 13,
@@ -354,7 +362,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // Seaside Resort rooms (hotel_id: 2)
       // SINGLE rooms (room_category_id: 5) - rooms 201-205
       {
@@ -402,7 +410,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // DOUBLE rooms (room_category_id: 6) - rooms 206-209
       {
         id: 21,
@@ -440,7 +448,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // DELUXE rooms (room_category_id: 7) - rooms 210-211
       {
         id: 25,
@@ -460,7 +468,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // FAMILY rooms (room_category_id: 8) - rooms 212-214
       {
         id: 27,
@@ -489,7 +497,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // Mountain Lodge rooms (hotel_id: 3)
       // SINGLE rooms (room_category_id: 9) - rooms 301-304
       {
@@ -528,7 +536,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // DOUBLE rooms (room_category_id: 10) - rooms 305-307
       {
         id: 34,
@@ -557,7 +565,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // SUITE rooms (room_category_id: 11) - rooms 308-309
       {
         id: 37,
@@ -577,7 +585,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // FAMILY rooms (room_category_id: 12) - rooms 310-311
       {
         id: 39,
@@ -597,7 +605,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // City Center Inn rooms (hotel_id: 4)
       // SINGLE rooms (room_category_id: 13) - rooms 401-405
       {
@@ -645,7 +653,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // DOUBLE rooms (room_category_id: 14) - rooms 406-409
       {
         id: 46,
@@ -683,7 +691,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // DELUXE rooms (room_category_id: 15) - rooms 410-411
       {
         id: 50,
@@ -703,7 +711,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // SUITE rooms (room_category_id: 16) - room 412
       {
         id: 52,
@@ -764,7 +772,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // Same rooms booked for next day
       {
         id: 6,
@@ -811,7 +819,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-      
+
       // Some rooms available for testing
       {
         id: 11,

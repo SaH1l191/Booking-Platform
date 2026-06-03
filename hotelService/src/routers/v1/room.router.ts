@@ -5,16 +5,20 @@ import {
   getAllRoomsHandler,
   getRoomByIdHandler,
   updateRoomHandler,
+  getRoomsByHotelHandler,
 } from "../../controllers/room.controller";
 import { roomSchema, updateRoomSchema } from "../../validators/room.validator";
 import { validateSchemaBody } from "../../validators";
 
-const router = express.Router();
+const roomRouter = express.Router();
 
-router.post("/", validateSchemaBody(roomSchema), createRoomHandler);
-router.get("/", getAllRoomsHandler);
-router.get("/:id", getRoomByIdHandler);
-router.put("/:id", validateSchemaBody(updateRoomSchema), updateRoomHandler);
-router.delete("/:id", deleteRoomHandler);
+roomRouter.get("/hotel/:hotelId", getRoomsByHotelHandler);
+roomRouter.post("/", validateSchemaBody(roomSchema), createRoomHandler);
+roomRouter.get("/", getAllRoomsHandler);
+roomRouter.get("/:id", getRoomByIdHandler);
+roomRouter.put("/:id", validateSchemaBody(updateRoomSchema), updateRoomHandler);
+roomRouter.delete("/:id", deleteRoomHandler);
 
-export default router;
+
+
+export default roomRouter;

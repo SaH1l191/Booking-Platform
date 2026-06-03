@@ -4,7 +4,6 @@ export type createHotelDto = {
     location: string;
     latitude?: number;
     longitude?: number;
-    coordinates?: any;
     rating?: number;
     ratingCount?: number;
 }
