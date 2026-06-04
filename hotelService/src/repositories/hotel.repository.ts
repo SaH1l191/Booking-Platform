@@ -6,17 +6,12 @@ import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 
 
 export async function createHotel(hotelData: createHotelDto) {
-    const coordinates = (hotelData.latitude !== undefined && hotelData.longitude !== undefined) 
-        ? { type: 'Point', coordinates: [hotelData.longitude, hotelData.latitude] }
-        : null;
-
     const hotel = await Hotel.create({
         name: hotelData.name,
         address: hotelData.address,
         location: hotelData.location,
         latitude: hotelData.latitude,
         longitude: hotelData.longitude,
-        coordinates: coordinates,
         rating: hotelData.rating || 0,
         ratingCount: hotelData.ratingCount || 0
     })
@@ -35,16 +30,20 @@ export async function getHotelById(hotelId: number) {
 }
 
 export async function getAllHotels(query: any) {
-
-    const {
-        page,
-        limit,
-        sortBy,
-        search, location, minRating, maxRating,
-        latitude, longitude, radius
-    } = query;
-
+    // Robust defaults - handles cases where validator might not have coerced values
+    const page = Math.max(1, parseInt(query.page) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(query.limit) || 10));
     const offset = (page - 1) * limit;
+    
+    const sortBy = query.sortBy || '-createdAt';
+    const search = query.search;
+    const location = query.location;
+    const minRating = query.minRating;
+    const maxRating = query.maxRating;
+    const latitude = query.latitude;
+    const longitude = query.longitude;
+    const radius = query.radius;
+
     const where: any = {
         deletedAt: null
     };
@@ -59,16 +58,16 @@ export async function getAllHotels(query: any) {
 
     if (minRating || maxRating) {
         where.rating = {};
-        if (minRating !== undefined) where.rating[Op.gte] = minRating;
-        if (maxRating !== undefined) where.rating[Op.lte] = maxRating;
+        if (minRating !== undefined && minRating !== '') where.rating[Op.gte] = minRating;
+        if (maxRating !== undefined && maxRating !== '') where.rating[Op.lte] = maxRating;
     }
 
     const attributes: any = {};
     const sortOrder: any = [];
 
-    // Geospatial search
-    if (latitude !== undefined && longitude !== undefined) {
-        const distanceField = literal(`ST_Distance_Sphere(coordinates, ST_GeomFromText('POINT(${longitude} ${latitude})', 4326)) / 1000`);
+    // Geospatial search using latitude and longitude columns directly
+    if (latitude !== undefined && longitude !== undefined && latitude !== '' && longitude !== '') {
+        const distanceField = literal(`ST_Distance_Sphere(POINT(longitude, latitude), ST_GeomFromText('POINT(${longitude} ${latitude})', 4326)) / 1000`);
         attributes.include = [[distanceField, 'distance']];
         
         where[Op.and] = [
@@ -83,7 +82,6 @@ export async function getAllHotels(query: any) {
         parts.forEach((part: string) => {
             const isDesc = part.startsWith('-');
             const field = isDesc ? part.substring(1) : part;
-            // If already sorting by distance, don't override unless explicitly requested
             if (field !== 'distance' || sortOrder.length === 0) {
                 sortOrder.push([field, isDesc ? 'DESC' : 'ASC']);
             }
@@ -94,7 +92,7 @@ export async function getAllHotels(query: any) {
         where,
         order: sortOrder,
         limit: limit,
-        offset,
+        offset: offset,
     };
 
     if (attributes.include) {
@@ -123,20 +121,8 @@ export async function updateHotel(hotelId: number, hotelData: Partial<createHote
     if (hotelData.address) hotel.address = hotelData.address;
     if (hotelData.location) hotel.location = hotelData.location;
     
-    if (hotelData.latitude !== undefined && hotelData.longitude !== undefined) {
-        hotel.latitude = hotelData.latitude;
-        hotel.longitude = hotelData.longitude;
-        hotel.coordinates = { type: 'Point', coordinates: [hotelData.longitude, hotelData.latitude] };
-    } else if (hotelData.latitude !== undefined || hotelData.longitude !== undefined) {
-        // Handle partial update of lat/lng if needed
-        const newLat = hotelData.latitude ?? hotel.latitude;
-        const newLng = hotelData.longitude ?? hotel.longitude;
-        if (newLat !== null && newLng !== null) {
-            hotel.latitude = newLat;
-            hotel.longitude = newLng;
-            hotel.coordinates = { type: 'Point', coordinates: [newLng, newLat] };
-        }
-    }
+    if (hotelData.latitude !== undefined) hotel.latitude = hotelData.latitude;
+    if (hotelData.longitude !== undefined) hotel.longitude = hotelData.longitude;
 
     if (hotelData.rating !== undefined) hotel.rating = hotelData.rating;
     if (hotelData.ratingCount !== undefined) hotel.ratingCount = hotelData.ratingCount;
