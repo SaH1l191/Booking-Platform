@@ -1,7 +1,7 @@
 // src/validators/index.ts
 import { NextFunction, Request, Response } from "express";
 import { ZodSchema } from "zod";
-import { BadRequestError } from "../utils/errors/app.error.js";
+import { BadRequestError } from "../utils/errors/app.error";
  
 export const validateSchemaBody = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {

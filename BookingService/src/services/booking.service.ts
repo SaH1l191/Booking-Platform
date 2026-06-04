@@ -1,26 +1,27 @@
-import { serverConfig } from "../config/index.js";
+import { serverConfig } from "../config/index";
 import { redlock } from '../config/redis.config';
-import { CreateBookingDTO } from "../dto/booking.dto.js";
-import { prisma } from "../lib/prisma.js";
-import { confirmBooking, conflictBooking, createBookingRecord, createIdempotencyKey, finalizeIdempotencyKey, getIdempotencyKey } from "../repositories/booking.repository.js";
-import { BadRequestError, InternalServerError, NotFoundError } from "../utils/errors/app.error.js";
-import { generateIdempotencyKey } from "../utils/generateIdempotencyKey.js";
+import { CreateBookingDTO } from "../dto/booking.dto";
+import { prisma } from "../lib/prisma";
+import { cancelBooking, confirmBooking, conflictBooking, createBookingRecord, createIdempotencyKey, finalizeIdempotencyKey, getBookingById, getBookingsByHotelId, getBookingsByUserId, getIdempotencyKey } from "../repositories/booking.repository";
+import { BadRequestError, InternalServerError, NotFoundError } from "../utils/errors/app.error";
+import { generateIdempotencyKey } from "../utils/generateIdempotencyKey";
+import logger from "../config/logger";
+import { AuthRequest } from "../middlewares/auth.middleware";
 
 
 
 //usera,userb books hotel -> usera hits first then lock it for 4minutes for usera to perform booking 
-export async function createBookingService(
-    createBookingDTO: CreateBookingDTO
-) {
+export async function createBookingService({ createBookingDTO, userId }: { createBookingDTO: CreateBookingDTO, userId: number }) {
+
 
     const ttl = serverConfig.LOCK_TTL;
     const bookingResource = `hotel:${createBookingDTO.hotelId}:room${createBookingDTO.roomId}`;
     // Unique resource identifier:hotel room
     let lock: any
 
-    try { 
+    try {
         lock = await redlock.acquire([bookingResource], ttl);
-        console.log("Acquired lock on Booking resource : ", bookingResource);
+        logger.info("Acquired lock on Booking resource : ", { bookingResource });
 
         return await prisma.$transaction(
             async (tx: any) => {
@@ -28,7 +29,7 @@ export async function createBookingService(
 
 
                 //1.query hotel-ROOM Availability [level- 1]    
-                
+
 
                 //2.if available -> booking queries its own availability [level-2] and creates booking  
 
@@ -37,11 +38,12 @@ export async function createBookingService(
                 // overlapping condition : existingCheckin < newCheckout AND existingCheckout > newCheckin (demorgans law)
                 const conflictingBooking = await conflictBooking(tx, createBookingDTO)
                 if (conflictingBooking) {
+                    logger.info("Conflicting booking found for dates", { createBookingDTO });
                     throw new BadRequestError("Selected room is not available for the chosen dates");
                 }
 
                 const booking = await createBookingRecord(tx, {
-                    userId: createBookingDTO.userId,
+                    userId: userId,
                     hotelId: createBookingDTO.hotelId,
                     roomId: createBookingDTO.roomId,
 
@@ -57,6 +59,8 @@ export async function createBookingService(
                 const idempotencyKey = await generateIdempotencyKey();
                 await createIdempotencyKey(tx, idempotencyKey, booking.id);
 
+                logger.info("Booking record and idempotency key created", { bookingId: booking.id, idempotencyKey });
+
                 return {
                     bookingId: booking.id,
                     idempotencyKey: idempotencyKey,
@@ -66,7 +70,7 @@ export async function createBookingService(
         )
 
     } catch (error) {
-        console.error("Booking service failed:", error);
+        logger.error("Booking service failed:", error);
         throw error
     } finally {
         if (lock) {
@@ -77,22 +81,25 @@ export async function createBookingService(
                 } else if (typeof lock.release === 'function') {
                     await lock.release();
                 }
+                logger.info("Released lock on Booking resource : ", { bookingResource });
             } catch (error) {
-                console.error("Failed to release lock for booking resource : ", bookingResource, "Error : ", error);
+                logger.error("Failed to release lock for booking resource : ", { bookingResource, error });
             }
         }
     }
 }
 
 export async function confirmBookingService(idempotencyKey: string) {
-
+    logger.info(`Service: Confirming booking with idempotencyKey: ${idempotencyKey}`);
     return await prisma.$transaction(async (tx: any) => {
         const idempotencyKeyData = await getIdempotencyKey(tx, idempotencyKey);
 
         if (!idempotencyKeyData || !idempotencyKeyData.bookingId) {
+            logger.info("Invalid idempotency key", { idempotencyKey });
             throw new NotFoundError("Invalid idempotency key");
         }
         if (idempotencyKeyData.finalized) {
+            logger.info("Idempotency key already finalized", { idempotencyKey });
             throw new BadRequestError("Idempotency key already finalized");
         }
         const booking =
@@ -104,6 +111,7 @@ export async function confirmBookingService(idempotencyKey: string) {
             });
 
         if (!booking) {
+            logger.info("Booking not found for idempotency key", { idempotencyKey, bookingId: idempotencyKeyData.bookingId });
             throw new NotFoundError(
                 "Booking not found"
             );
@@ -116,6 +124,7 @@ export async function confirmBookingService(idempotencyKey: string) {
             booking.expiresAt <
             new Date()
         ) {
+            logger.info("Booking session expired", { bookingId: booking.id });
             throw new BadRequestError(
                 "Booking session expired"
             );
@@ -127,6 +136,49 @@ export async function confirmBookingService(idempotencyKey: string) {
                 booking.id
             );
         await finalizeIdempotencyKey(tx, idempotencyKey);
+        logger.info("Booking confirmed and idempotency key finalized", { bookingId: booking.id, idempotencyKey });
         return confirmedBooking;
     })
+}
+
+export async function getBookingsByUserService(userId: number) {
+    logger.info(`Service: Fetching bookings for user: ${userId}`);
+    return await getBookingsByUserId(userId);
+}
+
+export async function getBookingsByHotelService(hotelId: number) {
+    logger.info(`Service: Fetching bookings for hotel: ${hotelId}`);
+    return await getBookingsByHotelId(hotelId);
+}
+
+export async function getBookingByIdService(bookingId: number) {
+    logger.info(`Service: Fetching booking by id: ${bookingId}`);
+    const booking = await getBookingById(bookingId);
+    if (!booking) {
+        throw new NotFoundError("Booking not found");
+    }
+    return booking;
+}
+
+export async function cancelBookingService(bookingId: number, userId: number) {
+    logger.info(`Service: Cancelling booking: ${bookingId} for user: ${userId}`);
+    return await prisma.$transaction(async (tx: any) => {
+        const booking = await tx.booking.findUnique({
+            where: { id: bookingId }
+        });
+
+        if (!booking) {
+            throw new NotFoundError("Booking not found");
+        }
+
+        if (booking.userId !== userId) {
+            throw new BadRequestError("You are not authorized to cancel this booking");
+        }
+
+        if (booking.status === 'CANCELLED') {
+            throw new BadRequestError("Booking is already cancelled");
+        }
+
+        return await cancelBooking(tx, bookingId);
+    });
 }

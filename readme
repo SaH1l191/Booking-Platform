@@ -1,0 +1,17 @@
+
+
+
+//remove room_availability 
+//add index in bookingservice
+//update geospatial indexing for hotels  
+//add user profile 
+
+//add monitiroing 
+
+
+//todo : add auth middleware for roles + add hotel amenities (wifi ,etc) + add hotel images (url) 
+//  + add hotel policies (cancellation policy, check-in/check-out times) + add hotel contact information (phone number, email)
+//  + add hotel services (room service, laundry, etc)
+
+
+//container setup 

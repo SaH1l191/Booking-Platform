@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --watch src --exec \"tsx watch\" src/index.ts",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
@@ -13,7 +13,7 @@
     "prisma:seed": "prisma db seed",
     "postinstall": "npm run prisma:generate"
   },
-  "type": "module",
+  "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "dotenv": "^17.4.2",

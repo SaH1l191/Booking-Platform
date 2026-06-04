@@ -16,7 +16,7 @@ type DBConfig = {
 }
 
 function loadEnv() {
-    dotenv.config();
+    dotenv.config({quiet: true});
     console.log(`Environment variables loaded`);
 }
 

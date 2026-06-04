@@ -14,13 +14,19 @@ model booking {
   roomId         Int
   checkIn        DateTime
   checkOut       DateTime
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   bookingAmount  Int
   status         booking_status  @default(PENDING)
   totalGuests    Int
   expiresAt      DateTime?
   idempotencykey idempotencykey?
+
+  @@index([userId]) // get bookings by user
+  @@index([hotelId]) // get bookings by hotel
+  @@index([hotelId, roomId, status])
+  @@index([hotelId, roomId, checkIn, checkOut]) // check availability : db level consistency 
+  @@index([status, expiresAt]) // invalidating the pending/expired by cron job
 }
 
 model idempotencykey {
@@ -30,7 +36,7 @@ model idempotencykey {
   updatedAt DateTime @updatedAt
   finalized Boolean  @default(false)
   bookingId Int      @unique(map: "IdempotencyKey_bookingId_key")
-  booking   booking   @relation(fields: [bookingId], references: [id], map: "IdempotencyKey_bookingId_fkey" ,onDelete: Cascade ) 
+  booking   booking  @relation(fields: [bookingId], references: [id], map: "IdempotencyKey_bookingId_fkey", onDelete: Cascade)
 }
 
 enum booking_status {

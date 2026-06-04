@@ -9,7 +9,7 @@ import v1Router from "./routers/v1/index.router";
 import sequelize from "./db/models/sequelize";
 
 const app = express();
-const PORT = serverConfig.PORT;
+const PORT = serverConfig.PORT; 
 
 app.use(express.json());
 
@@ -25,6 +25,7 @@ app.use(genericErrorHandler);
 
 const server = app.listen(PORT, async () => {
   logger.info(`Server is running on http://localhost:${PORT}`);
+  logger.info("Hotel Service started successfully");
 
   try {
     await sequelize.authenticate();

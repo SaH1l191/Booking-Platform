@@ -25,8 +25,8 @@ func (ur *UserRouter) Register(chiRouter chi.Router) {
 		r.Post("/logout", ur.userController.LogoutUser)
 		r.Get("/", ur.userController.GetAllUsers)
 		// Allow both POST and GET for token refresh
-		r.With(middlewares.JWTAuthMiddleware).Post("/refresh", ur.userController.RefreshToken)
-		r.With(middlewares.JWTAuthMiddleware).Get("/refresh", ur.userController.RefreshToken)
+		r.Post("/refresh", ur.userController.RefreshToken)
+		r.Get("/refresh", ur.userController.RefreshToken)
 		r.With(middlewares.JWTAuthMiddleware).Post("/logout",ur.userController.LogoutUser)
 	})
 }

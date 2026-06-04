@@ -85,7 +85,7 @@ func (a *App) Start(ctx context.Context) error {
 
 	chiRouter := router.SetupRouter(userRouter, roleRouter)
 
-	port := env.GetEnv("PORT", "8080")
+	port := env.GetEnv("PORT", "3000")
 	addr := ":" + port
 
 	a.server = &http.Server{

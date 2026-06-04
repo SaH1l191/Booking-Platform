@@ -1,9 +1,11 @@
 import { prisma } from "../lib/prisma"; 
-import { BadRequestError, NotFoundError } from "../utils/errors/app.error.js";
+import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import { validate as isValidUUID } from "uuid";
-import { CreateBookingDTO } from "../dto/booking.dto.js";
+import { CreateBookingDTO } from "../dto/booking.dto";
+import logger from "../config/logger";
 
 export async function createIdempotencyKey(tx: any, key: string, bookingId: number) {
+    logger.info("Creating idempotency key", { key, bookingId });
     const idempotencyKey = await tx.idempotencykey.create({
         data: {
             key: key,
@@ -20,6 +22,7 @@ export async function createIdempotencyKey(tx: any, key: string, bookingId: numb
 export async function getIdempotencyKey(tx: any, key: string) {
 
     if (!isValidUUID(key)) {
+        logger.info("Invalid idempotency key format", { key });
         throw new BadRequestError("Invalid idempotency key format");
     }
 
@@ -31,16 +34,20 @@ export async function getIdempotencyKey(tx: any, key: string) {
             FOR UPDATE
         `;
     if (!idempotencyKey || idempotencyKey.length === 0) {
+        logger.info("Idempotency key not found in raw query", { key });
         throw new NotFoundError("Idempotency key not found");
     }
-    console.log("Idempotency key : ", idempotencyKey);
-    return await tx.idempotencykey.findUnique({
+    
+    const keyData = await tx.idempotencykey.findUnique({
         where: { key },
     });
+    logger.info("Idempotency key found:", { key: keyData?.key, finalized: keyData?.finalized });
+    return keyData;
 }
 
 
 export async function getBookingById(bookingId: number) {
+    logger.info(`Fetching booking by id: ${bookingId}`);
     const booking = await prisma.booking.findUnique({
         where: { id: bookingId },
     })
@@ -48,6 +55,7 @@ export async function getBookingById(bookingId: number) {
 }
 
 export async function confirmBooking(tx: any, bookingId: number) {
+    logger.info(`Confirming booking in repository: ${bookingId}`);
     const booking = await tx.booking.update({
         where: {
             id: bookingId
@@ -59,6 +67,7 @@ export async function confirmBooking(tx: any, bookingId: number) {
     return booking
 }
 export async function cancelBooking(tx: any, bookingId: number) {
+    logger.info(`Cancelling booking in repository: ${bookingId}`);
     const booking = await tx.booking.update({
         where: {
             id: bookingId
@@ -71,6 +80,7 @@ export async function cancelBooking(tx: any, bookingId: number) {
 }
 
 export async function finalizeIdempotencyKey(tx: any, key: string) {
+    logger.info(`Finalizing idempotency key: ${key}`);
     const idempotencyKey = await tx.idempotencykey.update({
         where: {
             key
@@ -82,11 +92,13 @@ export async function finalizeIdempotencyKey(tx: any, key: string) {
 }
 
 export async function createBooking(bookingInput: any) {
+    logger.info("Creating booking record", { bookingInput });
     const booking = await prisma.booking.create({ data: bookingInput });
     return booking
 }
 
 export async function conflictBooking(tx: any, createBookingDTO: CreateBookingDTO) {
+    logger.info("Checking for conflicting bookings", { hotelId: createBookingDTO.hotelId, roomId: createBookingDTO.roomId });
     return await tx.booking.findFirst({
         where: {
             hotelId: createBookingDTO.hotelId,
@@ -129,7 +141,24 @@ export async function createBookingRecord(
         expiresAt: Date;
     }
 ) {
+    logger.info("Creating booking record in transaction", { userId: input.userId, hotelId: input.hotelId });
     return tx.booking.create({
         data: input,
+    });
+}
+
+export async function getBookingsByUserId(userId: number) {
+    logger.info(`Fetching bookings for user: ${userId}`);
+    return await prisma.booking.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' }
+    });
+}
+
+export async function getBookingsByHotelId(hotelId: number) {
+    logger.info(`Fetching bookings for hotel: ${hotelId}`);
+    return await prisma.booking.findMany({
+        where: { hotelId },
+        orderBy: { createdAt: 'desc' }
     });
 }

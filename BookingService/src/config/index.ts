@@ -7,7 +7,7 @@ type ServerConfig = {
     LOCK_TTL: number;
 }
 function loadEnv(){
-    dotenv.config();
+    dotenv.config({quiet: true});
 }
 
 loadEnv();
