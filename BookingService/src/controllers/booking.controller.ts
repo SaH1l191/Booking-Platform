@@ -1,7 +1,8 @@
-import { cancelBookingService, confirmBookingService, createBookingService, getBookingByIdService, getBookingsByHotelService, getBookingsByUserService } from '../services/booking.service';
+import { cancelBookingService, checkAvailabilityService, confirmBookingService, createBookingService, getBookingByIdService, getBookingsByHotelService, getBookingsByUserService } from '../services/booking.service';
 import { Request, Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import { CheckAvailabilityDTO } from '../dto/booking.dto';
 
 
 export async function createBookingHandler(req: AuthRequest, res: Response) {
@@ -42,23 +43,35 @@ export async function getBookingsByUserHandler(req: AuthRequest, res: Response) 
 }
 
 export async function getBookingsByHotelHandler(req: Request, res: Response) {
-    const hotelId = parseInt(req.params.hotelId);
+    const hotelIdParam = req.params.hotelId as string;
+    const hotelId = parseInt(hotelIdParam);
     logger.info(`Fetching bookings for hotel: ${hotelId}`);
     const bookings = await getBookingsByHotelService(hotelId);
     res.status(200).json(bookings);
 }
 
 export async function getBookingByIdHandler(req: Request, res: Response) {
-    const bookingId = parseInt(req.params.id);
+    const bookingIdParam = req.params.id as string;
+    const bookingId = parseInt(bookingIdParam);
     logger.info(`Fetching booking by id: ${bookingId}`);
     const booking = await getBookingByIdService(bookingId);
     res.status(200).json(booking);
 }
 
 export async function cancelBookingHandler(req: AuthRequest, res: Response) {
-    const bookingId = parseInt(req.params.id);
+    const bookingIdParam = req.params.id as string;
+    const bookingId = parseInt(bookingIdParam);
     const userId = req.userId!;
     logger.info(`Cancelling booking: ${bookingId} for user: ${userId}`);
     const booking = await cancelBookingService(bookingId, userId);
     res.status(200).json(booking);
+}
+
+export async function checkAvailabilityHandler(req: Request, res: Response) {
+    logger.info("Checking availability with data:", req.query);
+    const data = req.query as unknown as CheckAvailabilityDTO; 
+    
+    const availability = await checkAvailabilityService(data);
+    logger.info("Availability checked successfully:", availability);
+    res.status(200).json(availability);
 }

@@ -29,6 +29,32 @@ export const validateSchemaQuery = (schema: ZodSchema) => {
         .join(", ");
       return next(new BadRequestError(messages));
     }
+    Object.defineProperty(req, 'query', {
+      value: result.data,
+      enumerable: true,
+      writable: true,
+      configurable: true
+    });
     return next();
   };
 };
+
+export const validateSchemaParams = (schema: ZodSchema) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.params);
+    if (!result.success) {
+      const messages = result.error.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join(", ");
+      return next(new BadRequestError(messages));
+    }
+    Object.defineProperty(req, 'params', {
+      value: result.data,
+      enumerable: true,
+      writable: true,
+      configurable: true
+    });
+    return next();
+  };
+};
+

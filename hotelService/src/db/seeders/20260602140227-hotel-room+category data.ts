@@ -867,3 +867,76 @@ module.exports = {
     await queryInterface.bulkDelete("hotels", {}, {});
   },
 };
+
+//Data understanding 
+
+// hotelId	Hotel Name
+// 1	Grand Hotel
+// 2	Seaside Resort
+// 3	Mountain Lodge
+// 4	City Center Inn
+
+
+// hotelId = 1 → Grand Hotel
+// roomId	room_no	type
+// 1	101	SINGLE
+// 2	102	SINGLE
+// 3	103	SINGLE
+// 4	104	SINGLE
+// 5	105	SINGLE
+// 6	106	SINGLE
+// 7	107	DOUBLE
+// 8	108	DOUBLE
+// 9	109	DOUBLE
+// 10	110	DOUBLE
+// 11	111	SUITE
+// 12	112	SUITE
+// 13	113	FAMILY
+// 14	114	FAMILY
+// 15	115	FAMILY
+
+// hotelId = 2 → Seaside Resort
+// roomId	room_no	type
+// 16	201	SINGLE
+// 17	202	SINGLE
+// 18	203	SINGLE
+// 19	204	SINGLE
+// 20	205	SINGLE
+// 21	206	DOUBLE
+// 22	207	DOUBLE
+// 23	208	DOUBLE
+// 24	209	DOUBLE
+// 25	210	DELUXE
+// 26	211	DELUXE
+// 27	212	FAMILY
+// 28	213	FAMILY
+// 29	214	FAMILY
+
+// hotelId = 3 → Mountain Lodge
+// roomId	room_no	type
+// 30	301	SINGLE
+// 31	302	SINGLE
+// 32	303	SINGLE
+// 33	304	SINGLE
+// 34	305	DOUBLE
+// 35	306	DOUBLE
+// 36	307	DOUBLE
+// 37	308	SUITE
+// 38	309	SUITE
+// 39	310	FAMILY
+// 40	311	FAMILY
+
+// hotelId = 4 → City Center Inn
+// roomId	room_no	type
+// 41	401	SINGLE
+// 42	402	SINGLE
+// 43	403	SINGLE
+// 44	404	SINGLE
+// 45	405	SINGLE
+// 46	406	DOUBLE
+// 47	407	DOUBLE
+// 48	408	DOUBLE
+// 49	409	DOUBLE
+// 50	410	DELUXE
+// 51	411	DELUXE
+// 52	412	SUITE

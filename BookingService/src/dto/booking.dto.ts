@@ -7,3 +7,10 @@ export type CreateBookingDTO = {
     checkIn: Date;
     checkOut: Date;
 }
+
+export type CheckAvailabilityDTO = {
+    hotelId: number;
+    roomId: number;
+    checkIn: string;
+    checkOut: string,
+}

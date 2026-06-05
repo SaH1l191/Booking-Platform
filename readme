@@ -1,8 +1,7 @@
 
 
 
-//remove room_availability 
-//add index in bookingservice
+//remove room_availability  
 //update geospatial indexing for hotels  
 //add user profile 
 
@@ -15,3 +14,5 @@
 
 
 //container setup 
+
+//move redis cache to /hotel-availability route + Geocoding/Map Integration

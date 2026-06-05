@@ -1,7 +1,7 @@
-import { prisma } from "../lib/prisma"; 
+import { prisma } from "../lib/prisma";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import { validate as isValidUUID } from "uuid";
-import { CreateBookingDTO } from "../dto/booking.dto";
+import { CheckAvailabilityDTO, CreateBookingDTO } from "../dto/booking.dto";
 import logger from "../config/logger";
 
 export async function createIdempotencyKey(tx: any, key: string, bookingId: number) {
@@ -37,7 +37,7 @@ export async function getIdempotencyKey(tx: any, key: string) {
         logger.info("Idempotency key not found in raw query", { key });
         throw new NotFoundError("Idempotency key not found");
     }
-    
+
     const keyData = await tx.idempotencykey.findUnique({
         where: { key },
     });
@@ -102,7 +102,7 @@ export async function conflictBooking(tx: any, createBookingDTO: CreateBookingDT
     return await tx.booking.findFirst({
         where: {
             hotelId: createBookingDTO.hotelId,
-            roomId: createBookingDTO.roomId, 
+            roomId: createBookingDTO.roomId,
             AND: [
                 {
                     checkIn: {
@@ -160,5 +160,35 @@ export async function getBookingsByHotelId(hotelId: number) {
     return await prisma.booking.findMany({
         where: { hotelId },
         orderBy: { createdAt: 'desc' }
+    });
+}
+
+export async function checkHotelRoomAvailability(data: CheckAvailabilityDTO) {
+    return await prisma.booking.findFirst({
+        where: {
+            hotelId: data.hotelId,
+            roomId: data.roomId,
+            AND: [
+                {
+                    checkIn: {
+                        lt: new Date(data.checkOut),
+                    }
+                },
+                {
+                    checkOut: {
+                        gt: new Date(data.checkIn),
+                    }
+                }
+            ],
+            OR: [
+                { status: 'CONFIRMED' },
+                {
+                    status: 'PENDING',
+                    expiresAt: {
+                        gt: new Date()
+                    }
+                }
+            ],
+        }
     });
 }

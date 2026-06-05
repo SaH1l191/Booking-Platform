@@ -29,6 +29,18 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 		r.Handle("/*", utils.ProxyToService("http://localhost:3001", "/"))
 	})
 
+	//localhost:3000/api/v1/rooms/* -> localhost:3001/api/v1/rooms/*
+	chiRouter.Route("/api/v1/rooms", func(r chi.Router) {
+		r.Use(middlewares.JWTAuthMiddleware)
+		r.Handle("/*", utils.ProxyToService("http://localhost:3001", "/"))
+	})
+
+	//localhost:3000/api/v1/roomCategories/* -> localhost:3001/api/v1/roomCategories/*
+	chiRouter.Route("/api/v1/roomCategories", func(r chi.Router) {
+		r.Use(middlewares.JWTAuthMiddleware)
+		r.Handle("/*", utils.ProxyToService("http://localhost:3001", "/"))
+	})
+
 	//localhost:3000/api/v1/bookings/* -> localhost:3002/api/v1/bookings/*
 	chiRouter.Route("/api/v1/bookings", func(r chi.Router) {
 		r.Use(middlewares.JWTAuthMiddleware)
@@ -36,4 +48,4 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	})
 
 	return chiRouter
-} 
+}

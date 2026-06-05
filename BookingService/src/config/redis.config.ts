@@ -20,7 +20,7 @@ function connectToRedis() {
  
 export const getRedisConnObject = connectToRedis();
  
-const redisClient = getRedisConnObject();
+export const redisClient = getRedisConnObject();
  
 export const redlock = new Redlock([redisClient as any], {
     driftFactor: 0.01,

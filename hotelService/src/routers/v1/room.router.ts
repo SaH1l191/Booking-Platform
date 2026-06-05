@@ -8,16 +8,17 @@ import {
   getRoomsByHotelHandler,
 } from "../../controllers/room.controller";
 import { roomSchema, updateRoomSchema } from "../../validators/room.validator";
-import { validateSchemaBody } from "../../validators";
+import { validateSchemaBody, validateSchemaParams } from "../../validators";
+import { idParamSchema, hotelIdParamSchema } from "../../validators/common.validator";
 
 const roomRouter = express.Router();
 
-roomRouter.get("/hotel/:hotelId", getRoomsByHotelHandler);
+roomRouter.get("/hotel/:hotelId", validateSchemaParams(hotelIdParamSchema), getRoomsByHotelHandler);
 roomRouter.post("/", validateSchemaBody(roomSchema), createRoomHandler);
 roomRouter.get("/", getAllRoomsHandler);
-roomRouter.get("/:id", getRoomByIdHandler);
-roomRouter.put("/:id", validateSchemaBody(updateRoomSchema), updateRoomHandler);
-roomRouter.delete("/:id", deleteRoomHandler);
+roomRouter.get("/:id", validateSchemaParams(idParamSchema), getRoomByIdHandler);
+roomRouter.put("/:id", validateSchemaParams(idParamSchema), validateSchemaBody(updateRoomSchema), updateRoomHandler);
+roomRouter.delete("/:id", validateSchemaParams(idParamSchema), deleteRoomHandler);
 
 
 

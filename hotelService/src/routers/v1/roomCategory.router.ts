@@ -7,14 +7,15 @@ import {
   updateRoomCategoryHandler,
 } from "../../controllers/roomCategory.controller";
 import { roomCategorySchema, updateRoomCategorySchema } from "../../validators/roomCategory.validator";
-import { validateSchemaBody } from "../../validators";
+import { validateSchemaBody, validateSchemaParams } from "../../validators";
+import { idParamSchema } from "../../validators/common.validator";
 
 const router = express.Router();
 
 router.post("/", validateSchemaBody(roomCategorySchema), createRoomCategoryHandler);
 router.get("/", getAllRoomCategoriesHandler);
-router.get("/:id", getRoomCategoryByIdHandler);
-router.put("/:id", validateSchemaBody(updateRoomCategorySchema), updateRoomCategoryHandler);
-router.delete("/:id", deleteRoomCategoryHandler);
+router.get("/:id", validateSchemaParams(idParamSchema), getRoomCategoryByIdHandler);
+router.put("/:id", validateSchemaParams(idParamSchema), validateSchemaBody(updateRoomCategorySchema), updateRoomCategoryHandler);
+router.delete("/:id", validateSchemaParams(idParamSchema), deleteRoomCategoryHandler);
 
 export default router;

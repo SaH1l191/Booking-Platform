@@ -1,20 +1,18 @@
 import { serverConfig } from "../config/index";
-import { redlock } from '../config/redis.config';
-import { CreateBookingDTO } from "../dto/booking.dto";
+import { redisClient, redlock } from '../config/redis.config';
+import { CreateBookingDTO } from '../dto/booking.dto';
 import { prisma } from "../lib/prisma";
-import { cancelBooking, confirmBooking, conflictBooking, createBookingRecord, createIdempotencyKey, finalizeIdempotencyKey, getBookingById, getBookingsByHotelId, getBookingsByUserId, getIdempotencyKey } from "../repositories/booking.repository";
-import { BadRequestError, InternalServerError, NotFoundError } from "../utils/errors/app.error";
+import { cancelBooking, checkHotelRoomAvailability, confirmBooking, conflictBooking, createBookingRecord, createIdempotencyKey, finalizeIdempotencyKey, getBookingById, getBookingsByHotelId, getBookingsByUserId, getIdempotencyKey } from "../repositories/booking.repository";
+import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import { generateIdempotencyKey } from "../utils/generateIdempotencyKey";
 import logger from "../config/logger";
-import { AuthRequest } from "../middlewares/auth.middleware";
-
-
+import { date } from "zod/v4/mini";
 
 //usera,userb books hotel -> usera hits first then lock it for 4minutes for usera to perform booking 
 export async function createBookingService({ createBookingDTO, userId }: { createBookingDTO: CreateBookingDTO, userId: number }) {
 
 
-    const ttl = serverConfig.LOCK_TTL;
+    const ttl = serverConfig.REDLOCK_TTL;
     const bookingResource = `hotel:${createBookingDTO.hotelId}:room${createBookingDTO.roomId}`;
     // Unique resource identifier:hotel room
     let lock: any
@@ -76,11 +74,9 @@ export async function createBookingService({ createBookingDTO, userId }: { creat
         if (lock) {
             try {
                 // depending on redlock version the method may be `unlock` instead of `release`
-                if (typeof lock.unlock === 'function') {
-                    await lock.unlock();
-                } else if (typeof lock.release === 'function') {
-                    await lock.release();
-                }
+                // if (typeof lock.unlock === 'function') {
+                await lock.unlock();
+                // } 
                 logger.info("Released lock on Booking resource : ", { bookingResource });
             } catch (error) {
                 logger.error("Failed to release lock for booking resource : ", { bookingResource, error });
@@ -102,13 +98,11 @@ export async function confirmBookingService(idempotencyKey: string) {
             logger.info("Idempotency key already finalized", { idempotencyKey });
             throw new BadRequestError("Idempotency key already finalized");
         }
-        const booking =
-            await tx.booking.findUnique({
-                where: {
-                    id:
-                        idempotencyKeyData.bookingId
-                }
-            });
+        const booking = await tx.booking.findUnique({
+            where: {
+                id: idempotencyKeyData.bookingId
+            }
+        });
 
         if (!booking) {
             logger.info("Booking not found for idempotency key", { idempotencyKey, bookingId: idempotencyKeyData.bookingId });
@@ -117,26 +111,38 @@ export async function confirmBookingService(idempotencyKey: string) {
             );
         }
 
-        if (
-            booking.status ===
-            "PENDING" &&
-            booking.expiresAt &&
-            booking.expiresAt <
-            new Date()
-        ) {
+        if (booking.status === "PENDING" && booking.expiresAt && booking.expiresAt < new Date()) {
             logger.info("Booking session expired", { bookingId: booking.id });
-            throw new BadRequestError(
-                "Booking session expired"
-            );
+            throw new BadRequestError("Booking session expired");
         }
 
-        const confirmedBooking =
-            await confirmBooking(
-                tx,
-                booking.id
-            );
+        const confirmedBooking = await confirmBooking(tx, booking.id);
         await finalizeIdempotencyKey(tx, idempotencyKey);
+
         logger.info("Booking confirmed and idempotency key finalized", { bookingId: booking.id, idempotencyKey });
+        logger.info("confirmedBooking details", { bookingId: confirmedBooking.id, hotelId: confirmedBooking.hotelId, roomId: confirmedBooking.roomId, checkIn: confirmedBooking.checkIn, checkOut: confirmedBooking.checkOut });
+
+        try {
+            const redisKey = `room_availability:hotel:${confirmedBooking.hotelId}` + `:room:${confirmedBooking.roomId}`;
+
+            const dates: string[] = [];
+            const startDate = new Date(confirmedBooking.checkIn);
+            const endDate = new Date(confirmedBooking.checkOut);
+
+            // [checkIn, checkOut)
+            for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
+                dates.push(d.toISOString().split("T")[0]);
+            }
+
+            if (dates.length > 0) {
+                await redisClient.sadd(redisKey, ...dates);
+                logger.info("Availability cache updated", { redisKey, dates, });
+            }
+        } catch (redisError) {
+            logger.error("Failed to update availability cache", redisError);
+            logger.info("Booking confirmed and idempotency key finalized", { bookingId: booking.id, idempotencyKey });
+        }
+        
         return confirmedBooking;
     })
 }
@@ -181,4 +187,34 @@ export async function cancelBookingService(bookingId: number, userId: number) {
 
         return await cancelBooking(tx, bookingId);
     });
+}
+
+export async function checkAvailabilityService(data: {
+    hotelId: number;
+    roomId: number;
+    checkIn: string;
+    checkOut: string;
+}) {
+    logger.info(`Checking availability for hotel: ${data.hotelId}, check-in: ${data.checkIn}, check-out: ${data.checkOut}`);
+    const redisKey = `room_availability:hotel:${data.hotelId}` + `:room:${data.roomId}`;
+    const startDate = new Date(data.checkIn);
+    const endDate = new Date(data.checkOut);
+
+    // [checkIn, checkOut)
+    for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
+        const date = d.toISOString().split("T")[0];
+
+        const exists = await redisClient.sismember(redisKey, date);
+        if (exists) {
+            logger.info("Redis cache hit: room unavailable", { redisKey, date, });
+            throw new BadRequestError("Selected room is not available for chosen dates");
+        }
+    }
+
+    const conflictBooking = await checkHotelRoomAvailability(data);
+    if (conflictBooking) {
+        logger.info("Conflicting booking found for dates", { hotelId: data.hotelId, checkIn: data.checkIn, checkOut: data.checkOut });
+        throw new BadRequestError("Selected room is not available for the chosen dates");
+    }
+    return { available: true };
 }
