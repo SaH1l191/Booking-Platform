@@ -1,25 +1,24 @@
-import Redis from "ioredis";
-import { serverConfig } from ".";
+import IORedis, { Redis } from 'ioredis';
+import { serverConfig } from "./index";
 
-let redisConnection: Redis | null = null;
-
+ 
 //singleton pattern
-export const getRedis = (): Redis => {
-    if (!redisConnection) {
-        try {
-            redisConnection = new Redis({
-                port: serverConfig.REDIS_PORT,
-                host: serverConfig.REDIS_HOST,
-                maxRetriesPerRequest : null,
-            });
-            redisConnection.on('error', (error) => {
-                console.error('Redis connection error:', error);
-            });
-            console.log('Connected to Redis successfully');
-        } catch (error) {
-            console.error('Unable to connect to Redis:', error);
-            throw error;
-        }
+function connectToRedis() {
+    try {
+        let connection: Redis | null = null;
+
+        return () => {
+            if (!connection) { 
+                connection = new IORedis(serverConfig.REDIS_SERVER_URL,{ maxRetriesPerRequest: null,});
+            }
+            return connection;
+        };
+    } catch (error) {
+        console.error('Error connecting to Redis:', error);
+        throw error;
     }
-    return redisConnection;
 }
+
+export const getRedisConnObject = connectToRedis();
+ 
+export const redisClient = getRedisConnObject();

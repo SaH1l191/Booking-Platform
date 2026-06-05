@@ -103,6 +103,7 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			// Headers cleanup + propagation
 			// ---------------------------
 			out.Header.Del("x-user-id")
+			out.Header.Del("x-user-email")
 
 			userID, ok := in.Context().Value("userId").(string)
 			if ok {
@@ -113,6 +114,16 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 				)
 			} else {
 				logger.Logger.Info("No user ID found in context")
+			}
+
+			email,ok := in.Context().Value("email").(string)
+			if ok {
+				out.Header.Set("x-user-email", email)
+				logger.Logger.Info("User email propagated",
+					"user_email", email,
+				)
+			}else {
+				logger.Logger.Info("No email found in context")
 			}
 
 			// ---------------------------

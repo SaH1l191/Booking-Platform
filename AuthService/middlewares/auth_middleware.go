@@ -6,6 +6,7 @@ import (
 	config "goAuth/config/db"
 	env "goAuth/config/env"
 	repo "goAuth/db/repositories"
+	"goAuth/pkg/logger"
 	"net/http"
 	"strconv"
 	"strings"
@@ -54,6 +55,11 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
             http.Error(w, "Invalid token claims", http.StatusUnauthorized)
             return
         }
+        logger.Logger.Info("Token claims extracted",
+            "userId", userIDRaw,
+            "username", usernameRaw,
+            "email", emailRaw,
+        )
 		
     
         var userIDStr string
@@ -70,9 +76,18 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
             return
         }
 
-        username, _ := usernameRaw.(string)
-        email, _ := emailRaw.(string)
+        username, okUsernameString := usernameRaw.(string)
+        email, okEmailString := emailRaw.(string)
+        if !okUsernameString || !okEmailString {
+            http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+            return
+        }
 
+        logger.Logger.Info("User info extracted from token",
+            "userId", userIDStr,
+            "username", username,
+            "email", email,
+        )
         
         ctx := context.WithValue(r.Context(), "userID", userIDStr)
         ctx = context.WithValue(ctx, "userId", userIDStr)     
@@ -109,7 +124,11 @@ func RequireAllRoles(requiredRoles ...string) func(http.Handler) http.Handler {
 
             hasAllRoles, err := urr.HasAllRoles(userId, requiredRoles)
 
-            fmt.Println("userid", userId, "roles", requiredRoles, "hasAllRoles", hasAllRoles)
+            logger.Logger.Info("Role check result",
+                "userid", userId,
+                "roles", requiredRoles,
+                "hasAllRoles", hasAllRoles,
+            )
             if err != nil {
                 http.Error(w, "Error checking user roles: "+err.Error(), http.StatusInternalServerError)
                 return
@@ -120,7 +139,10 @@ func RequireAllRoles(requiredRoles ...string) func(http.Handler) http.Handler {
                 return
             }
 
-            fmt.Println("User has all required roles:", requiredRoles)
+            logger.Logger.Info("User has all required roles",
+                "userid", userId,
+                "roles", requiredRoles,
+            )
 
             next.ServeHTTP(w, r)
         })
@@ -152,7 +174,11 @@ func RequireAnyRole(requiredRoles ...string) func(http.Handler) http.Handler {
 
             hasAnyRole, err := urr.HasAnyRole(userId, requiredRoles)
 
-            fmt.Println("userid", userId, "roles", requiredRoles, "hasAnyRole", hasAnyRole)
+            logger.Logger.Info("Role check result",
+                "userid", userId,
+                "roles", requiredRoles,
+                "hasAnyRole", hasAnyRole,
+            )
             if err != nil {
                 http.Error(w, "Error checking user roles: "+err.Error(), http.StatusInternalServerError)
                 return
@@ -163,7 +189,10 @@ func RequireAnyRole(requiredRoles ...string) func(http.Handler) http.Handler {
                 return
             }
 
-            fmt.Println("User has any of the required roles:", requiredRoles)
+            logger.Logger.Info("User has any of the required roles",
+                "userid", userId,
+                "roles", requiredRoles,
+            )
 
             next.ServeHTTP(w, r)
         })

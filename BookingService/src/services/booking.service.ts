@@ -1,12 +1,11 @@
 import { serverConfig } from "../config/index";
-import { redisClient, redlock } from '../config/redis.config';
+import { redisClient, redlock, } from '../config/redis.config';
 import { CreateBookingDTO } from '../dto/booking.dto';
 import { prisma } from "../lib/prisma";
 import { cancelBooking, checkHotelRoomAvailability, confirmBooking, conflictBooking, createBookingRecord, createIdempotencyKey, finalizeIdempotencyKey, getBookingById, getBookingsByHotelId, getBookingsByUserId, getIdempotencyKey } from "../repositories/booking.repository";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import { generateIdempotencyKey } from "../utils/generateIdempotencyKey";
 import logger from "../config/logger";
-import { date } from "zod/v4/mini";
 
 //usera,userb books hotel -> usera hits first then lock it for 4minutes for usera to perform booking 
 export async function createBookingService({ createBookingDTO, userId }: { createBookingDTO: CreateBookingDTO, userId: number }) {
@@ -142,7 +141,7 @@ export async function confirmBookingService(idempotencyKey: string) {
             logger.error("Failed to update availability cache", redisError);
             logger.info("Booking confirmed and idempotency key finalized", { bookingId: booking.id, idempotencyKey });
         }
-        
+
         return confirmedBooking;
     })
 }

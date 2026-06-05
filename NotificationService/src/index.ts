@@ -15,7 +15,7 @@ app.use(appErrorHandler)
 app.use(genericErrorHandler)
 
 app.listen(PORT, async () => {
-  logger.info(`Server is running on http://localhost:${serverConfig.PORT}`);
+  logger.info(`NOtification Server is running on http://localhost:${serverConfig.PORT}`);
   logger.info(`Press Ctrl+C to stop the server.`);
   emailWorker() 
   logger.info(`Email worker started successfully.`);

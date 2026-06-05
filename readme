@@ -1,18 +1,22 @@
-
-
-
+//payment integration  -CreateOrder , VerifyPayment , HandleWebhook
+//cron jobs for cleanup pending bookings + sending email notifications for upcoming bookings
+//wish list for users to save hotels for later
 //remove room_availability  
 //update geospatial indexing for hotels  
-//add user profile 
+//add user profile
+//account lockout after 5 failed login attempts + password reset functionality + email verification for new accounts
+//secure http header helmet
+//rate limite per IP address to prevent brute-force attacks
+//add monitiroing
+//elastic search for hotel search functionality + caching search results in Redis for faster response times
 
-//add monitiroing 
+//todo : add auth middleware for roles + add hotel amenities (wifi ,etc) + add hotel images (url)
+// + add hotel policies (cancellation policy, check-in/check-out times) + add hotel contact information (phone number, email)
+// + add hotel services (room service, laundry, etc)
 
-
-//todo : add auth middleware for roles + add hotel amenities (wifi ,etc) + add hotel images (url) 
-//  + add hotel policies (cancellation policy, check-in/check-out times) + add hotel contact information (phone number, email)
-//  + add hotel services (room service, laundry, etc)
-
-
-//container setup 
+//container setup
 
 //move redis cache to /hotel-availability route + Geocoding/Map Integration
+
+
+//fix the auth jwt middleware context 

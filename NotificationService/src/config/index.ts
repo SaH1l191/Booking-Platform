@@ -7,6 +7,7 @@ type ServerConfig = {
     REDIS_PORT: number
     MAIL_USER: string
     MAIL_PASS: string
+    REDIS_SERVER_URL: string
 }
 
 type DBConfig = { 
@@ -29,6 +30,7 @@ export const serverConfig: ServerConfig = {
     REDIS_PORT: Number(process.env.REDIS_PORT) || 6379,
     MAIL_USER  : process.env.MAIL_USER!,
     MAIL_PASS  : process.env.MAIL_PASS!,
+    REDIS_SERVER_URL : process.env.REDIS_SERVER_URL!
 };
 
 export const dbConfig: DBConfig = {

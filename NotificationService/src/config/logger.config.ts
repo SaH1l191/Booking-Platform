@@ -1,4 +1,6 @@
 import winston from "winston";
+
+
 const logger = winston.createLogger({
     format: winston.format.combine(
         winston.format.timestamp({ format: "MM-DD-YYYY HH:mm:ss"  }), 
@@ -14,7 +16,7 @@ const logger = winston.createLogger({
         })
     ),
     transports: [
-        new winston.transports.Console(),
+        new winston.transports.Console()
     ]
 });
 
