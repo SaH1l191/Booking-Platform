@@ -118,10 +118,10 @@ export async function conflictBooking(tx: any, createBookingDTO: CreateBookingDT
             OR: [
                 { status: 'CONFIRMED' },
                 {
-                    status: 'PENDING',
-                    expiresAt: {
-                        gt: new Date()
-                    }
+                    AND: [
+                        { status: "PENDING" },
+                        { expiresAt: { gt: new Date() } }
+                    ]
                 }
             ],
         }
@@ -183,10 +183,10 @@ export async function checkHotelRoomAvailability(data: CheckAvailabilityDTO) {
             OR: [
                 { status: 'CONFIRMED' },
                 {
-                    status: 'PENDING',
-                    expiresAt: {
-                        gt: new Date()
-                    }
+                    AND: [
+                        { status: "PENDING" },
+                        { expiresAt: { gt: new Date() } }
+                    ]
                 }
             ],
         }

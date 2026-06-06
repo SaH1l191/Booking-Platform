@@ -32,6 +32,8 @@ export async function confirmBookingHandler(req: AuthRequest, res: Response) {
     const booking = await confirmBookingService(idempotencyKey)
     logger.info(`Booking confirmed successfully: ${booking.id}`);
 
+
+    //add Api call to hotel service by id for details 
     const emailPayload = {
         to: userEmail,
         subject: "Your booking is confirmed",
