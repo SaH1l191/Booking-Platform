@@ -11,7 +11,7 @@ import (
 func NewDatabasePool(ctx context.Context) (*sql.DB, error) {
 
 	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable", 
 		env.GetEnv("DB_USER", "root"),
 		env.GetEnv("DB_PASSWORD", "password"),
 		env.GetEnv("DB_HOST", "mysql"),

@@ -5,7 +5,6 @@ import (
 	"ReviewService/pkg/logger"
 	"database/sql"
 	"fmt"
-
 	"github.com/go-sql-driver/mysql"
 )
 

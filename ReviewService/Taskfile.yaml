@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  DB_DSN: root:password@tcp(127.0.0.1:3306)/auth_db
+  DB_DSN: root:password@tcp(127.0.0.1:3306)/review_service
 
 tasks:
   migrate-up:

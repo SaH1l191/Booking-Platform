@@ -3,8 +3,11 @@ package app
 import (
 	"ReviewService/config/db"
 	"ReviewService/config/env"
+	"ReviewService/controllers"
+	rr "ReviewService/db/repositories"
 	"ReviewService/pkg/logger"
-	// "ReviewService/router"
+	"ReviewService/router"
+	"ReviewService/services"
 	"context"
 	"database/sql"
 	"fmt"
@@ -40,17 +43,29 @@ func (app *Application) Start() error {
 	app.database = db
 	logger.Logger.Info("Database connection established")
 
-	// r := router.NewRouter()
+	repo := rr.NewReviewRepository(app.database)
+	reviewService := services.NewReviewService(repo)
+	reviewController := controllers.NewReviewController(reviewService)
+
+	reviewRouter := router.NewReviewRouter(reviewController)
+
+	r := router.SetupRouter(reviewRouter)
 
 	app.server = &http.Server{
-		Addr:    ":"+env.GetEnv("PORT", "3004"),
-		Handler: nil,
-		ReadTimeout: 5 * time.Second,
+		Addr:         ":" + env.GetEnv("PORT", "3004"),
+		Handler:      r,
+		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
-		IdleTimeout: 120 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
+	logger.Logger.Info("Review service started successfully", "addr", app.server.Addr)
 
+	go func() {
+		if err := app.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Logger.Error("Server error", "error", err)
+		}
+	}()
 
 	return nil
 }

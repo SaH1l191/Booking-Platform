@@ -1,22 +1,108 @@
-//payment integration  -CreateOrder , VerifyPayment , HandleWebhook
-//cron jobs for cleanup pending bookings + sending email notifications for upcoming bookings
-//wish list for users to save hotels for later
-//remove room_availability  
-//update geospatial indexing for hotels  
-//add user profile
-//account lockout after 5 failed login attempts + password reset functionality + email verification for new accounts
-//secure http header helmet
-//rate limite per IP address to prevent brute-force attacks
-//add monitiroing
-//elastic search for hotel search functionality + caching search results in Redis for faster response times
 
-//todo : add auth middleware for roles + add hotel amenities (wifi ,etc) + add hotel images (url)
-// + add hotel policies (cancellation policy, check-in/check-out times) + add hotel contact information (phone number, email)
-// + add hotel services (room service, laundry, etc)
+// //add monitoring
+// //elastic search for hotel search functionality + caching search results in Redis for faster response times
 
-//container setup
 
-//move redis cache to /hotel-availability route + Geocoding/Map Integration
 
-//review service 
- 
+// //user : add user profile
+// ////wish list for users to save hotels for later
+// //optional : //todo : add auth middleware for roles + and rbac  
+
+
+// //hotel
+// // add hotel amenities (wifi ,etc) + add hotel images (url) ,hotel contact information (phone number, email),//update geospatial indexing for hotels  
+// // + add hotel policies (cancellation policy, check-in/check-out times)
+
+
+// //remove room_availability  
+
+// //payment integration  -CreateOrder , VerifyPayment , HandleWebhook
+
+// //container setup
+
+
+// // owasp
+// //remove db.SQL conn and use DI for requireAllRoles middleware
+// // remove compplete logging of request and response bodies to prevent sensitive data exposure
+// //sslmode=require for production to prevent  man-in-the-middle attacks in connection folder
+// //cookies : httpOnline ,secure 
+// //add ratelimit to auth points 
+// ////account lockout after 5 failed login attempts + password reset functionality + email verification for new accounts  , MFA 
+// ////secure http header helmet
+// //Security headers
+// // - Add a middleware that sets common security headers (Content‑Security‑Policy, X‑Content‑Type‑Options, X‑Frame‑Options, Referrer-Policy, etc.) for all HTTP responses.
+// // Input handling & SQL
+// // - Review all raw SQL queries; replace string interpolation with prepared statements or parameterized queries (? placeholders) to avoid injection risk.
+// // - Validate all external inputs  and enforce strict type coercion in Go where applicable.
+
+
+
+
+
+
+// // How to turn this micro‑service demo into a recruiter‑ready showcase  
+// // 1.  Frame the story – “Why micro‑services?”
+// // Recruiter claim	How you prove it (quick demo)
+// // Scalable	Run two instances of a single service (e.g., BookingService) behind a load‑balancer (Docker‑Compose + NGINX) and show CPU / request‑per‑second metrics climb linearly.
+// // Fast	Cache expensive read‑paths (hotel search, availability) in Redis and expose latency graphs (Grafana) that drop from ≈ 200 ms → ≈ 30 ms.
+// // Resilient	Add a circuit‑breaker (e.g., github.com/sony/gobreaker) around each downstream call and demonstrate a failing service being bypassed without taking the whole API down.
+// // Polyglot	Keep the existing Go auth & review services and add a tiny Node/Express “notifications” service that publishes to a RabbitMQ queue – show two different runtimes co‑operating.
+// // When you talk, point to a single “demo dashboard” (Grafana + Prometheus) that visualises all the above.  Recruiters love a live screenshot or a short screen‑recording that shows metrics changing as you scale the containers.
+// // 2.  Immediate‑win checklist (high‑impact, low‑effort)
+// // Area	Quick win
+// // Observability	• Add Prometheus client (promhttp) to every service.<br>• Export request count, latency, error rate.<br>• Spin up Grafana dashboard.
+// // Search performance	• Deploy an Elasticsearch node (docker‑compose).<br>• Index hotels on name, location, amenities.<br>• Add a thin Go client in HotelService that queries ES first, falls back to DB.<br>• Cache the ES response in Redis (TTL ≈ 5 min).
+// // User experience	• Add a /profile endpoint (GET/PUT) that stores extra fields (avatar URL, phone).<br>• Add a “wishlist” table + API (/users/{id}/wishlist).
+// // RBAC & auth hardening	• Turn RequireAllRoles / RequireAnyRole into a reusable middleware that reads roles from the DB via DI (inject repository).<br>• Add a role claim to JWTs and protect a new /admin/* route.
+// Hotel data enrichment	• Extend hotel schema: amenities []string, image_urls []string, contact {phone,email}.<br>• Add migration + API fields (POST /hotels, GET /hotels/:id).
+// Geospatial indexing	• Switch the latitude/longitude columns to a PostGIS POINT type.<br>• Expose /hotels/near?lat=&lng=&radius= endpoint that uses ST_DWithin.
+// Payment flow (mock)	• Add /payments/create‑order, /payments/verify, /payments/webhook endpoints that call a fake Stripe/PayPal mock service.<br>• Store order_id, status in DB.
+// Containerisation	• Write a multi‑stage Dockerfile for each Go service (compile → slim runtime).<br>• Add a docker‑compose.yml that brings up all services, Redis, Elasticsearch, PostgreSQL, and a reverse‑proxy (NGINX).
+// OWASP hardening	• Replace any remaining fmt.Sprintf SQL with prepared statements (most already use ?).<br>• DI: inject the UserRoleRepository into the RequireAllRoles middleware instead of creating it inside the handler.<br>• Remove the global logger that prints request/response bodies; keep only request IDs and status codes.<br>• Change DB DSN to sslmode=require (or verify-full for prod).<br>• In utils/auth.go set cookies HttpOnly: true, Secure: true, SameSite: Strict.<br>• Add a rate‑limit wrapper around the login endpoint (RateLimitMiddleware(5) ≈ 5 req/min).<br>• Implement account‑lockout after 5 failed logins and a password‑reset token flow (email‑token stored with TTL).<br>• Add a security‑headers middleware (Helmet) that sets CSP, X‑Content‑Type‑Options, X‑Frame‑Options, Referrer‑Policy, HSTS.
+// Documentation / README	• Add a one‑page “Architecture diagram” (draw.io or Mermaid) with service boundaries, data flow, and the new observability stack.<br>• List “Run locally” steps (Docker‑Compose).<br>• Highlight the “Immediate wins” you just implemented.
+// 3.  Prioritisation for a fresh‑grad interview demo
+// 1. Observability + Docker – First 24 h. A working docker compose up plus a Grafana screenshot instantly validates “I can ship & run.”  
+// 2. Search (Elasticsearch + Redis) – Next 2 days. Shows you can wire up a “real‑world” search engine and caching layer.  
+// 3. User profile & wishlist – 1 day. Gives you UI‑ready data for a portfolio front‑end (React or simple HTML).  
+// 4. Security hardening – 2 days. Replace default JWT secrets, secure cookies, add rate limiting & lockout.  
+// 5. Hotel data enrichment & geospatial query – 2 days. Adds depth to the domain model and a cool “find hotels nearby” demo.  
+// 6. Payment mock – 1‑2 days if time permits; otherwise keep as a stub with comments.
+// Tip: Show, don’t just tell. Record a 60‑second video that starts the stack, runs a load‑test (hey -z 10s -c 20 http://localhost:3000/api/v1/hotels?city=Paris), then flips to the Grafana dashboard showing latency dropping after the Redis cache warms up.
+// 4.  Talking points to counter the “just label‑as‑scalable” objection
+// - Metrics‑first – “I never claim scalability without evidence. Here’s a live Prometheus graph that proves the API handles 500 RPS with < 40 ms latency when two instances run behind NGINX.”
+// - Isolation – “Each service has its own DB schema and can be independently versioned; adding a new language (Node) or a new domain (reviews) does not affect the existing code‑base.”
+// - Resilience – “Circuit‑breaker + retry policies prevent a single downstream failure from cascading. I can demonstrate the system staying up even when the Payment mock goes down.”
+// - Cost‑effective scaling – “Because we cache search results in Redis, we reduce DB load by ~80 % (observed from the Grafana query‑rate chart). Less DB traffic → cheaper cloud‑instance scaling.”
+// - Future‑ready – “The architecture already supports Kubernetes (deployment yaml in k8s/ folder). All services expose health checks (/healthz) for auto‑restart by an orchestrator.”
+// 5.  Quick checklist you can copy‑paste into the repo README
+// ## Quick‑run (Docker)
+
+// ```bash
+// docker compose up --build          # spins up all services + deps
+// Demo checklist
+// - Prometheus + Grafana metrics (request latency, error rate)
+// - Elasticsearch‑backed hotel search with Redis cache (TTL 5 min)
+// - User profile & wishlist APIs
+// - Secure JWT + HttpOnly/Secure cookies
+// - Rate limit on /auth/login (5 req/min) + account lockout (5 failures)
+// - Security‑headers middleware (CSP, HSTS, etc.)
+// - Geospatial nearby endpoint (ST_DWithin)
+// - Mock payment flow (/payments/create-order …)
+// - Docker‑compose + Nginx load‑balancer (run 2 instances of BookingService to see scaling)
+// Architecture diagram
+// architecture
+// How I proved “Scalable & Fast”
+// - Run hey -z 15s -c 30 http://localhost:3000/api/v1/hotels?city=Berlin
+// - Grafana shows latency < 30 ms after Redis warm‑up, and CPU scales linearly when a second BookingService container is added.
+
+// ### 6.  TL;DR – What to ship today
+
+// 1. **Docker + Prometheus/Grafana** (instant credibility).  
+// 2. **Elasticsearch + Redis caching** (visible performance gain).  
+// 3. **Secure auth (cookies, rate limit, lockout).**  
+// 4. **User profile & wishlist** (adds a personal‑touch feature).  
+// 5. **A brief security‑headers middleware** (only ~15 lines).  
+
+// Finish these in the next 3–4 days, push to GitHub, update the README, and you’ll have a **polished, production‑feel demo** that recruiters can instantly evaluate—no vague “micro‑services = scalable” claim needed.
+
+
