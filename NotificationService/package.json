@@ -16,6 +16,7 @@
     "@types/dotenv": "^8.2.3",
     "bullmq": "^5.76.4",
     "dotenv": "^17.4.2",
+    "helmet": "^7.1.0",
     "express": "^5.2.1",
     "handlebars": "^4.7.9",
     "ioredis": "5.10.1",

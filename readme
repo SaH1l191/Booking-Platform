@@ -10,9 +10,9 @@
 
 
 // //hotel
-// // add hotel amenities (wifi ,etc) + add hotel images (url) ,hotel contact information (phone number, email),//update geospatial indexing for hotels  
+// // add hotel amenities (wifi ,etc) + add hotel images (url) ,hotel contact information (phone number, email),
 // // + add hotel policies (cancellation policy, check-in/check-out times)
-
+//update geospatial indexing for hotels  
 
 // //remove room_availability  
 
@@ -26,9 +26,7 @@
 // // remove compplete logging of request and response bodies to prevent sensitive data exposure
 // //sslmode=require for production to prevent  man-in-the-middle attacks in connection folder
 // //cookies : httpOnline ,secure 
-// //add ratelimit to auth points 
 // ////account lockout after 5 failed login attempts + password reset functionality + email verification for new accounts  , MFA 
-// ////secure http header helmet
 // //Security headers
 // // - Add a middleware that sets common security headers (Content‑Security‑Policy, X‑Content‑Type‑Options, X‑Frame‑Options, Referrer-Policy, etc.) for all HTTP responses.
 // // Input handling & SQL

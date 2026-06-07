@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from "helmet"; 
 import logger from "./config/logger";
 import { serverConfig } from "./config";
 import {
@@ -12,6 +13,15 @@ const app = express();
 const PORT = serverConfig.PORT; 
 
 app.use(express.json());
+// Apply Helmet to set secure HTTP headers (prevents XSS, click‑jacking, MIME sniffing, etc.)
+app.use(helmet());// Helmet adds security headers (CSP, XSS protection, HSTS, click‑jacking prevention, etc.)
+
+//CSP – mitigates Cross‑Site Scripting (XSS) attacks.  
+// X‑XSS‑Protection – enables built‑in XSS filters in browsers.  
+// X‑Frame‑Options – prevents click‑jacking by disallowing framing.  
+// X‑Content‑Type‑Options – stops MIME‑type sniffing.  
+// Strict‑Transport‑Security (HSTS) – forces HTTPS.  
+// Hide‑Powered‑By – removes the X-Powered-By header.
 
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`, { query: req.query, body: req.body });

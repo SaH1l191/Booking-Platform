@@ -4,15 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/http"
-	"time"
 	config "goAuth/config/db"
 	"goAuth/config/env"
 	"goAuth/controllers"
-	repo "goAuth/db/repositories"
+	repo "goAuth/db/repositories" 
 	"goAuth/pkg/logger"
 	"goAuth/router"
 	"goAuth/services"
+	"net/http"
+	"time"
 )
 
 type App struct {

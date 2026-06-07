@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from "helmet"; // Helmet adds security headers (CSP, XSS protection, HSTS, click‑jacking prevention, etc.)
 import dotenv from "dotenv";
 import { appErrorHandler, genericErrorHandler } from "./middlewares/error.middleware";
 import v1Router from "./routers/v1/routes";
@@ -8,6 +9,8 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
+// Apply Helmet to set secure HTTP headers (prevents XSS, click‑jacking, MIME sniffing, etc.)
+app.use(helmet());
 
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`, { query: req.query, body: req.body });
