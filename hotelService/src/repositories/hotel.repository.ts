@@ -30,14 +30,13 @@ export async function getHotelById(hotelId: number) {
 }
 
 export async function getAllHotels(query: any) {
-    // Robust defaults - handles cases where validator might not have coerced values
+
     const page = Math.max(1, parseInt(query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(query.limit) || 10));
     const offset = (page - 1) * limit;
-    
+
     const sortBy = query.sortBy || '-createdAt';
     const search = query.search;
-    const location = query.location;
     const minRating = query.minRating;
     const maxRating = query.maxRating;
     const latitude = query.latitude;
@@ -52,10 +51,6 @@ export async function getAllHotels(query: any) {
         where.name = { [Op.like]: `%${search}%` };
     }
 
-    if (location && !latitude && !longitude) {
-        where.location = { [Op.like]: `%${location}%` };
-    }
-
     if (minRating || maxRating) {
         where.rating = {};
         if (minRating !== undefined && minRating !== '') where.rating[Op.gte] = minRating;
@@ -65,15 +60,34 @@ export async function getAllHotels(query: any) {
     const attributes: any = {};
     const sortOrder: any = [];
 
-    // Geospatial search using latitude and longitude columns directly
+    
     if (latitude !== undefined && longitude !== undefined && latitude !== '' && longitude !== '') {
-        const distanceField = literal(`ST_Distance_Sphere(POINT(longitude, latitude), ST_GeomFromText('POINT(${longitude} ${latitude})', 4326)) / 1000`);
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+        const r = parseFloat(radius || 10);
+        
+        const latDelta = r / 111;
+        const lngDelta = r / (111 * Math.cos(lat * Math.PI / 180));
+
+        where.latitude = { [Op.between]: [lat - latDelta, lat + latDelta] };
+        where.longitude = { [Op.between]: [lng - lngDelta, lng + lngDelta] };
+
+        // Exact distance calculation using MySQL's ST_Distance_Sphere
+
+        const distanceField = literal(`
+                ST_Distance_Sphere(
+                    POINT(longitude, latitude),
+                    POINT(${lng}, ${lat})
+                ) / 1000
+                `);
         attributes.include = [[distanceField, 'distance']];
-        
+
+        // Apply radius filter on the exact distance
         where[Op.and] = [
-            sequelizeWhere(distanceField, { [Op.lte]: radius || 10 })
+            sequelizeWhere(distanceField, { [Op.lte]: r })
         ];
-        
+
+        // Sort by distance (nearest first)
         sortOrder.push([literal('distance'), 'ASC']);
     }
 
@@ -116,17 +130,17 @@ export async function updateHotel(hotelId: number, hotelData: Partial<createHote
     if (!hotel) {
         throw new BadRequestError("Hotel not found");
     }
-    
+
     if (hotelData.name) hotel.name = hotelData.name;
     if (hotelData.address) hotel.address = hotelData.address;
     if (hotelData.location) hotel.location = hotelData.location;
-    
+
     if (hotelData.latitude !== undefined) hotel.latitude = hotelData.latitude;
     if (hotelData.longitude !== undefined) hotel.longitude = hotelData.longitude;
 
     if (hotelData.rating !== undefined) hotel.rating = hotelData.rating;
     if (hotelData.ratingCount !== undefined) hotel.ratingCount = hotelData.ratingCount;
-    
+
     await hotel.save();
     return hotel;
 }

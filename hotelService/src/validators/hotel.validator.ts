@@ -25,8 +25,7 @@ export const hotelQuerySchema = z.object({
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(10),
     sortBy: z.string().optional().default('-createdAt'),
-    search: z.string().optional(),
-    location: z.string().optional(),
+    search: z.string().optional(), 
     latitude: z.coerce.number().min(-90).max(90).optional(),
     longitude: z.coerce.number().min(-180).max(180).optional(),
     radius: z.coerce.number().min(0).optional().default(10), // default 10km

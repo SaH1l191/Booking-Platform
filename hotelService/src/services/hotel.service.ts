@@ -39,18 +39,7 @@ export async function getHotelByIdService(hotelId: number) {
 }
 
 export async function getAllHotelsService(query: any) {
-    // If location is provided but no lat/lng, try to geocode the location string
-    if (query.location && query.latitude === undefined && query.longitude === undefined) {
-        logger.info(`Geocoding query location: ${query.location}`);
-        const coords = await geocode(query.location);
-        if (coords) {
-            query.latitude = coords.lat;
-            query.longitude = coords.lng;
-            logger.info(`Geocoded query latitude and longitude: ${coords.lat}, ${coords.lng}`);
-        } else {
-            logger.warn(`Could not geocode query location: ${query.location}`);
-        }
-    }
+    logger.info(`Searching hotels with lat: ${query.latitude}, lng: ${query.longitude}`);
 
     const hotels = await getAllHotels(query);
     return hotels;

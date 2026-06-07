@@ -76,7 +76,10 @@ Hotel.init(
         timestamps: true,
         underscored: true, //converts deletedAt to deleted_at in the db
         indexes: [
-            { fields: ['deleted_at'] }
+            { fields: ['deleted_at'] },
+            { fields: ['latitude', 'longitude'] },
+            { fields: ['rating'] },
+
         ]
     },
 );

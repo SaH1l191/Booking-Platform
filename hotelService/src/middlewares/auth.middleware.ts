@@ -1,11 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import logger from '../config/logger.config';
-import jwt from 'jsonwebtoken';
+import { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import logger from "../config/logger";
 
-export interface AuthRequest extends Request { 
-    user?: any;  
+export interface AuthRequest extends Request {
+    user?: any;
 }
- 
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"]; 

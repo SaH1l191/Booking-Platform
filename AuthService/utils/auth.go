@@ -50,49 +50,47 @@ func ReadJsonRequest(r *http.Request, result any) error {
 }
 
 func SetAuthCookies(r *http.Request, w http.ResponseWriter, accessToken, refreshToken string) {
-
-	// secureFlag := false
-    // if r.TLS != nil {
-    //     secureFlag = true
-    // }
-    http.SetCookie(w, &http.Cookie{
-        Name:     "access_token",
-        Value:    accessToken,
-        Path:     "/",
-        // HttpOnly: true,
-        // Secure:   secureFlag,
-        SameSite: http.SameSiteStrictMode,
-        MaxAge:   15 * 60,
-    })
-	
+	secureFlag := false
+	if r.TLS != nil {
+		secureFlag = true
+	}
 	http.SetCookie(w, &http.Cookie{
-        Name:     "refresh_token",
-        Value:    refreshToken,
-        Path:     "/",
-        // HttpOnly: true,
-        // Secure:   secureFlag,
-        SameSite: http.SameSiteStrictMode,
-        MaxAge:   7 * 24 * 60 * 60,
-    }) 
+		Name:     "access_token",
+		Value:    accessToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secureFlag,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   15 * 60,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secureFlag,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   7 * 24 * 60 * 60,
+	})
 }
 
-
-func ClearAuthCookies(w http.ResponseWriter){
-	http.SetCookie(w,&http.Cookie{
+func ClearAuthCookies(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    "",
 		Path:     "/",
-		// HttpOnly: true,
-		// Secure:   true,
+		HttpOnly: true,
+		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   -1,
 	})
-	http.SetCookie(w,&http.Cookie{
+	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
 		Path:     "/",
-		// HttpOnly: true,
-		// Secure:   true,
+		HttpOnly: true,
+		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   -1,
 	})

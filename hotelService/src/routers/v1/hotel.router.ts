@@ -4,17 +4,18 @@ import { hotelQuerySchema, hotelSchema, updatehotelSchema } from '../../validato
 import { validateSchemaBody, validateSchemaParams, validateSchemaQuery } from '../../validators';
 import { getRoomsByHotelHandler } from '../../controllers/room.controller';
 import { idParamSchema } from '../../validators/common.validator';
+import { authMiddleware } from '../../middlewares/auth.middleware';
 
 
 const hotelRouter = express.Router();
 
-   
-   hotelRouter.get('/', validateSchemaQuery(hotelQuerySchema), getAllHotelsHandler)
-   hotelRouter.post('/', validateSchemaBody(hotelSchema), createHotelHandler)
 
-   hotelRouter.get('/:id/rooms', validateSchemaParams(idParamSchema), getRoomsByHotelHandler)
-   hotelRouter.get('/:id', validateSchemaParams(idParamSchema), getHotelByIdHandler)
-   hotelRouter.put('/:id', validateSchemaParams(idParamSchema), validateSchemaBody(updatehotelSchema), updateHotelHandler)
-   hotelRouter.delete('/:id', validateSchemaParams(idParamSchema), deleteHotelHandler) 
+hotelRouter.get('/', authMiddleware, validateSchemaQuery(hotelQuerySchema), getAllHotelsHandler)
+hotelRouter.post('/', authMiddleware, validateSchemaBody(hotelSchema), createHotelHandler)
+
+hotelRouter.get('/:id/rooms', authMiddleware, validateSchemaParams(idParamSchema), getRoomsByHotelHandler)
+hotelRouter.get('/:id', authMiddleware, validateSchemaParams(idParamSchema), getHotelByIdHandler)
+hotelRouter.put('/:id', authMiddleware, validateSchemaParams(idParamSchema), validateSchemaBody(updatehotelSchema), updateHotelHandler)
+hotelRouter.delete('/:id', authMiddleware, validateSchemaParams(idParamSchema), deleteHotelHandler)
 
 export default hotelRouter;

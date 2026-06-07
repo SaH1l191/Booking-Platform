@@ -26,6 +26,12 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			in := pr.In
 			out := pr.Out
 
+			cookie, err := in.Cookie("access_token")
+			if err == nil {
+				out.Header.Set("Authorization", "Bearer "+cookie.Value)
+				logger.Logger.Info("Access token found in cookie", "token", out.Header.Get("Authorization"))
+			}
+
 			logger.Logger.Info("=== Proxy Request Start ===")
 
 			logger.Logger.Info("Incoming request",
@@ -99,32 +105,21 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 				"host_header", out.Host,
 			)
 
-			// ---------------------------
-			// Headers cleanup + propagation
-			// ---------------------------
-			out.Header.Del("x-user-id")
-			out.Header.Del("x-user-email")
+			
 
-			userID, ok := in.Context().Value("userId").(string)
-			if ok {
-				out.Header.Set("x-user-id", userID)
-
-				logger.Logger.Info("User ID propagated",
-					"user_id", userID,
-				)
-			} else {
-				logger.Logger.Info("No user ID found in context")
-			}
-
-			email,ok := in.Context().Value("email").(string)
-			if ok {
-				out.Header.Set("x-user-email", email)
-				logger.Logger.Info("User email propagated",
-					"user_email", email,
-				)
-			}else {
-				logger.Logger.Info("No email found in context")
-			}
+			authHeader := in.Header.Get("authorization")
+            // If Authorization header is missing, fallback to the access_token cookie set by JWTAuthMiddleware
+            if authHeader == "" {
+                if cookie, err := in.Cookie("access_token"); err == nil && cookie.Value != "" {
+                    authHeader = "Bearer " + cookie.Value
+                }
+            }
+            if authHeader != "" {
+                out.Header.Set("authorization", authHeader)
+                logger.Logger.Info("Authorization header propagated (from header or cookie)", "auth_header", authHeader) 
+                out.Header.Del("cookie")
+                logger.Logger.Info("Cookie header stripped before forwarding")
+            }
 
 			// ---------------------------
 			// Final outgoing request summary

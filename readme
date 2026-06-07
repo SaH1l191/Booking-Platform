@@ -23,12 +23,7 @@
 
 // // owasp
 // //remove db.SQL conn and use DI for requireAllRoles middleware
-// // remove compplete logging of request and response bodies to prevent sensitive data exposure
-// //sslmode=require for production to prevent  man-in-the-middle attacks in connection folder
-// //cookies : httpOnline ,secure 
 // ////account lockout after 5 failed login attempts + password reset functionality + email verification for new accounts  , MFA 
-// //Security headers
-// // - Add a middleware that sets common security headers (Content‑Security‑Policy, X‑Content‑Type‑Options, X‑Frame‑Options, Referrer-Policy, etc.) for all HTTP responses.
 // // Input handling & SQL
 // // - Review all raw SQL queries; replace string interpolation with prepared statements or parameterized queries (? placeholders) to avoid injection risk.
 // // - Validate all external inputs  and enforce strict type coercion in Go where applicable.

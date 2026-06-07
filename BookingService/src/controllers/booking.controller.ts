@@ -10,7 +10,7 @@ import { CheckAvailabilityDTO } from '../dto/booking.dto';
 export async function createBookingHandler(req: AuthRequest, res: Response) {
     logger.info("Creating booking with data:", req.body);
 
-    const userId = req.userId!;
+    const userId = req.user.userId!;
 
     const booking = await createBookingService({ createBookingDTO: req.body, userId });
     logger.info("Booking created successfully:", { bookingId: booking.bookingId });
@@ -22,7 +22,7 @@ export async function createBookingHandler(req: AuthRequest, res: Response) {
 //race conditions can happen here 
 export async function confirmBookingHandler(req: AuthRequest, res: Response) {
     const idempotencyKeyParam = req.params.idempotencyKey;
-    const userEmail = req.email!;
+    const userEmail = req.user.email!;
     const idempotencyKey =
         Array.isArray(idempotencyKeyParam)
             ? idempotencyKeyParam[0] :
@@ -53,7 +53,7 @@ export async function confirmBookingHandler(req: AuthRequest, res: Response) {
 }
 
 export async function getBookingsByUserHandler(req: AuthRequest, res: Response) {
-    const userId = req.userId!;
+    const userId = req.user.userId!;
     logger.info(`Fetching bookings for user: ${userId}`);
     const bookings = await getBookingsByUserService(userId);
     sendSuccess(res, bookings, 'User bookings fetched');
@@ -78,7 +78,7 @@ export async function getBookingByIdHandler(req: AuthRequest, res: Response) {
 export async function cancelBookingHandler(req: AuthRequest, res: Response) {
     const bookingIdParam = req.params.id as string;
     const bookingId = parseInt(bookingIdParam);
-    const userId = req.userId!;
+    const userId = req.user.userId!;
     logger.info(`Cancelling booking: ${bookingId} for user: ${userId}`);
     const booking = await cancelBookingService(bookingId, userId);
     sendSuccess(res, booking, 'Booking cancelled');
@@ -86,7 +86,7 @@ export async function cancelBookingHandler(req: AuthRequest, res: Response) {
 
 export async function checkAvailabilityHandler(req: AuthRequest, res: Response) {
     logger.info("Checking availability with data:", req.query);
-    logger.info(`Fetching useremail , id: ${req.email} , ${req.userId} , checking availability for hotel: ${req.query.hotelId} and room: ${req.query.roomId}`);
+    logger.info(`Fetching useremail , id: ${req.user.email} , ${req.user.userId} , checking availability for hotel: ${req.query.hotelId} and room: ${req.query.roomId}`);
     const data = req.query as unknown as CheckAvailabilityDTO;
 
     const availability = await checkAvailabilityService(data);
