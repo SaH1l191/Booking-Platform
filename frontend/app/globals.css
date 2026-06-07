@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@source "../app";
+
+@theme inline {
+  --color-background: #ffffff;
+  --color-foreground: #222222;
+  --color-surface: #f7f7f7;
+  --color-border: #dddddd;
+  --color-border-light: #ebebeb;
+  --color-muted: #717171;
+  --color-muted-light: #b0b0b0;
+  --color-accent: #ff385c;
+  --color-accent-hover: #e31c5f;
+  --color-primary: #222222;
+  --color-primary-light: #484848;
+  --color-success: #008a05;
+  --color-warning: #ffb400;
+  --color-danger: #c13515;
+  --color-card: #ffffff;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: white;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+[data-sonner-toaster] {
+  font-family: var(--font-sans) !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  border-radius: 12px !important;
+  font-size: 14px !important;
+}

@@ -1,3 +1,15 @@
+fe:
+apis : 
+for hotelId , get all roooms categoried by roomcategories count (available not booked)
+logout button 
+get hotels by tags 
+add hotel image,amenties
+user bookmark feature , like feature 
+add hotel Catogories : villa , hotel etc 
+
+
+// Real-Time Room Availability (WebSocket)
+
 
 // //add monitoring
 // //elastic search for hotel search functionality + caching search results in Redis for faster response times

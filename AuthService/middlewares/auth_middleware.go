@@ -18,9 +18,17 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		tokenString := ""
-		if cookie, err := r.Cookie("access_token"); err == nil {
-			tokenString = cookie.Value
+
+		if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 		}
+
+		if tokenString == "" {
+			if cookie, err := r.Cookie("access_token"); err == nil {
+				tokenString = cookie.Value
+			}
+		}
+
 		tokenString = strings.TrimSpace(tokenString)
 		if tokenString == "" {
 			http.Error(w, "Missing token", http.StatusUnauthorized)

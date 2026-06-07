@@ -18,7 +18,7 @@ func (ur *UserRouter) Register(chiRouter chi.Router) {
 	chiRouter.Route("/users", func(r chi.Router) {
 
 		r.Group(func(auth chi.Router) {
-			auth.Use(middlewares.RateLimitMiddleware(5))
+			// auth.Use(middlewares.RateLimitMiddleware(5))
 
 			auth.With(middlewares.CreateUserRequestValidator).
 				Post("/signup", ur.userController.CreateUser)
@@ -33,7 +33,7 @@ func (ur *UserRouter) Register(chiRouter chi.Router) {
 		})
 
 		r.Group(func(protected chi.Router) {
-			protected.Use(middlewares.RateLimitMiddleware(10))
+			// protected.Use(middlewares.RateLimitMiddleware(10))
 			protected.Use(middlewares.JWTAuthMiddleware)
 
 			protected.Get("/{id}", ur.userController.GetUserByID)
