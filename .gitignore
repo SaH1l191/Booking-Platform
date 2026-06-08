@@ -3,6 +3,5 @@ ADVANCED_FEATURES_GUIDE.docx
 docker-compose-config
 docker-compose.yaml
 readme
-docker-file-config
-docker
+docker-file-config 
 CRONJOB_IMPLEMENTATION_PLAN.md

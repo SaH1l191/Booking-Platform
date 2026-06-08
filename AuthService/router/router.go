@@ -3,6 +3,7 @@ package router
 import (
 	"goAuth/config/env"
 	"goAuth/middlewares"
+	"goAuth/pkg/metrics"
 	"goAuth/utils"
 	"net/http"
 
@@ -50,6 +51,8 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 
 	UserRouter.Register(chiRouter)
 	RoleRouter.Register(chiRouter)
+
+	chiRouter.Handle("/metrics", metrics.MetricsHandler())
 
 	//Api-Gateway proxy routes
 	hotelServiceURL := env.GetEnv("HOTEL_SERVICE_URL", "http://localhost:3001")

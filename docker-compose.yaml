@@ -1,198 +1,262 @@
-version: "3.9"
+# services:
+
+#   # mysql:
+#   #   image: mysql:8.0
+#   #   container_name: booking-mysql
+#   #   restart: unless-stopped
+#   #   environment:
+#   #     MYSQL_ROOT_PASSWORD: password
+#   #   ports:
+#   #     - "3307:3306"
+#   #   volumes:
+#   #     - mysql_data:/var/lib/mysql
+#   #     - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+#   #   networks:
+#   #     - booking-network
+#   #   healthcheck:
+#   #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
+#   #     interval: 10s
+#   #     timeout: 5s
+#   #     retries: 5
+
+#   redis:
+#     image: redis:7-alpine
+#     container_name: booking-redis
+#     restart: unless-stopped
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis_data:/data
+#     networks:
+#       - booking-network
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   auth-service:
+#     build:
+#       context: ./AuthService
+#     container_name: auth-service
+#     # depends_on:
+#     #   mysql:
+#     #     condition: service_healthy
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       - ./AuthService:/app
+#     environment:
+#       PORT: 3000
+
+#       DBName: auth_db
+#       DB_ADDR: host.docker.internal:3306
+#       DB_USER: root
+#       DB_PASSWORD: password
+#       DB_NET: tcp
+
+#       DB_DSN: "root:password@tcp(host.docker.internal:3306)/auth_db"
+
+#       JWT_ACCESS_SECRET: secret
+#       JWT_REFRESH_SECRET: secret
+
+#       HOTEL_SERVICE_URL: http://hotel-service:3001
+#       BOOKING_SERVICE_URL: http://booking-service:3002
+#       REVIEW_SERVICE_URL: http://review-service:3003
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"
+#     networks:
+#       - booking-network
+
+#   hotel-service:
+#     build:
+#       context: ./hotelService
+#     container_name: hotel-service
+#     # depends_on:
+#     #   mysql:
+#     #     condition: service_healthy
+#     depends_on:
+#       redis:
+#         condition: service_healthy
+#     ports:
+#       - "3001:3001"
+#     volumes:
+#       - ./hotelService:/app
+#       - /app/node_modules
+#     environment:
+#       PORT: 3001
+
+#       DB_USER: root
+#       DB_PASSWORD: password
+#       DB_HOST: host.docker.internal
+#       DB_DATABASE: airbnb_development
+
+#       REDIS_SERVER_URL: redis://redis:6379
+
+#       JWT_ACCESS_SECRET: secret
+#       JWT_REFRESH_SECRET: secret
+
+#       LOCK_TTL: 900000
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"
+#     networks:
+#       - booking-network
+
+#   booking-service:
+#     build:
+#       context: ./BookingService
+#     container_name: booking-service
+#     # depends_on:
+#     #   mysql:
+#     #     condition: service_healthy
+#     depends_on:
+#       redis:
+#         condition: service_healthy
+#     ports:
+#       - "3002:3002"
+#     volumes:
+#       - ./BookingService:/app
+#       - /app/node_modules
+#     environment:
+#       PORT: 3002
+
+#       DATABASE_URL: "mysql://root:password@host.docker.internal:3306/airbnb_development1"
+
+#       DB_HOST: host.docker.internal
+#       DB_PORT: 3306
+#       DB_USER: root
+#       DB_PASSWORD: password
+#       DB_NAME: airbnb_development1
+
+#       REDIS_SERVER_URL: redis://redis:6379
+
+#       LOCK_TTL: 900000
+#       BOOKING_EXPIRY_MS: 900000
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"
+#     networks:
+#       - booking-network
+
+#   review-service:
+#     build:
+#       context: ./ReviewService
+#     container_name: review-service
+#     # depends_on:
+#     #   mysql:
+#     #     condition: service_healthy
+#     ports:
+#       - "3003:3003"
+#     volumes:
+#       - ./ReviewService:/app
+#     environment:
+#       PORT: 3003
+#       DBName: review_service
+#       DB_ADDR: host.docker.internal:3306
+#       DB_USER: root
+#       DB_PASSWORD: password
+#       DB_NET: tcp
+#       DB_DSN: "root:password@tcp(host.docker.internal:3306)/review_service"
+#       JWT_ACCESS_SECRET: secret
+#       JWT_REFRESH_SECRET: secret
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"
+#     networks:
+#       - booking-network
+
+#   notification-service:
+#     build:
+#       context: ./NotificationService
+#     container_name: notification-service
+#     # depends_on:
+#     #   mysql:
+#     #     condition: service_healthy
+#     depends_on:
+#       redis:
+#         condition: service_healthy
+#     ports:
+#       - "3004:3004"
+#     volumes:
+#       - ./NotificationService:/app
+#       - /app/node_modules
+#     environment:
+#       PORT: 3004
+
+#       DB_USER: root
+#       DB_PASSWORD: password
+#       DB_HOST: host.docker.internal
+#       DB_DATABASE: airbnb_development
+
+#       REDIS_HOST: redis
+#       REDIS_PORT: 6379
+#       REDIS_SERVER_URL: redis://redis:6379
+
+#       MAIL_USER: ${MAIL_USER}
+#       MAIL_PASS: ${MAIL_PASS}
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"
+#     networks:
+#       - booking-network
+
+#   frontend:
+#     build:
+#       context: ./frontend
+#       args:
+#         NEXT_PUBLIC_API_URL: http://localhost:3000
+#     container_name: booking-frontend
+#     depends_on:
+#       - auth-service
+#     ports:
+#       - "4000:4000"
+#     volumes:
+#       - ./frontend:/app
+#       - /app/node_modules
+#       - /app/.next
+#     environment:
+#       PORT: 4000
+#       NEXT_PUBLIC_API_URL: http://localhost:3000
+#     networks:
+#       - booking-network
+
+# networks:
+#   booking-network:
+#     driver: bridge
+
+# volumes:
+#   redis_data:
+
+# #docker compose down -v && docker compose up --build
 
 services:
-
-  mysql:
-    image: mysql:8.0
-    container_name: booking-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: password
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: booking-prometheus
     ports:
-      - "3306:3306"
+      - "9090:9090"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
     networks:
       - booking-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: booking-redis
+  grafana:
+    image: grafana/grafana:latest
+    container_name: booking-grafana
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "3010:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
-      - redis_data:/data
-    networks:
-      - booking-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  auth-service:
-    build:
-      context: ./AuthService
-    container_name: auth-service
-    depends_on:
-      mysql:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
-    environment:
-      PORT: 3000
-
-      DBName: auth_db
-      DB_ADDR: mysql:3306
-      DB_USER: root
-      DB_PASSWORD: password
-      DB_NET: tcp
-
-      DB_DSN: root:password@tcp(mysql:3306)/auth_db
-
-      JWT_ACCESS_SECRET: secret
-      JWT_REFRESH_SECRET: secret
-
-      HOTEL_SERVICE_URL: http://hotel-service:3001
-      BOOKING_SERVICE_URL: http://booking-service:3002
-      REVIEW_SERVICE_URL: http://review-service:3003
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
     networks:
       - booking-network
 
-  hotel-service:
-    build:
-      context: ./hotelService
-    container_name: hotel-service
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "3001:3001"
-    environment:
-      PORT: 3001
-
-      DB_USER: root
-      DB_PASSWORD: password
-      DB_HOST: mysql
-      DB_DATABASE: airbnb_development
-
-      REDIS_SERVER_URL: redis://redis:6379
-
-      JWT_ACCESS_SECRET: secret
-      JWT_REFRESH_SECRET: secret
-
-      LOCK_TTL: 900000
-    networks:
-      - booking-network
-
-  booking-service:
-    build:
-      context: ./BookingService
-    container_name: booking-service
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "3002:3002"
-    environment:
-      PORT: 3002
-
-      DATABASE_URL: mysql://root:password@mysql:3306/airbnb_development1
-
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: root
-      DB_PASSWORD: password
-      DB_NAME: airbnb_development1
-
-      REDIS_SERVER_URL: redis://redis:6379
-
-      LOCK_TTL: 900000
-      BOOKING_EXPIRY_MS: 900000
-    networks:
-      - booking-network
-
-  review-service:
-    build:
-      context: ./ReviewService
-    container_name: review-service
-    depends_on:
-      mysql:
-        condition: service_healthy
-    ports:
-      - "3003:3003"
-    environment:
-      PORT: 3003
-      DBName: review_service
-      DB_ADDR: mysql:3306
-      DB_USER: root
-      DB_PASSWORD: password
-      DB_NET: tcp
-      DB_DSN: "root:password@tcp(mysql:3306)/review_service"
-      JWT_ACCESS_SECRET: secret
-      JWT_REFRESH_SECRET: secret
-    networks:
-      - booking-network
-
-  notification-service:
-    build:
-      context: ./NotificationService
-    container_name: notification-service
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "3004:3004"
-    environment:
-      PORT: 3004
-
-      DB_USER: root
-      DB_PASSWORD: password
-      DB_HOST: mysql
-      DB_DATABASE: airbnb_development
-
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_SERVER_URL: redis://redis:6379
-
-      MAIL_USER: ${MAIL_USER}
-      MAIL_PASS: ${MAIL_PASS}
-    networks:
-      - booking-network
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
-    container_name: booking-frontend
-    depends_on:
-      - auth-service
-    ports:
-      - "3005:3000"
-    environment:
-      PORT: 3000
-      NEXT_PUBLIC_API_URL: http://localhost:3000
-    networks:
-      - booking-network
+volumes:
+  prometheus_data:
+  grafana_data:
 
 networks:
   booking-network:
     driver: bridge
-
-volumes:
-  mysql_data:
-  redis_data:

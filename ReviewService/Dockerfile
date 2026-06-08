@@ -1,12 +1,14 @@
-FROM golang:1.23
+FROM golang:1.26.1
+
+RUN go install github.com/air-verse/air@latest
 
 WORKDIR /app
 
-COPY . .
-
+COPY go.mod go.sum ./
 RUN go mod download
-RUN go build -o review-service .
+
+COPY . .
 
 EXPOSE 3003
 
-CMD ["./review-service"]
+CMD ["air", "-c", ".air.toml"]

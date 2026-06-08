@@ -5,6 +5,8 @@ import { serverConfig } from "./config";
 import { appErrorHandler, genericErrorHandler } from "./middlewares/error.middleware";
 import v1Router from "./routers/v1/index.router"; 
 import { emailWorker } from "./workers/email.worker";
+import { metricsMiddleware } from "./middlewares/metrics.middleware";
+import { register } from "./metrics/metrics";
 
 const app = express(); 
 const PORT = process.env.PORT || 5000; 
@@ -13,6 +15,12 @@ app.use(express.json());
 // Apply Helmet to set secure HTTP headers (prevents XSS, click‑jacking, MIME sniffing, etc.)
 app.use(helmet());
 app.get("/", (req, res) => res.send("Welcome"))
+
+app.use(metricsMiddleware);
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
 app.use('/api/v1', v1Router);
 app.use(appErrorHandler)
 app.use(genericErrorHandler)

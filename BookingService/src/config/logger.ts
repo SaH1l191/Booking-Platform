@@ -1,21 +1,23 @@
-import winston from "winston";  
+import winston from "winston";
+
+const SERVICE_NAME = "BookingService";
 
 const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-        winston.format.colorize(),
-        winston.format.printf(({ level, message, timestamp, ...data }) => {
-            let log = `${timestamp} [${level}]: ${message}`;
-            if (Object.keys(data).length > 0) {
-                log += ` ${JSON.stringify(data)}`;
-            }
-            return log;
-        })
-    ),
-    transports: [
-        new winston.transports.Console(),
-    ]
+  level: "info",
+
+  defaultMeta: {
+    service: SERVICE_NAME,
+  },
+
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+
+  transports: [
+    new winston.transports.Console(),
+  ],
 });
 
 export default logger;

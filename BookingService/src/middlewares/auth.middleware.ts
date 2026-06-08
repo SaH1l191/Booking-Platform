@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '../config/logger.config';
+import logger from '../config/logger';
 import jwt from 'jsonwebtoken';
 
 export interface AuthRequest extends Request { 
