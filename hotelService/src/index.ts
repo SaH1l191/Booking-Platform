@@ -1,3 +1,4 @@
+import "./db/models/associations";
 import express from "express";
 import helmet from "helmet"; 
 import logger from "./config/logger";

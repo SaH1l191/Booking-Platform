@@ -1,12 +1,14 @@
-FROM golang:1.23
+FROM golang:1.26.1
+
+RUN go install github.com/air-verse/air@latest
 
 WORKDIR /app
 
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
 
-RUN go mod download
-RUN go build -o auth-service .
+EXPOSE 3000
 
-EXPOSE 3001
-
-CMD ["./auth-service"]
+CMD ["air", "-c", ".air.toml"]

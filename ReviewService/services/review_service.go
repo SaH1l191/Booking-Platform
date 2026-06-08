@@ -31,24 +31,24 @@ func NewReviewService(reviewRepository db.ReviewRepository) ReviewService {
 }
 
 func (r *ReviewServiceImpl) GetReviewById(id string) (*models.Review, error) {
-	logger.Logger.Info("Fetching review in ReviewService")
+	logger.Log.Info("Fetching review in ReviewService")
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		logger.Logger.Error("Error parsing review ID", "error", err)
+		logger.Log.Error("Error parsing review ID", "error", err)
 		return nil, fmt.Errorf("invalid review ID")
 	}
 
 	review, err := r.reviewRepository.GetByID(idInt)
 	if err != nil {
-		logger.Logger.Error("Error fetching review", "error", err)
+		logger.Log.Error("Error fetching review", "error", err)
 		return nil, err
 	}
 	return review, nil
 }
 
 func (r *ReviewServiceImpl) CreateReview(payload *dto.CreateReviewRequestDTO) (*models.Review, error) {
-	logger.Logger.Info("Creating review in ReviewService")
+	logger.Log.Info("Creating review in ReviewService")
 
 	// Validate rating range
 	if payload.Rating < 1 || payload.Rating > 5 {
@@ -58,20 +58,20 @@ func (r *ReviewServiceImpl) CreateReview(payload *dto.CreateReviewRequestDTO) (*
 	// Call the repository to create the review
 	review, err := r.reviewRepository.Create(payload.UserId, payload.BookingId, payload.HotelId, payload.Comment, payload.Rating)
 	if err != nil {
-		logger.Logger.Error("Error creating review", "error", err)
+		logger.Log.Error("Error creating review", "error", err)
 		return nil, err
 	}
 
-	logger.Logger.Info("Review created successfully", "review", review)
+	logger.Log.Info("Review created successfully", "review", review)
 	return review, nil
 }
 
 func (r *ReviewServiceImpl) UpdateReview(id string, payload *dto.UpdateReviewRequestDTO) (*models.Review, error) {
-	logger.Logger.Info("Updating review in ReviewService")
+	logger.Log.Info("Updating review in ReviewService")
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		logger.Logger.Error("Error parsing review ID", "error", err)
+		logger.Log.Error("Error parsing review ID", "error", err)
 		return nil, fmt.Errorf("invalid review ID")
 	}
 
@@ -83,20 +83,20 @@ func (r *ReviewServiceImpl) UpdateReview(id string, payload *dto.UpdateReviewReq
 	// Call the repository to update the review
 	review, err := r.reviewRepository.Update(idInt, payload.Comment, payload.Rating)
 	if err != nil {
-		logger.Logger.Error("Error updating review", "error", err)
+		logger.Log.Error("Error updating review", "error", err)
 		return nil, err
 	}
 
-	logger.Logger.Info("Review updated successfully", "review", review)
+	logger.Log.Info("Review updated successfully", "review", review)
 	return review, nil
 }
 
 func (r *ReviewServiceImpl) DeleteReview(id string) error {
-	logger.Logger.Info("Deleting review in ReviewService")
+	logger.Log.Info("Deleting review in ReviewService")
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		logger.Logger.Error("Error parsing review ID", "error", err)
+		logger.Log.Error("Error parsing review ID", "error", err)
 		return fmt.Errorf("invalid review ID")
 	}
 

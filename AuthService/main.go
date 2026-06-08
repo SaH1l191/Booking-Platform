@@ -12,16 +12,16 @@ import (
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-
+	logger.Init("AuthService")
 	application, err := app.New(ctx)
 	if err != nil {
-		logger.Logger.Error("Failed to initialize application", "error", err)
+		logger.Log.Error("Failed to initialize application", "error", err)
 		os.Exit(1)
 	}
 
 	err = application.Start(ctx)
 	if err != nil {
-		logger.Logger.Error("Failed to start application", "error", err)
+		logger.Log.Error("Failed to start application", "error", err)
 		os.Exit(1)
 	}
 
@@ -29,7 +29,7 @@ func main() {
 
 	err = application.Stop(context.Background())
 	if err != nil {
-		logger.Logger.Error("Failed to stop application", "error", err)
+		logger.Log.Error("Failed to stop application", "error", err)
 		os.Exit(1)
 	}
 }

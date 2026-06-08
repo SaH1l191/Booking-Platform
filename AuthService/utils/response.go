@@ -13,7 +13,7 @@ func WriteJSON(w http.ResponseWriter, status int, payload interface{}) {
     if err := json.NewEncoder(w).Encode(payload); err != nil {
         // fallback to plain text if JSON encoding fails
         http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-        logger.Logger.Error("Failed to encode JSON response", "error", err)
+        logger.Log.Error("Failed to encode JSON response", "error", err)
     }
 }
 

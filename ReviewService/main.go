@@ -12,16 +12,16 @@ import (
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-
+	logger.Init("ReviewService")
 	application, err := app.NewApplication(ctx)
 	if err != nil {
-		logger.Logger.Error("Failed to start Review Service", "error", err)
+		logger.Log.Error("Failed to start Review Service", "error", err)
 		os.Exit(1)
 	}
 
 	err = application.Start()
 	if err != nil {
-		logger.Logger.Error("Failed to start Review Service", "error", err)
+		logger.Log.Error("Failed to start Review Service", "error", err)
 		os.Exit(1)
 	}
 
@@ -29,7 +29,7 @@ func main() {
 
 	err = application.Stop(context.Background())
 	if err != nil {
-		logger.Logger.Error("Failed to stop Review Service", "error", err)
+		logger.Log.Error("Failed to stop Review Service", "error", err)
 		os.Exit(1)
 	}
 }

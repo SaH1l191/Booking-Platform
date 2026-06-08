@@ -1,7 +1,7 @@
 package router
 
 import (
-	// "goAuth/config/env"
+	"goAuth/config/env"
 	"goAuth/middlewares"
 	"goAuth/utils"
 	"net/http"
@@ -18,16 +18,18 @@ type Route interface {
 func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	chiRouter := chi.NewRouter()
 
-	chiRouter.Use(middlewares.SecureHeaders)
-
 	chiRouter.Use(cors.New(cors.Options{
 		AllowedOrigins: []string{
+			"http://localhost:3000",
+			"http://localhost:3001",
+			"http://localhost:3005",
 			"http://localhost:4000",
 		},
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodPost,
 			http.MethodPut,
+			http.MethodPatch,
 			http.MethodDelete,
 			http.MethodOptions,
 		},
@@ -41,6 +43,8 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 		},
 	}).Handler)
 
+	chiRouter.Use(middlewares.SecureHeaders)
+
 	chiRouter.Use(middleware.Logger) // built in logger middleware
 	// chiRouter.Use(middlewares.RequestValidator)
 
@@ -48,38 +52,40 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	RoleRouter.Register(chiRouter)
 
 	//Api-Gateway proxy routes
-	// hotelServiceURL := env.GetEnv("HOTEL_SERVICE_URL", "http://localhost:3001")
-	// bookingServiceURL := env.GetEnv("BOOKING_SERVICE_URL", "http://localhost:3002")
-	// reviewServiceURL := env.GetEnv("REVIEW_SERVICE_URL", "http://localhost:3003")
+	hotelServiceURL := env.GetEnv("HOTEL_SERVICE_URL", "http://localhost:3001")
+	bookingServiceURL := env.GetEnv("BOOKING_SERVICE_URL", "http://localhost:3002")
+	reviewServiceURL := env.GetEnv("REVIEW_SERVICE_URL", "http://localhost:3003")
 
 	chiRouter.Route("/api/v1/hotels", func(r chi.Router) {
 		// r.Use(middlewares.RateLimitMiddleware(10))
 		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService("http://localhost:3001", "/"))
+		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
 	})
 
 	chiRouter.Route("/api/v1/rooms", func(r chi.Router) {
 		// r.Use(middlewares.RateLimitMiddleware(20))
 		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService("http://localhost:3001", "/"))
+		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
 	})
 
 	chiRouter.Route("/api/v1/roomCategories", func(r chi.Router) {
 		// r.Use(middlewares.RateLimitMiddleware(20))
 		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService("http://localhost:3001", "/"))
+		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
 	})
 
 	chiRouter.Route("/api/v1/bookings", func(r chi.Router) {
 		// r.Use(middlewares.RateLimitMiddleware(20))
 		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService("http://localhost:3002", "/"))
+		r.Handle("/*", utils.ProxyToService(bookingServiceURL, "/"))
 	})
 
-	chiRouter.Route("/api/v1/review", func(r chi.Router) {
-		// r.Use(middlewares.RateLimitMiddleware(5))
-		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService("http://localhost:3003", "/"))
+	chiRouter.Route("/api/v1/reviews", func(r chi.Router) {
+		r.Handle("/*", utils.ProxyToService(reviewServiceURL, "/api/v1"))
+	})
+
+	chiRouter.Route("/api/v1/categories", func(r chi.Router) {
+		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
 	})
 
 	return chiRouter

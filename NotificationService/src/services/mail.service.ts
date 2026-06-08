@@ -1,5 +1,6 @@
+
 import { serverConfig } from "../config";
-import logger from "../config/logger.config";
+import logger from "../config/logger";
 import transporter from "../config/mail.config";
 import { InternalServerError } from "../utils/errors/app.error";
 export async function sendEmail(to: string, subject: string, body: string) {

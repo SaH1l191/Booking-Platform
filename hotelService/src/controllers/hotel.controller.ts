@@ -14,8 +14,9 @@ export async function createHotelHandler(req: Request , res: Response) {
 }
 export async function getHotelByIdHandler(req: Request , res: Response) { 
     const hotelId = Number(req.params.id);
+    const userId = (req as any).user?.userId;
     logger.info(`Fetching hotel with id: ${hotelId}`);
-    const hotelResponse =  await getHotelByIdService(hotelId)
+    const hotelResponse =  await getHotelByIdService(hotelId, userId)
     logger.info(`Hotel with id: ${hotelId} fetched successfully`);
     res.status(200).json({
         message : "Hotel fetched successfully",
@@ -25,8 +26,9 @@ export async function getHotelByIdHandler(req: Request , res: Response) {
 }
 
 export async function getAllHotelsHandler(req: Request , res: Response) {
+    const userId = (req as any).user?.userId;
     logger.info("Fetching all hotels with query:", req.query);
-    const hotelResponse =  await getAllHotelsService(req.query)
+    const hotelResponse =  await getAllHotelsService(req.query, userId)
     logger.info("Hotels fetched successfully");
     res.status(200).json({
         message : "Hotels fetched successfully",

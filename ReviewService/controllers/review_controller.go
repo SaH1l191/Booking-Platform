@@ -21,7 +21,7 @@ func NewReviewController(reviewService services.ReviewService) *ReviewController
 }
 
 func (rc *ReviewController) GetReviewById(w http.ResponseWriter, r *http.Request) {
-	logger.Logger.Info("Fetching review by ID in ReviewController")
+	logger.Log.Info("Fetching review by ID in ReviewController")
 
 	reviewId := chi.URLParam(r, "id")
 	if reviewId == "" {
@@ -39,13 +39,13 @@ func (rc *ReviewController) GetReviewById(w http.ResponseWriter, r *http.Request
 		return
 	}
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Review fetched successfully", review)
-	logger.Logger.Info("Review fetched successfully", "review", review)
+	logger.Log.Info("Review fetched successfully", "review", review)
 }
 
 func (rc *ReviewController) CreateReview(w http.ResponseWriter, r *http.Request) {
 	payload := r.Context().Value("payload").(dto.CreateReviewRequestDTO)
 
-	logger.Logger.Info("Payload received", "payload", payload)
+	logger.Log.Info("Payload received", "payload", payload)
 
 	review, err := rc.ReviewService.CreateReview(&payload)
 
@@ -55,11 +55,11 @@ func (rc *ReviewController) CreateReview(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusCreated, "Review created successfully", review)
-	logger.Logger.Info("Review created successfully", "review", review)
+	logger.Log.Info("Review created successfully", "review", review)
 }
 
 func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request) {
-	logger.Logger.Info("Updating review in ReviewController")
+	logger.Log.Info("Updating review in ReviewController")
 
 	reviewId := chi.URLParam(r, "id")
 	if reviewId == "" {
@@ -69,7 +69,7 @@ func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request)
 
 	payload := r.Context().Value("payload").(dto.UpdateReviewRequestDTO)
 
-	logger.Logger.Info("Payload received", "payload", payload)
+	logger.Log.Info("Payload received", "payload", payload)
 
 	review, err := rc.ReviewService.UpdateReview(reviewId, &payload)
 
@@ -79,11 +79,11 @@ func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Review updated successfully", review)
-	logger.Logger.Info("Review updated successfully", "review", review)
+	logger.Log.Info("Review updated successfully", "review", review)
 }
 
 func (rc *ReviewController) DeleteReview(w http.ResponseWriter, r *http.Request) {
-	logger.Logger.Info("Deleting review in ReviewController")
+	logger.Log.Info("Deleting review in ReviewController")
 
 	reviewId := chi.URLParam(r, "id")
 	if reviewId == "" {
@@ -99,11 +99,11 @@ func (rc *ReviewController) DeleteReview(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Review deleted successfully", nil)
-	logger.Logger.Info("Review deleted successfully")
+	logger.Log.Info("Review deleted successfully")
 }
 
 func (rc *ReviewController) GetAllReviews(w http.ResponseWriter, r *http.Request) {
-	logger.Logger.Info("Fetching all reviews in ReviewController")
+	logger.Log.Info("Fetching all reviews in ReviewController")
 
 	reviews, err := rc.ReviewService.GetAllReviews()
 	if err != nil {
@@ -112,11 +112,11 @@ func (rc *ReviewController) GetAllReviews(w http.ResponseWriter, r *http.Request
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Reviews fetched successfully", reviews)
-	logger.Logger.Info("Reviews fetched successfully", "count", len(reviews))
+	logger.Log.Info("Reviews fetched successfully", "count", len(reviews))
 }
 
 func (rc *ReviewController) GetReviewsByUserId(w http.ResponseWriter, r *http.Request) {
-	logger.Logger.Info("Fetching reviews by user ID in ReviewController")
+	logger.Log.Info("Fetching reviews by user ID in ReviewController")
 
 	userId := r.URL.Query().Get("user_id")
 	if userId == "" {
@@ -131,11 +131,11 @@ func (rc *ReviewController) GetReviewsByUserId(w http.ResponseWriter, r *http.Re
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Reviews fetched successfully", reviews)
-	logger.Logger.Info("Reviews fetched successfully for user ID", "userId", userId, "count", len(reviews))
+	logger.Log.Info("Reviews fetched successfully for user ID", "userId", userId, "count", len(reviews))
 }
 
 func (rc *ReviewController) GetReviewsByHotelId(w http.ResponseWriter, r *http.Request) {
-	logger.Logger.Info("Fetching reviews by hotel ID in ReviewController")
+	logger.Log.Info("Fetching reviews by hotel ID in ReviewController")
 
 	hotelId := r.URL.Query().Get("hotel_id")
 	if hotelId == "" {
@@ -150,11 +150,11 @@ func (rc *ReviewController) GetReviewsByHotelId(w http.ResponseWriter, r *http.R
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Reviews fetched successfully", reviews)
-	logger.Logger.Info("Reviews fetched successfully for hotel ID", "hotelId", hotelId, "count", len(reviews))
+	logger.Log.Info("Reviews fetched successfully for hotel ID", "hotelId", hotelId, "count", len(reviews))
 }
 
 func (rc *ReviewController) GetReviewsByBookingId(w http.ResponseWriter, r *http.Request) {
-	logger.Logger.Info("Fetching reviews by booking ID in ReviewController")
+	logger.Log.Info("Fetching reviews by booking ID in ReviewController")
 
 	bookingId := r.URL.Query().Get("booking_id")
 	if bookingId == "" {
@@ -169,5 +169,5 @@ func (rc *ReviewController) GetReviewsByBookingId(w http.ResponseWriter, r *http
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Reviews fetched successfully", reviews)
-	logger.Logger.Info("Reviews fetched successfully for booking ID", "bookingId", bookingId, "count", len(reviews))
+	logger.Log.Info("Reviews fetched successfully for booking ID", "bookingId", bookingId, "count", len(reviews))
 }

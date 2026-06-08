@@ -5,3 +5,4 @@ docker-compose.yaml
 readme
 docker-file-config
 docker
+CRONJOB_IMPLEMENTATION_PLAN.md

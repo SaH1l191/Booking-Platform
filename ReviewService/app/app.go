@@ -28,20 +28,20 @@ func NewApplication(ctx context.Context) (*Application, error) {
 }
 
 func (app *Application) Start() error {
-	logger.Logger.Info("Starting Review Service")
+	logger.Log.Info("Starting Review Service")
 
 	if err := env.Load(); err != nil {
-		logger.Logger.Error("Failed to load environment variables", "error", err)
+		logger.Log.Error("Failed to load environment variables", "error", err)
 		return fmt.Errorf("error loading environment variables: %w", err)
 	}
 
-	logger.Logger.Info("Connecting to database")
+	logger.Log.Info("Connecting to database")
 	db, err := db.SetupDB()
 	if err != nil {
 		return fmt.Errorf("error connecting to database: %w", err)
 	}
 	app.database = db
-	logger.Logger.Info("Database connection established")
+	logger.Log.Info("Database connection established")
 
 	repo := rr.NewReviewRepository(app.database)
 	reviewService := services.NewReviewService(repo)
@@ -59,11 +59,11 @@ func (app *Application) Start() error {
 		IdleTimeout:  120 * time.Second,
 	}
 
-	logger.Logger.Info("Review service started successfully", "addr", app.server.Addr)
+	logger.Log.Info("Review service started successfully", "addr", app.server.Addr)
 
 	go func() {
 		if err := app.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Logger.Error("Server error", "error", err)
+			logger.Log.Error("Server error", "error", err)
 		}
 	}()
 
@@ -71,17 +71,17 @@ func (app *Application) Start() error {
 }
 
 func (app *Application) Stop(ctx context.Context) error {
-	logger.Logger.Info("Stopping Review Service")
+	logger.Log.Info("Stopping Review Service")
 
 	if app.server != nil {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		if err := app.server.Shutdown(shutdownCtx); err != nil {
-			logger.Logger.Error("Failed to shutdown HTTP server", "error", err)
+			logger.Log.Error("Failed to shutdown HTTP server", "error", err)
 		}
 	}
 
-	logger.Logger.Info("Review service shutdown complete")
+	logger.Log.Info("Review service shutdown complete")
 	return nil
 
 }

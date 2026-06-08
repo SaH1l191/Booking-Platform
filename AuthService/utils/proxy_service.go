@@ -12,10 +12,10 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 	targetURL, err := url.Parse(targetBaseURL)
 
 	if err != nil {
-		logger.Logger.Error("Error parsing service URL", "error", err)
+		logger.Log.Error("Error parsing service URL", "error", err)
 		return nil
 	}
-	logger.Logger.Info("Setting up proxy to service", "targetURL", targetURL.String(), "pathPrefix", pathPrefix)
+	logger.Log.Info("Setting up proxy to service", "targetURL", targetURL.String(), "pathPrefix", pathPrefix)
 
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
@@ -29,12 +29,12 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			cookie, err := in.Cookie("access_token")
 			if err == nil {
 				out.Header.Set("Authorization", "Bearer "+cookie.Value)
-				logger.Logger.Info("Access token found in cookie", "token", out.Header.Get("Authorization"))
+				logger.Log.Info("Access token found in cookie", "token", out.Header.Get("Authorization"))
 			}
 
-			logger.Logger.Info("=== Proxy Request Start ===")
+			logger.Log.Info("=== Proxy Request Start ===")
 
-			logger.Logger.Info("Incoming request",
+			logger.Log.Info("Incoming request",
 				"method", in.Method,
 				"url", in.URL.String(),
 				"path", in.URL.Path,
@@ -45,7 +45,7 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			// ---------------------------
 			// Outgoing request (gateway → service)
 			// ---------------------------
-			logger.Logger.Info("Outgoing request initial state",
+			logger.Log.Info("Outgoing request initial state",
 				"method", out.Method,
 				"url", out.URL.String(),
 				"path", out.URL.Path,
@@ -54,7 +54,7 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			// ---------------------------
 			// Scheme & Host rewrite
 			// ---------------------------
-			logger.Logger.Info("Setting target URL",
+			logger.Log.Info("Setting target URL",
 				"scheme_before", out.URL.Scheme,
 				"host_before", out.URL.Host,
 				"target_scheme", targetURL.Scheme,
@@ -64,7 +64,7 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			out.URL.Scheme = targetURL.Scheme
 			out.URL.Host = targetURL.Host
 
-			logger.Logger.Info("Target URL applied",
+			logger.Log.Info("Target URL applied",
 				"scheme_after", out.URL.Scheme,
 				"host_after", out.URL.Host,
 			)
@@ -73,14 +73,14 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			// Path rewrite
 			// ---------------------------
 			originalPath := in.URL.Path
-			logger.Logger.Info("Path rewrite start",
+			logger.Log.Info("Path rewrite start",
 				"original_path", originalPath,
 				"path_prefix", pathPrefix,
 			)
 
 			stripPrefix := strings.TrimPrefix(originalPath, pathPrefix)
 
-			logger.Logger.Info("After prefix stripping",
+			logger.Log.Info("After prefix stripping",
 				"strip_prefix", stripPrefix,
 			)
 
@@ -92,7 +92,7 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 
 			out.URL.Path = finalPath
 
-			logger.Logger.Info("Path rewrite complete",
+			logger.Log.Info("Path rewrite complete",
 				"final_path", out.URL.Path,
 			)
 
@@ -101,7 +101,7 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			// ---------------------------
 			out.Host = targetURL.Host
 
-			logger.Logger.Info("Host set",
+			logger.Log.Info("Host set",
 				"host_header", out.Host,
 			)
 
@@ -116,15 +116,15 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
             }
             if authHeader != "" {
                 out.Header.Set("authorization", authHeader)
-                logger.Logger.Info("Authorization header propagated (from header or cookie)", "auth_header", authHeader) 
+                logger.Log.Info("Authorization header propagated (from header or cookie)", "auth_header", authHeader) 
                 out.Header.Del("cookie")
-                logger.Logger.Info("Cookie header stripped before forwarding")
+                logger.Log.Info("Cookie header stripped before forwarding")
             }
 
 			// ---------------------------
 			// Final outgoing request summary
 			// ---------------------------
-			logger.Logger.Info("=== Proxy Request End ===",
+			logger.Log.Info("=== Proxy Request End ===",
 				"final_method", out.Method,
 				"final_url", out.URL.String(),
 				"final_path", out.URL.Path,
