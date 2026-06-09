@@ -1,9 +1,4 @@
-import { z } from 'zod';
-import { NextFunction, Request, Response } from "express";
-import { ZodSchema } from "zod";
-import { BadRequestError } from "../utils/errors/app.error";
-
-
+import { z } from 'zod'; 
 export const createBookingSchema = z.object({
     hotelId: z.number({ message: "Hotel ID must be a number" }),
     totalGuests: z.number({ message: "Total guests must be a number" })

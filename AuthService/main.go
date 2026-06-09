@@ -12,7 +12,7 @@ import (
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	logger.Init("AuthService")
+	logger.Init("AuthService", "C:/Users/aspha/OneDrive/Desktop/Booking-Platform-Complete/Booking-Platform/logs/auth-service.log")
 	application, err := app.New(ctx)
 	if err != nil {
 		logger.Log.Error("Failed to initialize application", "error", err)

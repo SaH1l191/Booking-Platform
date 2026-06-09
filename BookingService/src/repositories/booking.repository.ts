@@ -41,13 +41,13 @@ export async function getIdempotencyKey(tx: any, key: string) {
     const keyData = await tx.idempotencykey.findUnique({
         where: { key },
     });
-    logger.info("Idempotency key found:", { key: keyData?.key, finalized: keyData?.finalized });
+    logger.info("Idempotency key found", { key: keyData?.key, finalized: keyData?.finalized });
     return keyData;
 }
 
 
 export async function getBookingById(bookingId: number) {
-    logger.info(`Fetching booking by id: ${bookingId}`);
+    logger.info("Fetching booking by ID in repository", { bookingId });
     const booking = await prisma.booking.findUnique({
         where: { id: bookingId },
     })
@@ -55,7 +55,7 @@ export async function getBookingById(bookingId: number) {
 }
 
 export async function confirmBooking(tx: any, bookingId: number) {
-    logger.info(`Confirming booking in repository: ${bookingId}`);
+    logger.info("Confirming booking in repository", { bookingId });
     const booking = await tx.booking.update({
         where: {
             id: bookingId
@@ -67,7 +67,7 @@ export async function confirmBooking(tx: any, bookingId: number) {
     return booking
 }
 export async function cancelBooking(tx: any, bookingId: number) {
-    logger.info(`Cancelling booking in repository: ${bookingId}`);
+    logger.info("Cancelling booking in repository", { bookingId });
     const booking = await tx.booking.update({
         where: {
             id: bookingId
@@ -80,7 +80,7 @@ export async function cancelBooking(tx: any, bookingId: number) {
 }
 
 export async function finalizeIdempotencyKey(tx: any, key: string) {
-    logger.info(`Finalizing idempotency key: ${key}`);
+    logger.info("Finalizing idempotency key", { key });
     const idempotencyKey = await tx.idempotencykey.update({
         where: {
             key
@@ -148,7 +148,7 @@ export async function createBookingRecord(
 }
 
 export async function getBookingsByUserId(userId: number) {
-    logger.info(`Fetching bookings for user: ${userId}`);
+    logger.info("Fetching bookings for user in repository", { userId });
     return await prisma.booking.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' }
@@ -156,7 +156,7 @@ export async function getBookingsByUserId(userId: number) {
 }
 
 export async function getBookingsByHotelId(hotelId: number) {
-    logger.info(`Fetching bookings for hotel: ${hotelId}`);
+    logger.info("Fetching bookings for hotel in repository", { hotelId });
     return await prisma.booking.findMany({
         where: { hotelId },
         orderBy: { createdAt: 'desc' }

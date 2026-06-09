@@ -5,17 +5,17 @@ import logger from "../config/logger";
 
 export async function createRoom(data: createRoomDto) {
   const room = await Room.create(data);
-  logger.info("Room created:", room.toJSON());
+  logger.info("Room created", { roomId: room.id });
   return room;
 }
 
 export async function getRoomById(id: number) {
   const room = await Room.findByPk(id);
   if (!room) {
-    logger.warn(`Room with id: ${id} not found`);
+    logger.warn("Room not found", { roomId: id });
     throw new NotFoundError("Room not found");
   }
-  logger.info("Room found:", room.toJSON());
+  logger.info("Room found", { roomId: room.id });
   return room;
 }
 
@@ -33,7 +33,7 @@ export async function updateRoom(id: number, data: Partial<createRoomDto>) {
   const room = await getRoomById(id);
   Object.assign(room, data);
   await room.save();
-  logger.info("Room updated:", room.toJSON());
+  logger.info("Room updated", { roomId: room.id });
   return room;
 }
 
@@ -41,6 +41,6 @@ export async function deleteRoom(id: number) {
   const room = await getRoomById(id);
   room.deletedAt = new Date();
   await room.save();
-  logger.info("Room soft-deleted:", room.toJSON());
+  logger.info("Room soft-deleted", { roomId: room.id });
   return room;
 }

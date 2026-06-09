@@ -9,7 +9,7 @@ export interface AuthRequest extends Request {
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"]; 
-    logger.info("Authenticating user",  req.headers);
+    logger.info("Authenticating user", { hasAuthHeader: !!authHeader });
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).json({ message: "Unauthorized" });
     }
@@ -19,7 +19,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
         const secret = process.env.JWT_ACCESS_SECRET || "secret";
         const decoded = jwt.verify(token, secret!);
         req.user = decoded
-        logger.info("User authenticated", req.user);
+        logger.info("User authenticated", { userId: req.user.userId });
         next();
     }
     catch (err) {

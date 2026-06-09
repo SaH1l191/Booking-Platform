@@ -1,6 +1,7 @@
 import IORedis, { Redis } from 'ioredis';
 import Redlock from "redlock";
 import { serverConfig } from "./index";
+import logger from './logger';
  
 function connectToRedis() {
     try {
@@ -13,7 +14,7 @@ function connectToRedis() {
             return connection;
         };
     } catch (error) {
-        console.error('Error connecting to Redis:', error);
+        logger.error("Error connecting to Redis", { error: (error as Error).message });
         throw error;
     }
 }

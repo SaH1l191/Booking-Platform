@@ -7,6 +7,7 @@ import (
 	db "goAuth/db/repositories"
 	"goAuth/dto"
 	"goAuth/models"
+	"goAuth/pkg/logger"
 	"goAuth/utils"
 	"strconv"
 	"time"
@@ -33,22 +34,22 @@ func NewUserServiceImpl(userRepo db.UserRepository) UserService {
 func (u *UserServiceImpl) GetUserById(id string) (*models.User, error) {
 	user, err := u.userRepo.GetByID(id)
 	if err != nil {
-		fmt.Printf("Error fetching user by ID: %v\n", err)
+		logger.Log.Error("Failed to fetch user by ID", "error", err, "userId", id)
 		return nil, err
 	}
 	return user, nil
 }
 
 func (u *UserServiceImpl) CreateUser(payload *dto.CreateUserRequestDTO) (*models.User, error) {
-	fmt.Println("Creating user in userservice")
+	logger.Log.Info("Creating user in service", "email", payload.Email)
 	hashedPass, err := utils.HashPassword(payload.Password)
 	if err != nil {
-		fmt.Printf("Error hashing password: %v\n", err)
+		logger.Log.Error("Failed to hash password", "error", err)
 		return nil, err
 	}
 	user, err := u.userRepo.Create(payload.Username, payload.Email, hashedPass)
 	if err != nil {
-		fmt.Printf("Error creating user: %v\n", err)
+		logger.Log.Error("Failed to create user", "error", err)
 		return nil, err
 	}
 	return user, nil
@@ -60,16 +61,16 @@ func (u *UserServiceImpl) LoginUser(payload *dto.LoginUserRequestDTO) (dto.AuthT
 
 	user, err := u.userRepo.GetByEmail(email)
 	if err != nil {
-		fmt.Println("Error fetching user by email:", err)
+		logger.Log.Error("Failed to fetch user by email", "error", err, "email", email)
 		return dto.AuthTokens{}, err
 	}
 	if user == nil {
-		fmt.Println("No user found with the given email")
+		logger.Log.Warn("No user found with email", "email", email)
 		return dto.AuthTokens{}, fmt.Errorf("no user found with email: %s", email)
 	}
 
 	if !utils.CheckPasswordHash(password, user.Password) {
-		fmt.Println("Password does not match")
+		logger.Log.Warn("Password does not match", "email", email)
 		return dto.AuthTokens{}, fmt.Errorf("invalid password")
 	}
 

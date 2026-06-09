@@ -1,0 +1,59 @@
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: local-services
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            msg: msg
+            service: service
+            time: time
+      - labels:
+          level:
+          service:
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: AuthService
+          service: AuthService
+          __path__: /logs/auth-service.log
+
+      - targets:
+          - localhost
+        labels:
+          job: BookingService
+          service: BookingService
+          __path__: /logs/booking-service.log
+
+      - targets:
+          - localhost
+        labels:
+          job: HotelService
+          service: HotelService
+          __path__: /logs/hotel-service.log
+
+      - targets:
+          - localhost
+        labels:
+          job: ReviewService
+          service: ReviewService
+          __path__: /logs/review-service.log
+
+      - targets:
+          - localhost
+        labels:
+          job: NotificationService
+          service: NotificationService
+          __path__: /logs/notification-service.log

@@ -1,42 +1,42 @@
 import express from "express";
-import helmet from "helmet"; // Helmet adds security headers (CSP, XSS protection, HSTS, click‑jacking prevention, etc.)
+import helmet from "helmet";
 import dotenv from "dotenv";
 import { appErrorHandler, genericErrorHandler } from "./middlewares/error.middleware";
 import v1Router from "./routers/v1/routes";
 import { serverConfig } from "./config/index";
 import logger from "./config/logger";
+import { metricsMiddleware } from "./middlewares/metrics.middleware";
+import { register } from "./metrics/metrics";
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-// Apply Helmet to set secure HTTP headers (prevents XSS, click‑jacking, MIME sniffing, etc.)
 app.use(helmet());
 
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`, { query: req.query, body: req.body });
+  logger.info("Incoming request", { method: req.method, path: req.path, query: req.query });
   next();
+});
+app.use(metricsMiddleware);
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
 });
 
 app.use(v1Router);
 app.use(appErrorHandler);
 app.use(genericErrorHandler);
 
-
-//docker run -d --name my-redis -p 6379:6379 redis:latest   
-
-
 const server = app.listen(serverConfig.port, async () => {
-  logger.info("Booking Service started successfully");
-  logger.info(`Server is running on http://localhost:${serverConfig.port}`);
-
+  logger.info("Booking Service started successfully", { port: serverConfig.port });
 });
 
 async function gracefulShutdown(signal: string) {
-  logger.info(`${signal} received. Starting graceful shutdown...`);
+  logger.info("Graceful shutdown initiated", { signal });
 
   server.close(async (err) => {
     if (err) {
-      logger.error("Error while closing server:", err);
+      logger.error("Error while closing server", { error: err.message });
       process.exit(1);
     }
     logger.info("Graceful shutdown completed");

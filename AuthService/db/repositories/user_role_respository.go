@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"goAuth/models"
+	"goAuth/pkg/logger"
 	"strings"
 )
 
@@ -190,6 +191,6 @@ func (u *UserRoleRepositoryImpl) HasAnyRole(userId int64, roleNames []string) (b
 		}
 		return false, err 
 	}  
-	fmt.Println("hasAnyRole", hasAnyRole) 
+	logger.Log.Info("HasAnyRole check", "userId", userId, "result", hasAnyRole) 
 	return hasAnyRole, nil
 }

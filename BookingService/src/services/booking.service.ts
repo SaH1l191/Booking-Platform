@@ -7,35 +7,22 @@ import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import { generateIdempotencyKey } from "../utils/generateIdempotencyKey";
 import logger from "../config/logger";
 
-//usera,userb books hotel -> usera hits first then lock it for 4minutes for usera to perform booking 
 export async function createBookingService({ createBookingDTO, userId }: { createBookingDTO: CreateBookingDTO, userId: number }) {
 
 
     const ttl = serverConfig.REDLOCK_TTL;
     const bookingResource = `hotel:${createBookingDTO.hotelId}:room${createBookingDTO.roomId}`;
-    // Unique resource identifier:hotel room
     let lock: any
 
     try {
         lock = await redlock.acquire([bookingResource], ttl);
-        logger.info("Acquired lock on Booking resource : ", { bookingResource });
+        logger.info("Acquired lock on booking resource", { bookingResource });
 
         return await prisma.$transaction(
             async (tx: any) => {
-
-
-
-                //1.query hotel-ROOM Availability [level- 1]    
-
-
-                //2.if available -> booking queries its own availability [level-2] and creates booking  
-
-
-                //existingCheckout <= newCheckin OR existingCheckin >= newCheckout  ( non overlapping condition)
-                // overlapping condition : existingCheckin < newCheckout AND existingCheckout > newCheckin (demorgans law)
                 const conflictingBooking = await conflictBooking(tx, createBookingDTO)
                 if (conflictingBooking) {
-                    logger.info("Conflicting booking found for dates", { createBookingDTO });
+                    logger.info("Conflicting booking found for dates", { hotelId: createBookingDTO.hotelId, roomId: createBookingDTO.roomId });
                     throw new BadRequestError("Selected room is not available for the chosen dates");
                 }
 
@@ -67,25 +54,22 @@ export async function createBookingService({ createBookingDTO, userId }: { creat
         )
 
     } catch (error) {
-        logger.error("Booking service failed:", error);
+        logger.error("Booking service failed", { error: (error as Error).message });
         throw error
     } finally {
         if (lock) {
             try {
-                // depending on redlock version the method may be `unlock` instead of `release`
-                // if (typeof lock.unlock === 'function') {
                 await lock.unlock();
-                // } 
-                logger.info("Released lock on Booking resource : ", { bookingResource });
+                logger.info("Released lock on booking resource", { bookingResource });
             } catch (error) {
-                logger.error("Failed to release lock for booking resource : ", { bookingResource, error });
+                logger.error("Failed to release lock for booking resource", { bookingResource, error: (error as Error).message });
             }
         }
     }
 }
 
 export async function confirmBookingService(idempotencyKey: string) {
-    logger.info(`Service: Confirming booking with idempotencyKey: ${idempotencyKey}`);
+    logger.info("Confirming booking in service", { idempotencyKey });
     return await prisma.$transaction(async (tx: any) => {
         const idempotencyKeyData = await getIdempotencyKey(tx, idempotencyKey);
 
@@ -119,7 +103,6 @@ export async function confirmBookingService(idempotencyKey: string) {
         await finalizeIdempotencyKey(tx, idempotencyKey);
 
         logger.info("Booking confirmed and idempotency key finalized", { bookingId: booking.id, idempotencyKey });
-        logger.info("confirmedBooking details", { bookingId: confirmedBooking.id, hotelId: confirmedBooking.hotelId, roomId: confirmedBooking.roomId, checkIn: confirmedBooking.checkIn, checkOut: confirmedBooking.checkOut });
 
         try {
             const redisKey = `room_availability:hotel:${confirmedBooking.hotelId}` + `:room:${confirmedBooking.roomId}`;
@@ -128,17 +111,16 @@ export async function confirmBookingService(idempotencyKey: string) {
             const startDate = new Date(confirmedBooking.checkIn);
             const endDate = new Date(confirmedBooking.checkOut);
 
-            // [checkIn, checkOut)
             for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
                 dates.push(d.toISOString().split("T")[0]);
             }
 
             if (dates.length > 0) {
                 await redisClient.sadd(redisKey, ...dates);
-                logger.info("Availability cache updated", { redisKey, dates, });
+                logger.info("Availability cache updated", { redisKey, dates });
             }
         } catch (redisError) {
-            logger.error("Failed to update availability cache", redisError);
+            logger.error("Failed to update availability cache", { error: (redisError as Error).message });
             logger.info("Booking confirmed and idempotency key finalized", { bookingId: booking.id, idempotencyKey });
         }
 
@@ -147,17 +129,17 @@ export async function confirmBookingService(idempotencyKey: string) {
 }
 
 export async function getBookingsByUserService(userId: number) {
-    logger.info(`Service: Fetching bookings for user: ${userId}`);
+    logger.info("Fetching bookings for user in service", { userId });
     return await getBookingsByUserId(userId);
 }
 
 export async function getBookingsByHotelService(hotelId: number) {
-    logger.info(`Service: Fetching bookings for hotel: ${hotelId}`);
+    logger.info("Fetching bookings for hotel in service", { hotelId });
     return await getBookingsByHotelId(hotelId);
 }
 
 export async function getBookingByIdService(bookingId: number) {
-    logger.info(`Service: Fetching booking by id: ${bookingId}`);
+    logger.info("Fetching booking by ID in service", { bookingId });
     const booking = await getBookingById(bookingId);
     if (!booking) {
         throw new NotFoundError("Booking not found");
@@ -166,7 +148,7 @@ export async function getBookingByIdService(bookingId: number) {
 }
 
 export async function cancelBookingService(bookingId: number, userId: number) {
-    logger.info(`Service: Cancelling booking: ${bookingId} for user: ${userId}`);
+    logger.info("Cancelling booking in service", { bookingId, userId });
     return await prisma.$transaction(async (tx: any) => {
         const booking = await tx.booking.findUnique({
             where: { id: bookingId }
@@ -194,18 +176,17 @@ export async function checkAvailabilityService(data: {
     checkIn: string;
     checkOut: string;
 }) {
-    logger.info(`Checking availability for hotel: ${data.hotelId}, check-in: ${data.checkIn}, check-out: ${data.checkOut}`);
+    logger.info("Checking availability in service", { hotelId: data.hotelId, roomId: data.roomId, checkIn: data.checkIn, checkOut: data.checkOut });
     const redisKey = `room_availability:hotel:${data.hotelId}` + `:room:${data.roomId}`;
     const startDate = new Date(data.checkIn);
     const endDate = new Date(data.checkOut);
 
-    // [checkIn, checkOut)
     for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
         const date = d.toISOString().split("T")[0];
 
         const exists = await redisClient.sismember(redisKey, date);
         if (exists) {
-            logger.info("Redis cache hit: room unavailable", { redisKey, date, });
+            logger.info("Redis cache hit: room unavailable", { redisKey, date });
             throw new BadRequestError("Selected room is not available for chosen dates");
         }
     }

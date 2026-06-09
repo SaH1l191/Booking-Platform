@@ -4,6 +4,7 @@ import (
 	"fmt"
 	env "goAuth/config/env"
 	"goAuth/dto"
+	"goAuth/pkg/logger"
 	"goAuth/services"
 	"goAuth/utils"
 	"net/http"
@@ -24,7 +25,7 @@ func NewUserController(userService services.UserService) *UserController {
 func (uc *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	payload := r.Context().Value("payload").(dto.CreateUserRequestDTO)
-	fmt.Println("payload in controller ", payload)
+	logger.Log.Info("Creating user", "username", payload.Username, "email", payload.Email)
 
 	user, err := uc.UserService.CreateUser(&payload)
 	if err != nil {
@@ -36,9 +37,8 @@ func (uc *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Fetching user by id ", chi.URLParam(r, "id"))
 	userId := chi.URLParam(r, "id")
-	fmt.Println("User id in controller ", userId)
+	logger.Log.Info("Fetching user by ID", "userId", userId)
 
 	if userId == "" {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "USER ID is required", fmt.Errorf("missing user ID"))
@@ -57,19 +57,19 @@ func (uc *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User fetched successfully", user)
-	fmt.Println("User fetched in controller ", user)
+	logger.Log.Info("User fetched successfully", "userId", userId)
 }
 
 func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
 	payload := r.Context().Value("payload").(dto.LoginUserRequestDTO)
-	fmt.Println("Payload received:", payload)
+	logger.Log.Info("Login attempt", "email", payload.Email)
 
 	tokens, err := uc.UserService.LoginUser(&payload)
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to login user", err)
 		return
 	}
-	fmt.Println("Tokens generated:", tokens)
+	logger.Log.Info("Login successful", "email", payload.Email)
 
 	utils.SetAuthCookies(r, w, tokens.AccessToken, tokens.RefreshToken)
 
@@ -77,9 +77,8 @@ func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Fetching user by id ")
 	userId := chi.URLParam(r, "id")
-	fmt.Println("User id in controller ", userId)
+	logger.Log.Info("Deleting user", "userId", userId)
 
 	if userId == "" {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "USER ID is required", fmt.Errorf("missing user ID"))
@@ -93,7 +92,7 @@ func (uc *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User deleted successfully", nil)
-	fmt.Println("User deleted in controller ", userId)
+	logger.Log.Info("User deleted successfully", "userId", userId)
 }
 
 func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +103,6 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenString := cookie.Value
-	fmt.Println("userid from context", r.Context().Value("userID"))
 	claims := jwt.MapClaims{}
 	_, err = jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(env.GetEnv("JWT_REFRESH_SECRET", "refresh_secret")), nil
@@ -126,15 +124,14 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Normalise e‑mail (trim spaces, lower‑case) – DB collation is case‑insensitive but this guards against subtle mismatches
+	// Normalise e-mail (trim spaces, lower-case) -- DB collation is case-insensitive but this guards against subtle mismatches
 	email = strings.TrimSpace(strings.ToLower(email))
 
-	// Debug: log email claim and full claims
-	fmt.Printf("Refresh token claims email: %s, full claims: %+v\n", email, claims)
+	logger.Log.Info("Refreshing token", "email", email)
 
 	user, err := uc.UserService.GetUserByEmail(email)
 	if err != nil || user == nil {
-		fmt.Printf("GetUserByEmail error: %v, user=nil? %v\n", err, user == nil)
+		logger.Log.Error("User not found during token refresh", "error", err, "email", email)
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "User not found", fmt.Errorf("invalid user"))
 		return
 	}
@@ -151,7 +148,7 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Fetching all users")
+	logger.Log.Info("Fetching all users")
 	users, err := uc.UserService.GetAllUsers()
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to fetch users", err)
@@ -159,11 +156,12 @@ func (uc *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Users fetched successfully", users)
-	fmt.Println("Users fetched in controller ", users)
+	logger.Log.Info("Users fetched successfully", "count", len(users))
 }
 
 func (uc *UserController) LogoutUser(w http.ResponseWriter, r *http.Request) {
 	utils.ClearAuthCookies(w)
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User logged out successfully", nil)
+	logger.Log.Info("User logged out successfully")
 }

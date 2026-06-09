@@ -250,6 +250,30 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./docker/grafana/dashboards:/etc/grafana/dashboards
+    networks:
+      - booking-network
+
+  loki:
+    image: grafana/loki:latest
+    container_name: booking-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./docker/loki/config.yml:/etc/loki/config.yml
+    networks:
+      - booking-network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: booking-promtail
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./docker/promtail/promtail.yml:/etc/promtail/promtail.yml
+      - ./logs:/logs
+    depends_on:
+      - loki
     networks:
       - booking-network
 

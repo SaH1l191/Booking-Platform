@@ -2,6 +2,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodSchema } from "zod";
 import { BadRequestError } from "../utils/errors/app.error";
+import logger from "../config/logger";
 
 export const validateSchemaBody = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -11,7 +12,7 @@ export const validateSchemaBody = (schema: ZodSchema) => {
         new BadRequestError("Request body is required and must be valid JSON")
       );
     }
-    console.log("Validating request body:", req.body);
+    logger.info("Validating request body");
     const result = schema.safeParse(req.body);
     if (!result.success) {
       const messages = result.error.issues

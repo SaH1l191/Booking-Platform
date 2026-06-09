@@ -2,15 +2,15 @@ package middlewares
 
 import (
 	"context"
-	"fmt"
 	"goAuth/dto"
+	"goAuth/pkg/logger"
 	"goAuth/utils"
 	"net/http"
 )
 
 func RequestValidator(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("middleware", r.Method, r.Body)
+		logger.Log.Info("Request validation", "method", r.Method, "path", r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }
