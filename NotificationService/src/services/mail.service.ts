@@ -11,9 +11,9 @@ export async function sendEmail(to: string, subject: string, body: string) {
             subject,
             html: body
         });
-        logger.info(`Email sent to ${to} with subject "${subject}"`);
+        logger.info("Email sent successfully", { to, subject });
     } catch (error) {
-        console.error("Actual email error:", error);
+        logger.error("Failed to send email", { to, subject, error: (error as Error).message });
         throw new InternalServerError(`Failed to send email`);
     }
 }

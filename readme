@@ -1,7 +1,4 @@
-fe:
-apis : 
-for hotelId , get all roooms categoried by roomcategories count (available not booked)
- 
+
 get hotels by tags 
 add hotel image,amenties
 user (bookmark ) like feature 

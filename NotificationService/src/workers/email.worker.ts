@@ -22,13 +22,13 @@ export const emailWorker = () => {
                 case MAIL_PAYLOAD: {
                     const emailContent = await renderMailTemplate(payload.templateId, payload.params);
                     await sendEmail(payload.to, payload.subject, emailContent);
-                    logger.info(`Welcome email sent to ${payload.to}`);
+                    logger.info("Welcome email sent", { to: payload.to });
                     break;
                 }
                 case CONFIRM_BOOKING_PAYLOAD: {
                     const emailContent = await renderMailTemplate("confirm-booking", payload.params);
                     await sendEmail(payload.to, payload.subject, emailContent);
-                    logger.info(`Booking confirmation email sent to ${payload.to}`);
+                    logger.info("Booking confirmation email sent", { to: payload.to });
                     break;
                 }
                 default:
@@ -39,7 +39,7 @@ export const emailWorker = () => {
     )
 
     emailProcessor.on("failed", (job, err) => {
-        console.error("Email processing failed", {
+        logger.error("Email processing failed", {
             jobId: job?.id,
             templateId: job?.data?.templateId,
             error: err?.message
@@ -47,6 +47,6 @@ export const emailWorker = () => {
     });
 
     emailProcessor.on("completed", () => {
-        console.log("Email processing completed successfully");
+        logger.info("Email processing completed successfully");
     });
 } 

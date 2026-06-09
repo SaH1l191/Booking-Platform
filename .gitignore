@@ -5,3 +5,6 @@ docker-compose.yaml
 readme
 docker-file-config 
 CRONJOB_IMPLEMENTATION_PLAN.md
+logs
+GRAFANA_OBSERVABILITY_GUIDE.docx
+GRAFANA_COMPLETE_GUIDE.docx

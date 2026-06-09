@@ -7,26 +7,21 @@ import Footer from "./components/Footer";
 import SearchPanel from "./components/SearchPanel";
 import { useHotelsStore } from "@/stores";
 
-const categories = [
-  { name: "Trending", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
-  { name: "Beachfront", icon: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" },
-  { name: "Cabins", icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" },
-  { name: "Lakefront", icon: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" },
-  { name: "Amazing Pools", icon: "M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" },
-  { name: "Countryside", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-  { name: "Mansions", icon: "M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" },
-  { name: "OMG!", icon: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
-];
-
 const fallbackImage = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop";
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState("Trending");
-  const { hotels, isLoading, fetchHotels } = useHotelsStore();
+  const { hotels, categories, isLoading, fetchHotels, fetchCategories, selectedCategory, setSelectedCategory, toggleLike } = useHotelsStore();
 
   useEffect(() => {
+    fetchCategories();
     fetchHotels();
-  }, [fetchHotels]);
+  }, [fetchCategories, fetchHotels]);
+
+  const handleCategoryClick = (slug: string) => {
+    const newCategory = selectedCategory === slug ? "" : slug;
+    setSelectedCategory(newCategory);
+    fetchHotels(newCategory);
+  };
 
   return (
     <>
@@ -48,17 +43,15 @@ export default function Home() {
             <div className="flex items-center gap-6 md:gap-8 overflow-x-auto py-4 scrollbar-hide">
               {categories.map((cat) => (
                 <button
-                  key={cat.name}
-                  onClick={() => setSelectedCategory(cat.name)}
+                  key={cat.id}
+                  onClick={() => handleCategoryClick(cat.slug)}
                   className={`flex flex-col items-center gap-1.5 min-w-[60px] pb-2 border-b-2 transition-colors ${
-                    selectedCategory === cat.name
+                    selectedCategory === cat.slug
                       ? "border-gray-900 text-gray-900"
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={cat.icon} />
-                  </svg>
+                  <span className="text-2xl">{cat.icon || "🏠"}</span>
                   <span className="text-xs font-medium whitespace-nowrap">{cat.name}</span>
                 </button>
               ))}
@@ -88,6 +81,10 @@ export default function Home() {
                   ? Math.min(...hotel.roomCategories.map((rc) => rc.price))
                   : null;
 
+                const hotelImage = hotel.images?.length > 0
+                  ? hotel.images[0].url
+                  : fallbackImage;
+
                 return (
                   <Link
                     key={hotel.id}
@@ -96,18 +93,32 @@ export default function Home() {
                   >
                     <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100">
                       <img
-                        src={fallbackImage}
-                        alt={hotel.name}
+                        src={hotelImage}
+                        alt={hotel.images?.[0]?.altText || hotel.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <button className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors">
-                        <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleLike(hotel.id);
+                        }}
+                        className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+                      >
+                        <svg
+                          className={`w-5 h-5 ${hotel.isLiked ? "text-red-500 fill-red-500" : "text-gray-800"}`}
+                          fill={hotel.isLiked ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                         </svg>
                       </button>
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                        <span className="text-xs font-medium">Guest favourite</span>
-                      </div>
+                      {hotel.categories?.length > 0 && (
+                        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                          <span className="text-xs font-medium">{hotel.categories[0].name}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-3">
@@ -121,9 +132,9 @@ export default function Home() {
                         </div>
                       </div>
                       <p className="text-gray-500 text-sm mt-0.5">{hotel.location}</p>
-                      {hotel.roomCategories && hotel.roomCategories.length > 0 && (
+                      {hotel.categories && hotel.categories.length > 1 && (
                         <p className="text-gray-400 text-xs mt-1">
-                          {hotel.roomCategories.map((rc) => rc.roomType).join(" · ")}
+                          {hotel.categories.map((c) => c.name).join(" · ")}
                         </p>
                       )}
                       <p className="mt-1.5">

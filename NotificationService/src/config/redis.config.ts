@@ -1,5 +1,6 @@
 import IORedis, { Redis } from 'ioredis';
 import { serverConfig } from "./index";
+import logger from './logger';
 
  
 //singleton pattern
@@ -14,7 +15,7 @@ function connectToRedis() {
             return connection;
         };
     } catch (error) {
-        console.error('Error connecting to Redis:', error);
+        logger.error("Error connecting to Redis", { error: (error as Error).message });
         throw error;
     }
 }
