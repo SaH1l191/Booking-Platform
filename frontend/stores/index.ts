@@ -3,6 +3,7 @@ export { useHotelsStore } from "./hotels";
 export { useBookingsStore } from "./bookings";
 export { useRoomsStore } from "./rooms";
 export { useRoomCategoriesStore } from "./roomCategories";
+export { useReviewsStore } from "./reviews";
 export type {
   User,
   Hotel,
@@ -12,4 +13,7 @@ export type {
   Booking,
   BookingStatus,
   CreateBookingPayload,
+  Category,
+  HotelImage,
+  Review,
 } from "./types";

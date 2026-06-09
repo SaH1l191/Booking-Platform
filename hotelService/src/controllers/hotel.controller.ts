@@ -3,7 +3,7 @@ import { createHotelService, deleteHotelService, getAllHotelsService, getHotelBy
 import logger from '../config/logger';
 
 export async function createHotelHandler(req: Request , res: Response) {
-    logger.info("Creating hotel with data:", req.body);
+    logger.info("Creating hotel", { body: req.body });
     const hotelResponse =  await createHotelService(req.body)
     logger.info("Hotel created successfully");
     res.status(201).json({
@@ -15,9 +15,9 @@ export async function createHotelHandler(req: Request , res: Response) {
 export async function getHotelByIdHandler(req: Request , res: Response) { 
     const hotelId = Number(req.params.id);
     const userId = (req as any).user?.userId;
-    logger.info(`Fetching hotel with id: ${hotelId}`);
+    logger.info("Fetching hotel by ID", { hotelId });
     const hotelResponse =  await getHotelByIdService(hotelId, userId)
-    logger.info(`Hotel with id: ${hotelId} fetched successfully`);
+    logger.info("Hotel fetched successfully", { hotelId });
     res.status(200).json({
         message : "Hotel fetched successfully",
         data : hotelResponse,
@@ -27,7 +27,7 @@ export async function getHotelByIdHandler(req: Request , res: Response) {
 
 export async function getAllHotelsHandler(req: Request , res: Response) {
     const userId = (req as any).user?.userId;
-    logger.info("Fetching all hotels with query:", req.query);
+    logger.info("Fetching all hotels", { query: req.query });
     const hotelResponse =  await getAllHotelsService(req.query, userId)
     logger.info("Hotels fetched successfully");
     res.status(200).json({
@@ -39,9 +39,9 @@ export async function getAllHotelsHandler(req: Request , res: Response) {
 
 export async function updateHotelHandler(req: Request , res: Response) {
     const hotelId = Number(req.params.id);
-    logger.info(`Updating hotel with id: ${hotelId}`);
+    logger.info("Updating hotel", { hotelId });
     const hotelResponse =  await updateHotelService(hotelId, req.body)
-    logger.info(`Hotel with id: ${hotelId} updated successfully`);
+    logger.info("Hotel updated successfully", { hotelId });
     res.status(200).json({
         message : "Hotel updated successfully",
         data : hotelResponse,
@@ -51,9 +51,9 @@ export async function updateHotelHandler(req: Request , res: Response) {
 
 export async function deleteHotelHandler(req: Request , res: Response) {
     const hotelId = Number(req.params.id);
-    logger.info(`Deleting hotel with id: ${hotelId}`);
+    logger.info("Deleting hotel", { hotelId });
     const hotelReponse =  await deleteHotelService(hotelId)
-    logger.info(`Hotel with id: ${hotelId} deleted successfully`);
+    logger.info("Hotel deleted successfully", { hotelId });
     res.status(200).json({
         message : "Hotel deleted successfully",
         data : hotelReponse,

@@ -9,24 +9,23 @@ import {
 } from "./middlewares/error.middleware";
 import v1Router from "./routers/v1/index.router";
 import sequelize from "./db/models/sequelize";
+import { register } from "./metrics/metrics";
+import { metricsMiddleware } from './middlewares/metrics.middleware';
 
 const app = express();
 const PORT = serverConfig.PORT; 
 
 app.use(express.json());
-// Apply Helmet to set secure HTTP headers (prevents XSS, click‑jacking, MIME sniffing, etc.)
-app.use(helmet());// Helmet adds security headers (CSP, XSS protection, HSTS, click‑jacking prevention, etc.)
-
-//CSP – mitigates Cross‑Site Scripting (XSS) attacks.  
-// X‑XSS‑Protection – enables built‑in XSS filters in browsers.  
-// X‑Frame‑Options – prevents click‑jacking by disallowing framing.  
-// X‑Content‑Type‑Options – stops MIME‑type sniffing.  
-// Strict‑Transport‑Security (HSTS) – forces HTTPS.  
-// Hide‑Powered‑By – removes the X-Powered-By header.
+app.use(helmet());
 
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`, { query: req.query, body: req.body });
+  logger.info("Incoming request", { method: req.method, path: req.path, query: req.query });
   next();
+});
+app.use(metricsMiddleware);
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
 });
 
 app.use("/api/v1", v1Router);
@@ -35,23 +34,22 @@ app.use(appErrorHandler);
 app.use(genericErrorHandler);
 
 const server = app.listen(PORT, async () => {
-  logger.info(`Server is running on http://localhost:${PORT}`);
-  logger.info("Hotel Service started successfully");
+  logger.info("Hotel Service started successfully", { port: PORT });
 
   try {
     await sequelize.authenticate();
     logger.info("Database connected successfully");
   } catch (error) {
-    logger.error("Unable to connect to the database:", error);
+    logger.error("Unable to connect to the database", { error: (error as Error).message });
   }
 });
 
 async function gracefulShutdown(signal: string) {
-  logger.info(`${signal} received. Starting graceful shutdown...`);
+  logger.info("Graceful shutdown initiated", { signal });
 
   server.close(async (err) => {
     if (err) {
-      logger.error("Error while closing server:", err);
+      logger.error("Error while closing server", { error: err.message });
       process.exit(1);
     }
 
@@ -59,7 +57,7 @@ async function gracefulShutdown(signal: string) {
       await sequelize.close();
       logger.info("Database connection closed");
     } catch (error) {
-      logger.error("Error closing database connection:", error);
+      logger.error("Error closing database connection", { error: (error as Error).message });
     }
 
     logger.info("Graceful shutdown completed");

@@ -9,7 +9,7 @@ import {
 import logger from "../config/logger";
 
 export async function createRoomHandler(req: Request, res: Response) {
-  logger.info("Creating room with data:", req.body);
+  logger.info("Creating room", { body: req.body });
   const result = await createRoomService(req.body);
   logger.info("Room created successfully");
   res.status(201).json({ message: "Room created", data: result, success: true });
@@ -17,14 +17,14 @@ export async function createRoomHandler(req: Request, res: Response) {
 
 export async function getRoomByIdHandler(req: Request, res: Response) {
   const roomId = Number(req.params.id);
-  logger.info(`Fetching room with id: ${roomId}`);
+  logger.info("Fetching room by ID", { roomId });
   const result = await getRoomByIdService(roomId);
-  logger.info(`Room with id: ${roomId} fetched successfully`);
+  logger.info("Room fetched successfully", { roomId });
   res.status(200).json({ message: "Room fetched", data: result, success: true });
 }
 
 export async function getAllRoomsHandler(req: Request, res: Response) {
-  logger.info("Fetching all rooms with query:", req.query);
+  logger.info("Fetching all rooms", { query: req.query });
   const result = await getAllRoomsService(req.query);
   logger.info("Rooms fetched successfully");
   res.status(200).json({ message: "Rooms fetched", data: result, success: true });
@@ -32,24 +32,24 @@ export async function getAllRoomsHandler(req: Request, res: Response) {
 
 export async function updateRoomHandler(req: Request, res: Response) {
   const roomId = Number(req.params.id);
-  logger.info(`Updating room with id: ${roomId}`);
+  logger.info("Updating room", { roomId });
   const result = await updateRoomService(roomId, req.body);
-  logger.info(`Room with id: ${roomId} updated successfully`);
+  logger.info("Room updated successfully", { roomId });
   res.status(200).json({ message: "Room updated", data: result, success: true });
 }
 
 export async function deleteRoomHandler(req: Request, res: Response) {
   const roomId = Number(req.params.id);
-  logger.info(`Deleting room with id: ${roomId}`);
+  logger.info("Deleting room", { roomId });
   const result = await deleteRoomService(roomId);
-  logger.info(`Room with id: ${roomId} deleted successfully`);
+  logger.info("Room deleted successfully", { roomId });
   res.status(200).json({ message: "Room deleted", data: result, success: true });
 }
 
 export async function getRoomsByHotelHandler(req: Request, res: Response) {
   const hotelId = Number(req.params.id || req.params.hotelId);
-  logger.info(`Fetching rooms for hotel id: ${hotelId}`);
+  logger.info("Fetching rooms for hotel", { hotelId });
   const result = await getAllRoomsService({ hotelId: hotelId });
-  logger.info(`Rooms for hotel id: ${hotelId} fetched successfully`);
+  logger.info("Hotel rooms fetched successfully", { hotelId });
   res.status(200).json({ message: "Hotel rooms fetched", data: result, success: true });
 }

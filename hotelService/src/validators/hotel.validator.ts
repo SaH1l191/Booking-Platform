@@ -8,7 +8,14 @@ export const hotelSchema = z.object({
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
     rating : z.number().min(0, "Rating must be at least 0").max(5, "Rating cannot be more than 5").optional(),
-    ratingCount : z.number().min(0, "Rating count must be at least 0").optional()
+    ratingCount : z.number().min(0, "Rating count must be at least 0").optional(),
+    amenities: z.array(z.string()).optional(),
+    categoryIds: z.array(z.number().int().positive()).optional(),
+    images: z.array(z.object({
+        url: z.string().url("Must be a valid URL"),
+        altText: z.string().max(255).optional(),
+        displayOrder: z.number().int().min(0).optional().default(0),
+    })).optional(),
 })
  
 export const updatehotelSchema = z.object({
@@ -18,7 +25,14 @@ export const updatehotelSchema = z.object({
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
     rating : z.number().min(0, "Rating must be at least 0").max(5, "Rating cannot be more than 5").optional(),
-    ratingCount : z.number().min(0, "Rating count must be at least 0").optional()
+    ratingCount : z.number().min(0, "Rating count must be at least 0").optional(),
+    amenities: z.array(z.string()).optional(),
+    categoryIds: z.array(z.number().int().positive()).optional(),
+    images: z.array(z.object({
+        url: z.string().url("Must be a valid URL"),
+        altText: z.string().max(255).optional(),
+        displayOrder: z.number().int().min(0).optional().default(0),
+    })).optional(),
 })
 
 export const hotelQuerySchema = z.object({
@@ -28,7 +42,10 @@ export const hotelQuerySchema = z.object({
     search: z.string().optional(), 
     latitude: z.coerce.number().min(-90).max(90).optional(),
     longitude: z.coerce.number().min(-180).max(180).optional(),
-    radius: z.coerce.number().min(0).optional().default(10), // default 10km
+    radius: z.coerce.number().min(0).optional().default(10),
     minRating: z.coerce.number().min(0).max(5).optional(),
     maxRating: z.coerce.number().min(0).max(5).optional(),
+    category: z.string().optional(),
+    minPrice: z.coerce.number().min(0).optional(),
+    maxPrice: z.coerce.number().min(0).optional(),
 });

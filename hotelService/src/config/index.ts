@@ -1,5 +1,6 @@
  
 import dotenv from 'dotenv';
+import logger from './logger';
 
 type ServerConfig = {
     PORT: number
@@ -17,7 +18,7 @@ type DBConfig = {
 
 function loadEnv() {
     dotenv.config({quiet: true});
-    console.log(`Environment variables loaded`);
+    logger.info("Environment variables loaded");
 }
 
 loadEnv();

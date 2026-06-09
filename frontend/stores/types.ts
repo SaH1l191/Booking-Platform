@@ -2,6 +2,12 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  avatar?: string;
+  bio?: string;
+  phoneNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationality?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +30,24 @@ export interface Booking {
 
 export type RoomType = "SINGLE" | "DOUBLE" | "FAMILY" | "DELUXE" | "SUITE";
 
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  icon: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelImage {
+  id: number;
+  hotelId: number;
+  url: string;
+  altText: string | null;
+  displayOrder: number;
+  createdAt: string;
+}
+
 export interface Hotel {
   id: number;
   name: string;
@@ -33,6 +57,11 @@ export interface Hotel {
   longitude: number | null;
   rating: number;
   ratingCount: number;
+  amenities: string[];
+  categories: Category[];
+  images: HotelImage[];
+  isLiked: boolean;
+  likeCount: number;
   createdAt: string;
   updatedAt: string;
   rooms?: Room[];
@@ -66,4 +95,17 @@ export interface CreateBookingPayload {
   bookingAmount: number;
   checkIn: string;
   checkOut: string;
+}
+
+export interface Review {
+  id: number;
+  user_id: number;
+  booking_id: number;
+  hotel_id: number;
+  comment: string;
+  rating: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  is_synced: boolean;
 }

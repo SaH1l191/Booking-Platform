@@ -9,26 +9,26 @@ import {
 import logger from "../config/logger";
 
 export async function createRoomCategoryService(data: createRoomCategoryDto) {
-  logger.info("Service: Creating room category");
+  logger.info("Creating room category in service");
   return await createRoomCategory(data);
 }
 
 export async function getRoomCategoryByIdService(id: number) {
-  logger.info(`Service: Fetching room category with id: ${id}`);
+  logger.info("Fetching room category by ID in service", { categoryId: id });
   return await getRoomCategoryById(id);
 }
 
-export async function getAllRoomCategoriesService() {
-  logger.info("Service: Fetching all room categories");
-  return await getAllRoomCategories();
+export async function getAllRoomCategoriesService(hotelId?: number) {
+  logger.info("Fetching all room categories in service", { hotelId });
+  return await getAllRoomCategories(hotelId);
 }
 
 export async function updateRoomCategoryService(id: number, data: Partial<createRoomCategoryDto>) {
-  logger.info(`Service: Updating room category with id: ${id}`);
+  logger.info("Updating room category in service", { categoryId: id });
   return await updateRoomCategory(id, data);
 }
 
 export async function deleteRoomCategoryService(id: number) {
-  logger.info(`Service: Deleting room category with id: ${id}`);
+  logger.info("Deleting room category in service", { categoryId: id });
   return await deleteRoomCategory(id);
 }

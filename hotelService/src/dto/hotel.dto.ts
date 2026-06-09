@@ -6,4 +6,11 @@ export type createHotelDto = {
     longitude?: number;
     rating?: number;
     ratingCount?: number;
+    amenities?: string[];
+    categoryIds?: number[];
+    images?: {
+        url: string;
+        altText?: string;
+        displayOrder?: number;
+    }[];
 }
