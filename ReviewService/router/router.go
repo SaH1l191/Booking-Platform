@@ -1,6 +1,7 @@
 package router
 
-import (
+import ( 
+	"ReviewService/pkg/metrics" 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 )
@@ -13,6 +14,9 @@ func SetupRouter(reviewRouter *ReviewRouter) chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	r.Handle("/metrics", metrics.MetricsHandler())
+
 
 	reviewRouter.Register(r)
 

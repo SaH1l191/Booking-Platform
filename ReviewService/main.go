@@ -12,7 +12,7 @@ import (
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	logger.Init("ReviewService")
+	logger.Init("ReviewService", "C:/Users/aspha/OneDrive/Desktop/Booking-Platform-Complete/Booking-Platform/logs/review-service.log")
 	application, err := app.NewApplication(ctx)
 	if err != nil {
 		logger.Log.Error("Failed to start Review Service", "error", err)

@@ -2,6 +2,7 @@ package respositories
 
 import (
 	"ReviewService/models"
+	"ReviewService/pkg/logger"
 	"database/sql"
 	"fmt"
 )
@@ -31,7 +32,7 @@ func (r *ReviewRepositoryImpl) GetAll() ([]*models.Review, error) {
 	query := "SELECT id, user_id, booking_id, hotel_id, comment, rating, created_at, updated_at, deleted_at, is_synced FROM reviews WHERE deleted_at IS NULL"
 	rows, err := r.db.Query(query)
 	if err != nil {
-		fmt.Println("Error fetching reviews:", err)
+		logger.Log.Error("Error fetching reviews", "error", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -40,14 +41,14 @@ func (r *ReviewRepositoryImpl) GetAll() ([]*models.Review, error) {
 	for rows.Next() {
 		review := &models.Review{}
 		if err := rows.Scan(&review.Id, &review.UserId, &review.BookingId, &review.HotelId, &review.Comment, &review.Rating, &review.CreatedAt, &review.UpdatedAt, &review.DeletedAt, &review.IsSynced); err != nil {
-			fmt.Println("Error scanning review:", err)
+			logger.Log.Error("Error scanning review", "error", err)
 			return nil, err
 		}
 		reviews = append(reviews, review)
 	}
 
 	if err := rows.Err(); err != nil {
-		fmt.Println("Error with rows:", err)
+		logger.Log.Error("Error iterating review rows", "error", err)
 		return nil, err
 	}
 
@@ -63,10 +64,10 @@ func (r *ReviewRepositoryImpl) GetByID(id int64) (*models.Review, error) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			fmt.Println("No review found with the given ID")
+			logger.Log.Warn("No review found with the given ID", "reviewId", id)
 			return nil, err
 		} else {
-			fmt.Println("Error scanning review:", err)
+			logger.Log.Error("Error scanning review", "error", err, "reviewId", id)
 			return nil, err
 		}
 	}
@@ -79,13 +80,13 @@ func (r *ReviewRepositoryImpl) Create(userId int64, bookingId int64, hotelId int
 	result, err := r.db.Exec(query, userId, bookingId, hotelId, comment, rating)
 
 	if err != nil {
-		fmt.Println("Error creating review:", err)
+		logger.Log.Error("Error creating review", "error", err, "userId", userId, "hotelId", hotelId)
 		return nil, err
 	}
 
 	lastInsertID, rowErr := result.LastInsertId()
 	if rowErr != nil {
-		fmt.Println("Error getting last insert ID:", rowErr)
+		logger.Log.Error("Error getting last insert ID", "error", rowErr)
 		return nil, rowErr
 	}
 
@@ -99,7 +100,7 @@ func (r *ReviewRepositoryImpl) Create(userId int64, bookingId int64, hotelId int
 		IsSynced:  false,
 	}
 
-	fmt.Println("Review created successfully:", review)
+	logger.Log.Info("Review created successfully", "reviewId", review.Id, "userId", userId, "hotelId", hotelId)
 	return review, nil
 }
 
@@ -108,17 +109,17 @@ func (r *ReviewRepositoryImpl) Update(id int64, comment string, rating int) (*mo
 	result, err := r.db.Exec(query, comment, rating, id)
 
 	if err != nil {
-		fmt.Println("Error updating review:", err)
+		logger.Log.Error("Error updating review", "error", err, "reviewId", id)
 		return nil, err
 	}
 
 	rowsAffected, rowErr := result.RowsAffected()
 	if rowErr != nil {
-		fmt.Println("Error getting rows affected:", rowErr)
+		logger.Log.Error("Error getting rows affected", "error", rowErr)
 		return nil, rowErr
 	}
 	if rowsAffected == 0 {
-		fmt.Println("No rows were affected, review not found or already deleted")
+		logger.Log.Warn("No rows were affected, review not found or already deleted", "reviewId", id)
 		return nil, fmt.Errorf("review not found")
 	}
 
@@ -131,20 +132,20 @@ func (r *ReviewRepositoryImpl) Delete(id int64) error {
 	result, err := r.db.Exec(query, id)
 
 	if err != nil {
-		fmt.Println("Error deleting review:", err)
+		logger.Log.Error("Error deleting review", "error", err, "reviewId", id)
 		return err
 	}
 
 	rowsAffected, rowErr := result.RowsAffected()
 	if rowErr != nil {
-		fmt.Println("Error getting rows affected:", rowErr)
+		logger.Log.Error("Error getting rows affected", "error", rowErr)
 		return rowErr
 	}
 	if rowsAffected == 0 {
-		fmt.Println("No rows were affected, review not found or already deleted")
+		logger.Log.Warn("No rows were affected, review not found or already deleted", "reviewId", id)
 		return fmt.Errorf("review not found")
 	}
-	fmt.Println("Review deleted successfully, rows affected:", rowsAffected)
+	logger.Log.Info("Review deleted successfully", "reviewId", id, "rowsAffected", rowsAffected)
 	return nil
 }
 
@@ -152,7 +153,7 @@ func (r *ReviewRepositoryImpl) GetByUserId(userId int64) ([]*models.Review, erro
 	query := "SELECT id, user_id, booking_id, hotel_id, comment, rating, created_at, updated_at, deleted_at, is_synced FROM reviews WHERE user_id = ? AND deleted_at IS NULL"
 	rows, err := r.db.Query(query, userId)
 	if err != nil {
-		fmt.Println("Error fetching reviews by user ID:", err)
+		logger.Log.Error("Error fetching reviews by user ID", "error", err, "userId", userId)
 		return nil, err
 	}
 	defer rows.Close()
@@ -161,14 +162,14 @@ func (r *ReviewRepositoryImpl) GetByUserId(userId int64) ([]*models.Review, erro
 	for rows.Next() {
 		review := &models.Review{}
 		if err := rows.Scan(&review.Id, &review.UserId, &review.BookingId, &review.HotelId, &review.Comment, &review.Rating, &review.CreatedAt, &review.UpdatedAt, &review.DeletedAt, &review.IsSynced); err != nil {
-			fmt.Println("Error scanning review:", err)
+			logger.Log.Error("Error scanning review", "error", err)
 			return nil, err
 		}
 		reviews = append(reviews, review)
 	}
 
 	if err := rows.Err(); err != nil {
-		fmt.Println("Error with rows:", err)
+		logger.Log.Error("Error iterating review rows", "error", err)
 		return nil, err
 	}
 
@@ -179,7 +180,7 @@ func (r *ReviewRepositoryImpl) GetByHotelId(hotelId int64) ([]*models.Review, er
 	query := "SELECT id, user_id, booking_id, hotel_id, comment, rating, created_at, updated_at, deleted_at, is_synced FROM reviews WHERE hotel_id = ? AND deleted_at IS NULL"
 	rows, err := r.db.Query(query, hotelId)
 	if err != nil {
-		fmt.Println("Error fetching reviews by hotel ID:", err)
+		logger.Log.Error("Error fetching reviews by hotel ID", "error", err, "hotelId", hotelId)
 		return nil, err
 	}
 	defer rows.Close()
@@ -188,14 +189,14 @@ func (r *ReviewRepositoryImpl) GetByHotelId(hotelId int64) ([]*models.Review, er
 	for rows.Next() {
 		review := &models.Review{}
 		if err := rows.Scan(&review.Id, &review.UserId, &review.BookingId, &review.HotelId, &review.Comment, &review.Rating, &review.CreatedAt, &review.UpdatedAt, &review.DeletedAt, &review.IsSynced); err != nil {
-			fmt.Println("Error scanning review:", err)
+			logger.Log.Error("Error scanning review", "error", err)
 			return nil, err
 		}
 		reviews = append(reviews, review)
 	}
 
 	if err := rows.Err(); err != nil {
-		fmt.Println("Error with rows:", err)
+		logger.Log.Error("Error iterating review rows", "error", err)
 		return nil, err
 	}
 
@@ -206,7 +207,7 @@ func (r *ReviewRepositoryImpl) GetByBookingId(bookingId int64) ([]*models.Review
 	query := "SELECT id, user_id, booking_id, hotel_id, comment, rating, created_at, updated_at, deleted_at, is_synced FROM reviews WHERE booking_id = ? AND deleted_at IS NULL"
 	rows, err := r.db.Query(query, bookingId)
 	if err != nil {
-		fmt.Println("Error fetching reviews by booking ID:", err)
+		logger.Log.Error("Error fetching reviews by booking ID", "error", err, "bookingId", bookingId)
 		return nil, err
 	}
 	defer rows.Close()
@@ -215,14 +216,14 @@ func (r *ReviewRepositoryImpl) GetByBookingId(bookingId int64) ([]*models.Review
 	for rows.Next() {
 		review := &models.Review{}
 		if err := rows.Scan(&review.Id, &review.UserId, &review.BookingId, &review.HotelId, &review.Comment, &review.Rating, &review.CreatedAt, &review.UpdatedAt, &review.DeletedAt, &review.IsSynced); err != nil {
-			fmt.Println("Error scanning review:", err)
+			logger.Log.Error("Error scanning review", "error", err)
 			return nil, err
 		}
 		reviews = append(reviews, review)
 	}
 
 	if err := rows.Err(); err != nil {
-		fmt.Println("Error with rows:", err)
+		logger.Log.Error("Error iterating review rows", "error", err)
 		return nil, err
 	}
 
