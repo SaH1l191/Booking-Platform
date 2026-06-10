@@ -1,0 +1,114 @@
+package controllers
+
+import (
+	"fmt"
+	"goPayment/dto"
+	"goPayment/pkg/logger"
+	"goPayment/services"
+	"goPayment/utils"
+	"io"
+	"net/http"
+	"strconv"
+	"github.com/go-chi/chi"
+)
+
+type PaymentController struct {
+	PaymentService services.PaymentService
+}
+
+func NewPaymentController(paymentService services.PaymentService) *PaymentController {
+	return &PaymentController{PaymentService: paymentService}
+}
+
+func (pc *PaymentController) CreateOrder(w http.ResponseWriter, r *http.Request) {
+	payload := r.Context().Value("payload").(dto.CreateOrderRequestDTO)
+	userIDStr := r.Context().Value("userID").(string)
+
+	userId, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid user ID", err)
+		return
+	}
+
+	logger.Log.Info("Creating order", "userId", userId, "bookingId", payload.BookingId)
+
+	result, err := pc.PaymentService.CreateOrder(userId, &payload)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to create order", err)
+		return
+	}
+
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Order created successfully", result)
+}
+
+func (pc *PaymentController) VerifyPayment(w http.ResponseWriter, r *http.Request) {
+	payload := r.Context().Value("payload").(dto.VerifyPaymentRequestDTO)
+
+	logger.Log.Info("Verifying payment", "orderId", payload.RazorpayOrderId)
+
+	payment, err := pc.PaymentService.VerifyPayment(&payload)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Payment verification failed", err)
+		return
+	}
+
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Payment verified successfully", map[string]interface{}{
+		"paymentId": payment.Id,
+		"status":    payment.Status,
+	})
+}
+
+func (pc *PaymentController) RefundPayment(w http.ResponseWriter, r *http.Request) {
+	payload := r.Context().Value("payload").(dto.RefundRequestDTO)
+
+	logger.Log.Info("Refunding payment", "paymentId", payload.PaymentId)
+
+	result, err := pc.PaymentService.RefundPayment(&payload)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Refund failed", err)
+		return
+	}
+
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Refund processed successfully", result)
+}
+
+func (pc *PaymentController) GetPaymentByBookingId(w http.ResponseWriter, r *http.Request) {
+	bookingIdParam := chi.URLParam(r, "bookingId")
+	bookingId, err := strconv.ParseInt(bookingIdParam, 10, 64)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid booking ID", fmt.Errorf("invalid booking ID format"))
+		return
+	}
+
+	logger.Log.Info("Fetching payment by booking ID", "bookingId", bookingId)
+
+	payment, err := pc.PaymentService.GetPaymentByBookingId(bookingId)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusNotFound, "Payment not found", err)
+		return
+	}
+
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Payment fetched successfully", payment)
+}
+
+func (pc *PaymentController) HandleWebhook(w http.ResponseWriter, r *http.Request) {
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Failed to read webhook body", err)
+		return
+	}
+	defer r.Body.Close()
+
+	signature := r.Header.Get("X-Razorpay-Signature")
+
+	logger.Log.Info("Webhook received")
+
+	err = pc.PaymentService.HandleWebhook(rawBody, signature)
+	if err != nil {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Webhook processing failed", err)
+		return
+	}
+
+	// Always return 200 to Razorpay
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Webhook processed", nil)
+}

@@ -1,7 +1,7 @@
 package middlewares
 
-// RolePermissions =>  [role] : [permission1,permission2....]
-var RolePermissions = map[string][]string{
+// RolePermissionsByRole =>  [role] : [permission1,permission2....]
+var RolePermissionsByRole = map[string][]string{
 	"admin": {"*"},
 	"hotel_manager": {
 		"hotel:create",
@@ -15,7 +15,8 @@ var RolePermissions = map[string][]string{
 		"booking:read",
 		"payment:read",
 		"payment:create",
-		"review:read",
+		"review:read", 
+		"review:create",
 	},
 	"customer": {
 		"hotel:read",
@@ -29,5 +30,6 @@ var RolePermissions = map[string][]string{
 		"review:delete",
 		"payment:read",
 		"payment:create",
+		"payment:delete",
 	},
 }
