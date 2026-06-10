@@ -74,7 +74,13 @@ func (u *UserServiceImpl) LoginUser(payload *dto.LoginUserRequestDTO) (dto.AuthT
 		return dto.AuthTokens{}, fmt.Errorf("invalid password")
 	}
 
-	accessToken, err := u.generateAccessToken(user)
+	roles, err := u.userRepo.GetUserRoles(user.Id)
+	if err != nil {
+		logger.Log.Error("Failed to fetch user roles", "error", err, "userId", user.Id)
+		return dto.AuthTokens{}, err
+	}
+
+	accessToken, err := u.generateAccessToken(user, roles)
 	if err != nil {
 		return dto.AuthTokens{}, err
 	}
@@ -87,11 +93,15 @@ func (u *UserServiceImpl) LoginUser(payload *dto.LoginUserRequestDTO) (dto.AuthT
 }
 
 
-func (u *UserServiceImpl) generateAccessToken(user *models.User) (string, error) {
+func (u *UserServiceImpl) generateAccessToken(user *models.User, roles []string) (string, error) {
+	if roles == nil {
+		roles = []string{}
+	}
 	claims := jwt.MapClaims{
 		"email":    user.Email,
-		"userId": user.Id,
+		"userId":   user.Id,
 		"username": user.Username,
+		"roles":    roles,
 		"type":     "access",
 		"exp":      time.Now().Add(15 * time.Minute).Unix(),
 	}
@@ -134,7 +144,13 @@ func (u *UserServiceImpl) RefreshTokens(email string) (dto.AuthTokens, error) {
     if user == nil {
         return dto.AuthTokens{}, fmt.Errorf("user not found for email: %s", email)
     }
-    access, err := u.generateAccessToken(user)
+
+    roles, err := u.userRepo.GetUserRoles(user.Id)
+    if err != nil {
+        return dto.AuthTokens{}, err
+    }
+
+    access, err := u.generateAccessToken(user, roles)
     if err != nil {
         return dto.AuthTokens{}, err
     }

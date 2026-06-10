@@ -16,7 +16,7 @@ export async function getHotelByIdHandler(req: Request , res: Response) {
     const hotelId = Number(req.params.id);
     const userId = (req as any).user?.userId;
     logger.info("Fetching hotel by ID", { hotelId });
-    const hotelResponse =  await getHotelByIdService(hotelId, userId)
+    const hotelResponse =  await getHotelByIdService(hotelId)
     logger.info("Hotel fetched successfully", { hotelId });
     res.status(200).json({
         message : "Hotel fetched successfully",

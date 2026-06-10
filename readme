@@ -1,14 +1,6 @@
 
-get hotels by tags 
-add hotel image,amenties
-user (bookmark ) like feature 
-add hotel Catogories : villa , hotel etc 
-// //user : add user profile
-// ////wish list for users to save hotels for later
 // //optional : //todo : add auth middleware for roles + and rbac  
-// //hotel
-// // add hotel amenities (wifi ,etc) + add hotel images (url) ,hotel contact information (phone number, email),
- 
+
 
 // Real-Time Room Availability (WebSocket)
 
@@ -92,7 +84,5 @@ add hotel Catogories : villa , hotel etc
 // 3. **Secure auth (cookies, rate limit, lockout).**  
 // 4. **User profile & wishlist** (adds a personal‑touch feature).  
 // 5. **A brief security‑headers middleware** (only ~15 lines).  
-
-// Finish these in the next 3–4 days, push to GitHub, update the README, and you’ll have a **polished, production‑feel demo** that recruiters can instantly evaluate—no vague “micro‑services = scalable” claim needed.
 
 

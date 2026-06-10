@@ -9,8 +9,7 @@ import {
 } from "./middlewares/error.middleware";
 import v1Router from "./routers/v1/index.router";
 import sequelize from "./db/models/sequelize";
-import { register } from "./metrics/metrics";
-import { metricsMiddleware } from './middlewares/metrics.middleware';
+import { register } from "./metrics/metrics"; 
 
 const app = express();
 const PORT = serverConfig.PORT; 
@@ -21,8 +20,7 @@ app.use(helmet());
 app.use((req, res, next) => {
   logger.info("Incoming request", { method: req.method, path: req.path, query: req.query });
   next();
-});
-app.use(metricsMiddleware);
+}); 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());

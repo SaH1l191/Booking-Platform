@@ -12,8 +12,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http" 
-	"time"
-	"ReviewService/pkg/metrics"
+	"time" 
 )
 
 type Application struct {
@@ -47,8 +46,7 @@ func (app *Application) Start() error {
 	repo := rr.NewReviewRepository(app.database)
 	reviewService := services.NewReviewService(repo)
 	reviewController := controllers.NewReviewController(reviewService)
-
-	metrics.Init()
+ 
 	reviewRouter := router.NewReviewRouter(reviewController)
 
 	r := router.SetupRouter(reviewRouter)

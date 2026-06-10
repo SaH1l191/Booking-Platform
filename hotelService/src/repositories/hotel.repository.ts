@@ -42,22 +42,24 @@ export async function createHotel(hotelData: createHotelDto) {
     return hotel;
 }
 
-export async function getHotelById(hotelId: number, userId?: number) {
+export async function getHotelById(hotelId: number) {
     const hotel = await Hotel.findByPk(hotelId);
     if (!hotel) {
         logger.warn("Hotel not found");
         throw new NotFoundError("Hotel not found");
     }
 
-    const categories = await HotelCategory.findAll({
-        where: { hotelId },
-        include: [{ model: Category, as: "category" }],
-    });
+    const [categories, images] = await Promise.all([
+        HotelCategory.findAll({
+            where: { hotelId },
+            include: [{ model: Category, as: "category" }],
+        }),
+        HotelImage.findAll({
+            where: { hotelId },
+            order: [["display_order", "ASC"]],
+        }),
+    ]);
 
-    const images = await HotelImage.findAll({
-        where: { hotelId },
-        order: [["display_order", "ASC"]],
-    });
     return {
         ...hotel.toJSON(),
         categories: categories.map((hc: any) => hc.category),

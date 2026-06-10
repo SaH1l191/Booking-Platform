@@ -3,30 +3,31 @@ import { validateSchemaBody, validateSchemaParams, validateSchemaQuery } from '.
 import { bookingIdParamSchema, checkAvailabilitySchema, confirmBookingSchema, createBookingSchema, getBookingsByHotelSchema } from '../../validators/booking.validator';
 import { cancelBookingHandler, checkAvailabilityHandler, confirmBookingHandler, createBookingHandler, getBookingByIdHandler, getBookingsByHotelHandler, getBookingsByUserHandler } from '../../controllers/booking.controller';
 import { authMiddleware } from '../../middlewares/auth.middleware';
+import { requirePermission } from '../../middlewares/rbac.middleware';
 
 
 const bookingRouter = express.Router();
 
-//create book->create idempotency key
-//single operation -> single db transaction
-bookingRouter.post('/',authMiddleware, validateSchemaBody(createBookingSchema), createBookingHandler);
-//Create the booking
-//Generate the idempotency key
-//save the idempotency key with booking id and finalized as false
+// Create booking - customer only
+bookingRouter.post('/', authMiddleware, requirePermission("booking:create"), validateSchemaBody(createBookingSchema), createBookingHandler);
 
+// Confirm booking - customer only
+bookingRouter.post('/confirm/:idempotencyKey', authMiddleware, requirePermission("booking:confirm"), validateSchemaParams(confirmBookingSchema), confirmBookingHandler);
 
-bookingRouter.post('/confirm/:idempotencyKey', authMiddleware, validateSchemaParams(confirmBookingSchema), confirmBookingHandler);
-//Retrieve the idempotency key
-//Check if the idempotency key is valid and not finalized
-//Confirm the booking
-//Finalize the idempotency key
-bookingRouter.get('/availability', authMiddleware,validateSchemaQuery(checkAvailabilitySchema), checkAvailabilityHandler); 
-//GET /checkAvailability?hotelId=2&roomId=4&checkIn=2026-12-20&checkOut=2026-12-25
+// Check availability - any authenticated user
+bookingRouter.get('/availability', authMiddleware, requirePermission("booking:read"), validateSchemaQuery(checkAvailabilitySchema), checkAvailabilityHandler);
 
-bookingRouter.get('/me', authMiddleware, getBookingsByUserHandler);
-bookingRouter.get('/hotel/:hotelId', authMiddleware, validateSchemaParams(getBookingsByHotelSchema), getBookingsByHotelHandler);
-bookingRouter.get('/:id', authMiddleware, validateSchemaParams(bookingIdParamSchema), getBookingByIdHandler);
-bookingRouter.patch('/cancel/:id', authMiddleware, validateSchemaParams(bookingIdParamSchema), cancelBookingHandler);
+// Get own bookings - any authenticated user
+bookingRouter.get('/me', authMiddleware, requirePermission("booking:read"), getBookingsByUserHandler);
+
+// Get bookings by hotel - hotel_manager and admin
+bookingRouter.get('/hotel/:hotelId', authMiddleware, requirePermission("booking:read"), validateSchemaParams(getBookingsByHotelSchema), getBookingsByHotelHandler);
+
+// Get booking by ID - any authenticated user
+bookingRouter.get('/:id', authMiddleware, requirePermission("booking:read"), validateSchemaParams(bookingIdParamSchema), getBookingByIdHandler);
+
+// Cancel booking - customer only
+bookingRouter.patch('/cancel/:id', authMiddleware, requirePermission("booking:cancel"), validateSchemaParams(bookingIdParamSchema), cancelBookingHandler);
 
 
 export default bookingRouter;

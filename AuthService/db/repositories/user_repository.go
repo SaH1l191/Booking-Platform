@@ -78,6 +78,29 @@ func (u *UserRepository) DeleteByID(id int64) error {
 	return nil
 }
 
+func (u *UserRepository) GetUserRoles(userId int64) ([]string, error) {
+	query := `
+		SELECT r.name
+		FROM user_roles ur
+		INNER JOIN roles r ON ur.role_id = r.id
+		WHERE ur.user_id = ?`
+	rows, err := u.db.Query(query, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roles []string
+	for rows.Next() {
+		var roleName string
+		if err := rows.Scan(&roleName); err != nil {
+			return nil, err
+		}
+		roles = append(roles, roleName)
+	}
+	return roles, rows.Err()
+}
+
 func (u *UserRepository) GetAll(id int64) ([]*models.User, error) {
 	query := "SELECT id,username,email,created_at,updated_at FROM users"
 	rows, err := u.db.Query(query)

@@ -11,8 +11,7 @@ import (
 	"goAuth/pkg/logger"
 	"goAuth/router"
 	"goAuth/services"
-	"net/http" 
-	"goAuth/pkg/metrics"
+	"net/http"  
 	"time"
 )
 
@@ -80,7 +79,6 @@ func (a *App) Start(ctx context.Context) error {
 	a.RoleController = controllers.NewRoleController(a.RoleService)
 	logger.Log.Info("Controllers initialized")
 
-	metrics.Init()
 	// Router
 	userRouter := router.NewUserRouter(a.UserController)
 	roleRouter := router.NewRoleRouter(a.RoleController)

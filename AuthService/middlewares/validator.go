@@ -63,7 +63,6 @@ func CreateRoleRequestValidator(next http.Handler) http.Handler {
 			return
 		}
 
-
 		if err := payload.Validate(); err != nil {
 			utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Validation failed", err)
 			return

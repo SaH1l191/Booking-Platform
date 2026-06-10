@@ -10,16 +10,16 @@ import {
 import { roomSchema, updateRoomSchema } from "../../validators/room.validator";
 import { validateSchemaBody, validateSchemaParams } from "../../validators";
 import { idParamSchema, hotelIdParamSchema } from "../../validators/common.validator";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+import { requirePermission } from "../../middlewares/rbac.middleware";
 
 const roomRouter = express.Router();
 
-roomRouter.get("/hotel/:hotelId", validateSchemaParams(hotelIdParamSchema), getRoomsByHotelHandler);
-roomRouter.post("/", validateSchemaBody(roomSchema), createRoomHandler);
-roomRouter.get("/", getAllRoomsHandler);
-roomRouter.get("/:id", validateSchemaParams(idParamSchema), getRoomByIdHandler);
-roomRouter.put("/:id", validateSchemaParams(idParamSchema), validateSchemaBody(updateRoomSchema), updateRoomHandler);
-roomRouter.delete("/:id", validateSchemaParams(idParamSchema), deleteRoomHandler);
-
-
+roomRouter.get("/hotel/:hotelId", authMiddleware, requirePermission("room:read"), validateSchemaParams(hotelIdParamSchema), getRoomsByHotelHandler);
+roomRouter.post("/", authMiddleware, requirePermission("room:create"), validateSchemaBody(roomSchema), createRoomHandler);
+roomRouter.get("/", authMiddleware, requirePermission("room:read"), getAllRoomsHandler);
+roomRouter.get("/:id", authMiddleware, requirePermission("room:read"), validateSchemaParams(idParamSchema), getRoomByIdHandler);
+roomRouter.put("/:id", authMiddleware, requirePermission("room:update"), validateSchemaParams(idParamSchema), validateSchemaBody(updateRoomSchema), updateRoomHandler);
+roomRouter.delete("/:id", authMiddleware, requirePermission("room:delete"), validateSchemaParams(idParamSchema), deleteRoomHandler);
 
 export default roomRouter;

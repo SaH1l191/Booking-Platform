@@ -17,8 +17,9 @@ func NewUserRouter(userController *controllers.UserController) *UserRouter {
 func (ur *UserRouter) Register(chiRouter chi.Router) {
 	chiRouter.Route("/users", func(r chi.Router) {
 
+		// Public routes - no auth
 		r.Group(func(auth chi.Router) {
-			// auth.Use(middlewares.RateLimitMiddleware(5))
+			auth.Use(middlewares.RateLimitMiddleware(5))
 
 			auth.With(middlewares.CreateUserRequestValidator).
 				Post("/signup", ur.userController.CreateUser)
@@ -32,28 +33,16 @@ func (ur *UserRouter) Register(chiRouter chi.Router) {
 			auth.Post("/logout", ur.userController.LogoutUser)
 		})
 
+		// Protected routes - JWT required
 		r.Group(func(protected chi.Router) {
-			// protected.Use(middlewares.RateLimitMiddleware(10))
+			protected.Use(middlewares.RateLimitMiddleware(10))
 			protected.Use(middlewares.JWTAuthMiddleware)
 
-			protected.Get("/{id}", ur.userController.GetUserByID)
-			protected.Delete("/{id}", ur.userController.DeleteUser)
+			protected.With(middlewares.RequirePermission("user:read")).Get("/{id}", ur.userController.GetUserByID)
+			protected.With(middlewares.RequirePermission("user:delete")).Delete("/{id}", ur.userController.DeleteUser)
 			protected.Post("/logout", ur.userController.LogoutUser)
 		})
 
-		r.Get("/", ur.userController.GetAllUsers)
-
-		// r.With(middlewares.JWTAuthMiddleware).Get("/{id}", ur.userController.GetUserByID)
-		// r.With(middlewares.CreateUserRequestValidator).Post("/signup", ur.userController.CreateUser)
-		// r.With(middlewares.LoginUserRequestValidator).Post("/login", ur.userController.LoginUser)
-
-		// r.With(middlewares.JWTAuthMiddleware).Delete("/{id}", ur.userController.DeleteUser)
-		// // Logout clears cookies (no auth required)
-		// r.Post("/logout", ur.userController.LogoutUser)
-		// r.Get("/", ur.userController.GetAllUsers)
-		// // Allow both POST and GET for token refresh
-		// r.Post("/refresh", ur.userController.RefreshToken)
-		// r.Get("/refresh", ur.userController.RefreshToken)
-		// r.With(middlewares.JWTAuthMiddleware).Post("/logout",ur.userController.LogoutUser)
+		r.With(middlewares.JWTAuthMiddleware, middlewares.RequirePermission("user:read")).Get("/", ur.userController.GetAllUsers)
 	})
 }

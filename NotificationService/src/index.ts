@@ -4,8 +4,7 @@ import logger from "./config/logger";
 import { serverConfig } from "./config";
 import { appErrorHandler, genericErrorHandler } from "./middlewares/error.middleware";
 import v1Router from "./routers/v1/index.router"; 
-import { emailWorker } from "./workers/email.worker";
-import { metricsMiddleware } from "./middlewares/metrics.middleware";
+import { emailWorker } from "./workers/email.worker"; 
 import { register } from "./metrics/metrics";
 
 const app = express(); 
@@ -20,8 +19,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => res.send("Welcome"))
-
-app.use(metricsMiddleware);
+ 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
