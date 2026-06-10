@@ -19,7 +19,7 @@ func (ur *UserRouter) Register(chiRouter chi.Router) {
 
 		// Public routes - no auth
 		r.Group(func(auth chi.Router) {
-			auth.Use(middlewares.RateLimitMiddleware(5))
+			// auth.Use(middlewares.RateLimitMiddleware(5))
 
 			auth.With(middlewares.CreateUserRequestValidator).
 				Post("/signup", ur.userController.CreateUser)
@@ -35,7 +35,7 @@ func (ur *UserRouter) Register(chiRouter chi.Router) {
 
 		// Protected routes - JWT required
 		r.Group(func(protected chi.Router) {
-			protected.Use(middlewares.RateLimitMiddleware(10))
+			// protected.Use(middlewares.RateLimitMiddleware(10))
 			protected.Use(middlewares.JWTAuthMiddleware)
 
 			protected.With(middlewares.RequirePermission("user:read")).Get("/{id}", ur.userController.GetUserByID)

@@ -41,37 +41,39 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200">
+    <div className="min-h-screen bg-cream">
+      <header className="border-b border-border-light bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-1">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M29 6.5C23.5 1.5 15.5 0 10 3.5C6 6 4 10.5 4 15.5C4 22 8.5 28 16 30C10 32 3 28.5 0 22C3.5 26.5 9 29.5 15 29C10 32 2 29 0 22L4 15.5C4 10.5 6 6 10 3.5C15.5 0 23.5 1.5 29 6.5Z" fill="#FF385C"/>
-            </svg>
-            <span className="text-xl font-semibold text-gray-900">stayease</span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-navy flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 21V7l9-4 9 4v14" stroke="#c9a96e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 21V11h6v10" stroke="#c9a96e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 11V7" stroke="#c9a96e" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <span className="text-lg font-semibold text-navy font-serif">Haven</span>
           </Link>
           <Link
             href="/login"
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2.5 text-sm font-medium text-primary-soft hover:bg-cream-dark rounded-xl transition-colors"
           >
             Log in
           </Link>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-md mx-auto px-6 py-12 md:py-16">
-        <h1 className="text-[32px] font-semibold text-gray-900 leading-tight">
-          Welcome to StayEase
+        <h1 className="text-4xl font-serif font-semibold text-navy leading-tight">
+          Welcome to Haven
         </h1>
-        <p className="mt-2 text-gray-600">
-          Create an account to start booking
+        <p className="mt-3 text-muted">
+          Create an account to start booking extraordinary stays
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-navy mb-1.5">
               Username
             </label>
             <input
@@ -88,15 +90,15 @@ export default function SignupPage() {
                 },
               })}
               placeholder="JohnDoe"
-              className="w-full px-4 py-3.5 border border-gray-300 rounded-xl text-[15px] focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 transition-colors placeholder:text-gray-400"
+              className="w-full px-4 py-3.5 border border-border rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all placeholder:text-muted-light bg-white"
             />
             {errors.username && (
-              <p className="mt-1 text-xs text-red-600">{errors.username.message}</p>
+              <p className="mt-1.5 text-xs text-danger">{errors.username.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-navy mb-1.5">
               Email
             </label>
             <input
@@ -109,15 +111,15 @@ export default function SignupPage() {
                 },
               })}
               placeholder="email@example.com"
-              className="w-full px-4 py-3.5 border border-gray-300 rounded-xl text-[15px] focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 transition-colors placeholder:text-gray-400"
+              className="w-full px-4 py-3.5 border border-border rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all placeholder:text-muted-light bg-white"
             />
             {errors.email && (
-              <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+              <p className="mt-1.5 text-xs text-danger">{errors.email.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-navy mb-1.5">
               Password
             </label>
             <div className="relative">
@@ -131,12 +133,12 @@ export default function SignupPage() {
                   },
                 })}
                 placeholder="6+ characters"
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-xl text-[15px] focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 transition-colors placeholder:text-gray-400 pr-12"
+                className="w-full px-4 py-3.5 border border-border rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all placeholder:text-muted-light bg-white pr-12"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-navy transition-colors"
               >
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,36 +153,36 @@ export default function SignupPage() {
               </button>
             </div>
             {errors.password && (
-              <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+              <p className="mt-1.5 text-xs text-danger">{errors.password.message}</p>
             )}
           </div>
 
-          <p className="text-xs text-gray-500">
-            By selecting Continue, I agree to StayEase&apos;s{" "}
-            <span className="underline cursor-pointer">Terms of Service</span> and{" "}
-            <span className="underline cursor-pointer">Privacy Policy</span>.
+          <p className="text-xs text-muted">
+            By selecting Continue, I agree to Haven&apos;s{" "}
+            <span className="underline cursor-pointer hover:text-navy transition-colors">Terms of Service</span> and{" "}
+            <span className="underline cursor-pointer hover:text-navy transition-colors">Privacy Policy</span>.
           </p>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 bg-pink-500 hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors mt-2"
+            className="w-full py-3.5 bg-navy hover:bg-navy-light disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all shadow-luxury mt-2"
           >
             {isLoading ? "Creating account..." : "Continue"}
           </button>
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="bg-white px-4 text-gray-500">or</span>
+              <span className="bg-cream px-4 text-muted">or</span>
             </div>
           </div>
 
           <button
             type="button"
-            className="w-full py-3.5 border border-gray-300 rounded-xl text-[15px] font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-3"
+            className="w-full py-3.5 border border-border rounded-xl text-[15px] font-medium text-navy hover:bg-white transition-colors flex items-center justify-center gap-3 bg-white"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -193,7 +195,7 @@ export default function SignupPage() {
 
           <button
             type="button"
-            className="w-full py-3.5 border border-gray-300 rounded-xl text-[15px] font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-3"
+            className="w-full py-3.5 border border-border rounded-xl text-[15px] font-medium text-navy hover:bg-white transition-colors flex items-center justify-center gap-3 bg-white"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
@@ -202,9 +204,9 @@ export default function SignupPage() {
           </button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-gray-600">
+        <p className="mt-8 text-center text-sm text-muted">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-gray-900 underline hover:text-gray-600">
+          <Link href="/login" className="font-medium text-navy underline hover:text-muted transition-colors">
             Log in
           </Link>
         </p>

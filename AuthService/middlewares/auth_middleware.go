@@ -1,10 +1,13 @@
 package middlewares
+
 import (
 	"context"
 	"fmt"
 	env "goAuth/config/env"
+	"goAuth/pkg/logger"
 	"net/http"
 	"strings"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -95,6 +98,7 @@ func RequirePermission(requiredPerm string) func(http.Handler) http.Handler {
 				http.Error(w, "Unauthorized: no roles in context", http.StatusUnauthorized)
 				return
 			}
+			logger.Log.Info("Checking permissions for user", "required_permission", requiredPerm, "user_roles", roles)
 
 			for _, role := range roles {
 				permissions, exists := RolePermissions[role]
@@ -103,6 +107,7 @@ func RequirePermission(requiredPerm string) func(http.Handler) http.Handler {
 				}
 				for _, p := range permissions {
 					if p == "*" || p == requiredPerm {
+						logger.Log.Info("Permission granted", "user_roles", roles, "required_permission", requiredPerm)
 						next.ServeHTTP(w, r)
 						return
 					}

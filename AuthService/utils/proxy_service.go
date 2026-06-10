@@ -26,12 +26,6 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			in := pr.In
 			out := pr.Out
 
-			cookie, err := in.Cookie("access_token")
-			if err == nil {
-				out.Header.Set("Authorization", "Bearer "+cookie.Value)
-				logger.Log.Info("Access token found in cookie", "token", out.Header.Get("Authorization"))
-			}
-
 			logger.Log.Info("=== Proxy Request Start ===")
 
 			logger.Log.Info("Incoming request",
@@ -54,76 +48,39 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			// ---------------------------
 			// Scheme & Host rewrite
 			// ---------------------------
-			logger.Log.Info("Setting target URL",
-				"scheme_before", out.URL.Scheme,
-				"host_before", out.URL.Host,
-				"target_scheme", targetURL.Scheme,
-				"target_host", targetURL.Host,
-			)
-
 			out.URL.Scheme = targetURL.Scheme
 			out.URL.Host = targetURL.Host
-
-			logger.Log.Info("Target URL applied",
-				"scheme_after", out.URL.Scheme,
-				"host_after", out.URL.Host,
-			)
 
 			// ---------------------------
 			// Path rewrite
 			// ---------------------------
 			originalPath := in.URL.Path
-			logger.Log.Info("Path rewrite start",
-				"original_path", originalPath,
-				"path_prefix", pathPrefix,
-			)
-
 			stripPrefix := strings.TrimPrefix(originalPath, pathPrefix)
-
-			logger.Log.Info("After prefix stripping",
-				"strip_prefix", stripPrefix,
-			)
-
 			finalPath := "/" + strings.TrimPrefix(stripPrefix, "/")
-
-			// if targetURL.Path != "" && targetURL.Path != "/" {
-			// 	finalPath = "/" + strings.TrimSuffix(targetURL.Path, "/") + finalPath
-			// }
-
 			out.URL.Path = finalPath
-
-			logger.Log.Info("Path rewrite complete",
-				"final_path", out.URL.Path,
-			)
 
 			// ---------------------------
 			// Host header
 			// ---------------------------
 			out.Host = targetURL.Host
 
-			logger.Log.Info("Host set",
-				"host_header", out.Host,
-			)
-
-			
-
-			authHeader := in.Header.Get("authorization")
-            // If Authorization header is missing, fallback to the access_token cookie set by JWTAuthMiddleware
-            if authHeader == "" {
-                if cookie, err := in.Cookie("access_token"); err == nil && cookie.Value != "" {
-                    authHeader = "Bearer " + cookie.Value
-                }
-            }
-            if authHeader != "" {
-                out.Header.Set("authorization", authHeader)
-                logger.Log.Info("Authorization header propagated (from header or cookie)", "auth_header", authHeader) 
-                out.Header.Del("cookie")
-                logger.Log.Info("Cookie header stripped before forwarding")
-            }
-
 			// ---------------------------
-			// Final outgoing request summary
+			// Authorization propagation
+			// Priority: Authorization header > access_token cookie
 			// ---------------------------
+			authHeader := in.Header.Get("Authorization")
+			if authHeader == "" {
+				if cookie, err := in.Cookie("access_token"); err == nil && cookie.Value != "" {
+					authHeader = "Bearer " + cookie.Value
+				}
+			}
+			if authHeader != "" {
+				out.Header.Set("Authorization", authHeader)
+				logger.Log.Info("Authorization header propagated", "auth_header", authHeader)
+			}
+ 
+			out.Header.Del("Cookie")
+
 			logger.Log.Info("=== Proxy Request End ===",
 				"final_method", out.Method,
 				"final_url", out.URL.String(),

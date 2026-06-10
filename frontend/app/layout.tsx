@@ -4,8 +4,8 @@ import ClientProviders from "./components/ClientProviders";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StayEase | Holiday Rentals, Cabins, Beach Houses & More",
-  description: "Find holiday rentals, cabins, beach houses, unique homes and experiences on StayEase.",
+  title: "Haven | Luxury Hotel & Stay Bookings",
+  description: "Discover extraordinary stays, boutique hotels, and curated experiences around the world.",
 };
 
 export default function RootLayout({
@@ -24,12 +24,12 @@ export default function RootLayout({
           toastOptions={{
             style: {
               background: "#ffffff",
-              border: "1px solid #ebebeb",
+              border: "1px solid #e2e0dc",
               borderRadius: "12px",
               padding: "12px 16px",
               fontSize: "14px",
               fontFamily: "var(--font-sans)",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              boxShadow: "0 12px 40px -8px rgba(15,23,42,0.12)",
             },
           }}
           closeButton
@@ -39,4 +39,3 @@ export default function RootLayout({
     </html>
   );
 }
-//npm run dev -- -p 4000

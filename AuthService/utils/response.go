@@ -6,7 +6,8 @@ import (
     "goAuth/pkg/logger"
 )
 
-// WriteJSON sends a JSON response with the given status code.
+
+
 func WriteJSON(w http.ResponseWriter, status int, payload interface{}) {
     w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(status)
@@ -17,13 +18,11 @@ func WriteJSON(w http.ResponseWriter, status int, payload interface{}) {
     }
 }
 
-// ErrorResponse is the standard error envelope.
 type ErrorResponse struct {
     Success bool   `json:"success"`
     Message string `json:"message"`
 }
 
-// SuccessResponse is the standard success envelope.
 type SuccessResponse struct {
     Success bool        `json:"success"`
     Message string      `json:"message"`

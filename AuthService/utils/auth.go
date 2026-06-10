@@ -32,7 +32,7 @@ func WriteJsonSuccessResponse(w http.ResponseWriter, status int, message string,
 	response["success"] = true
 	response["message"] = message
 	response["data"] = data
-	return WriteJsonResponse(w, http.StatusOK, response)
+	return WriteJsonResponse(w, status, response)
 }
 
 func WriteJsonErrorResponse(w http.ResponseWriter, status int, message string, err error) error {
@@ -50,17 +50,15 @@ func ReadJsonRequest(r *http.Request, result any) error {
 }
 
 func SetAuthCookies(r *http.Request, w http.ResponseWriter, accessToken, refreshToken string) {
-	// secureFlag := false
-	// if r.TLS != nil {
-	// 	secureFlag = true
-	// }
+	// secureFlag := r.TLS != nil
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
 		Path:     "/",
 		// HttpOnly: true,
 		// Secure:   secureFlag,
-		// SameSite: http.SameSiteStrictMode,
+		// SameSite: http.SameSiteLaxMode,
 		MaxAge:   15 * 60,
 	})
 
@@ -70,7 +68,7 @@ func SetAuthCookies(r *http.Request, w http.ResponseWriter, accessToken, refresh
 		Path:     "/",
 		// HttpOnly: true,
 		// Secure:   secureFlag,
-		// SameSite: http.SameSiteStrictMode,
+		// SameSite: http.SameSiteLaxMode,
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 }

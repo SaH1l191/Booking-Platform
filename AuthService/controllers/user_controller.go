@@ -97,22 +97,35 @@ func (uc *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
-	cookie, err := r.Cookie("refresh_token")
-	if err != nil {
-		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Refresh token missing", err)
+	tokenString := ""
+
+	// if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+	// 	tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+	// }
+
+	// if tokenString == "" {
+
+	if cookie, err := r.Cookie("refresh_token"); err == nil {
+		tokenString = cookie.Value
+	}
+
+	// }
+
+	tokenString = strings.TrimSpace(tokenString)
+	if tokenString == "" {
+		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Refresh token missing", fmt.Errorf("no refresh token provided"))
 		return
 	}
-	tokenString := cookie.Value
+
 	claims := jwt.MapClaims{}
-	_, err = jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(env.GetEnv("JWT_REFRESH_SECRET", "refresh_secret")), nil
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(env.GetEnv("JWT_REFRESH_SECRET", "secret")), nil
 	})
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid refresh token", err)
 		return
 	}
 
-	// Ensure token type is refresh if set
 	if typ, ok := claims["type"].(string); ok && typ != "refresh" {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid token type", fmt.Errorf("expected refresh token"))
 		return
@@ -124,11 +137,10 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Normalise e-mail (trim spaces, lower-case) -- DB collation is case-insensitive but this guards against subtle mismatches
 	email = strings.TrimSpace(strings.ToLower(email))
-
 	logger.Log.Info("Refreshing token", "email", email)
 
+	//additional guard to check if user still exists before refreshing tokens
 	user, err := uc.UserService.GetUserByEmail(email)
 	if err != nil || user == nil {
 		logger.Log.Error("User not found during token refresh", "error", err, "email", email)

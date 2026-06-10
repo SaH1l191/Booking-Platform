@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import logger from "../config/logger";
+import logger from "../config/logger"; 
 
 export interface AuthRequest extends Request {
     user?: any;
@@ -17,11 +17,13 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     try {
         const secret = process.env.JWT_ACCESS_SECRET || "secret";
         const decoded = jwt.verify(token, secret!);
+        logger.info("Token decoded successfully", { decoded });
         req.user = decoded
         logger.info("User authenticated", { userId: req.user.userId });
         next();
     }
     catch (err) {
+        logger.error("Invalid token", { error: err });
         return res.status(401).json({ message: "Invalid token" });
     }
 }
