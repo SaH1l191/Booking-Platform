@@ -10,6 +10,7 @@ datasource db {
 model booking {
   id             Int             @id @default(autoincrement())
   userId         Int
+  userEmail      String          @default("")
   hotelId        Int
   roomId         Int
   checkIn        DateTime
@@ -22,11 +23,11 @@ model booking {
   expiresAt      DateTime?
   idempotencykey idempotencykey?
 
-  @@index([userId]) // get bookings by user
-  @@index([hotelId]) // get bookings by hotel
+  @@index([userId])
+  @@index([hotelId])
   @@index([hotelId, roomId, status])
-  @@index([hotelId, roomId, checkIn, checkOut]) // check availability : db level consistency 
-  @@index([status, expiresAt]) // invalidating the pending/expired by cron job
+  @@index([hotelId, roomId, checkIn, checkOut])
+  @@index([status, expiresAt])
 }
 
 model idempotencykey {
@@ -39,8 +40,19 @@ model idempotencykey {
   booking   booking  @relation(fields: [bookingId], references: [id], map: "IdempotencyKey_bookingId_fkey", onDelete: Cascade)
 }
 
+model outbox {
+  id        Int      @id @default(autoincrement())
+  eventType String
+  payload   Json
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([published, createdAt])
+}
+
 enum booking_status {
   PENDING
   CONFIRMED
   CANCELLED
+  EXPIRED
 }

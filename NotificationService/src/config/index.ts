@@ -4,11 +4,9 @@ import logger from './logger';
 
 type ServerConfig = {
     PORT: number,
-    REDIS_HOST: string,
-    REDIS_PORT: number
+    RABBITMQ_URL: string,
     MAIL_USER: string
     MAIL_PASS: string
-    REDIS_SERVER_URL: string
 }
 
 type DBConfig = { 
@@ -26,12 +24,10 @@ function loadEnv() {
 loadEnv();
 
 export const serverConfig: ServerConfig = {
-    PORT: Number(process.env.PORT) || 3001 ,
-    REDIS_HOST: process.env.REDIS_HOST!,
-    REDIS_PORT: Number(process.env.REDIS_PORT) || 6379,
-    MAIL_USER  : process.env.MAIL_USER!,
-    MAIL_PASS  : process.env.MAIL_PASS!,
-    REDIS_SERVER_URL : process.env.REDIS_SERVER_URL!
+    PORT: Number(process.env.PORT) || 3001,
+    RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
+    MAIL_USER: process.env.MAIL_USER!,
+    MAIL_PASS: process.env.MAIL_PASS!,
 };
 
 export const dbConfig: DBConfig = {

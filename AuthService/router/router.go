@@ -57,7 +57,8 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	//Api-Gateway proxy routes
 	hotelServiceURL := env.GetEnv("HOTEL_SERVICE_URL", "http://localhost:3001")
 	bookingServiceURL := env.GetEnv("BOOKING_SERVICE_URL", "http://localhost:3002")
-	reviewServiceURL := env.GetEnv("REVIEW_SERVICE_URL", "http://localhost:3003")
+	reviewServiceURL := env.GetEnv("REVIEW_SERVICE_URL", "http://localhost:3004")
+	paymentServiceURL := env.GetEnv("PAYMENT_SERVICE_URL", "http://localhost:3005")
 
 	chiRouter.Route("/api/v1/hotels", func(r chi.Router) {
 		// r.Use(middlewares.RateLimitMiddleware(10))
@@ -91,6 +92,11 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	chiRouter.Route("/api/v1/categories", func(r chi.Router) {
 		// r.Use(middlewares.RateLimitMiddleware(20))
 		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
+	})
+ 
+	chiRouter.Route("/api/v1/payments", func(r chi.Router) {
+		r.Use(middlewares.JWTAuthMiddleware)
+		r.Handle("/*", utils.ProxyToService(paymentServiceURL, "/api/v1"))
 	})
 
 	return chiRouter
