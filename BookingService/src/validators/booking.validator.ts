@@ -1,4 +1,4 @@
-import { z } from 'zod'; 
+import { z } from 'zod';
 export const createBookingSchema = z.object({
     hotelId: z.number({ message: "Hotel ID must be a number" }),
     totalGuests: z.number({ message: "Total guests must be a number" })
@@ -31,12 +31,6 @@ export const checkAvailabilitySchema = z.object({
     }
 );
 
-export const confirmBookingSchema = z.object({
-    idempotencyKey: z.string().uuid("Invalid idempotency key format"),
-});
-
 export const bookingIdParamSchema = z.object({
     id: z.coerce.number().int().positive(),
 });
-
-

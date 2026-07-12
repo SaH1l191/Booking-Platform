@@ -2,13 +2,13 @@ import { serverConfig } from "../config/index";
 import { redisClient, redlock, } from '../config/redis.config';
 import { CreateBookingDTO } from '../dto/booking.dto';
 import { prisma } from "../lib/prisma";
-import { cancelBooking, checkHotelRoomAvailability, confirmBooking, conflictBooking, createBookingRecord, createIdempotencyKey, finalizeIdempotencyKey, getBookingById, getBookingsByHotelId, getBookingsByUserId, getIdempotencyKey } from "../repositories/booking.repository";
+import {checkHotelRoomAvailability, conflictBooking, createBookingRecord, createIdempotencyKey, getBookingById, getBookingsByHotelId, getBookingsByUserId, insertOutboxEvent } from "../repositories/booking.repository";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import { generateIdempotencyKey } from "../utils/generateIdempotencyKey";
 import logger from "../config/logger";
+import { BOOKING_CREATED_EVENT, BOOKING_CANCELLED_EVENT } from "../producers/booking-producer";
 
-export async function createBookingService({ createBookingDTO, userId }: { createBookingDTO: CreateBookingDTO, userId: number }) {
-
+export async function createBookingService({ createBookingDTO, userId, userEmail }: { createBookingDTO: CreateBookingDTO, userId: number, userEmail: string }) {
 
     const ttl = serverConfig.REDLOCK_TTL;
     const bookingResource = `hotel:${createBookingDTO.hotelId}:room${createBookingDTO.roomId}`;
@@ -20,6 +20,7 @@ export async function createBookingService({ createBookingDTO, userId }: { creat
 
         return await prisma.$transaction(
             async (tx: any) => {
+                //cache chcek to reduce database load
                 const conflictingBooking = await conflictBooking(tx, createBookingDTO)
                 if (conflictingBooking) {
                     logger.info("Conflicting booking found for dates", { hotelId: createBookingDTO.hotelId, roomId: createBookingDTO.roomId });
@@ -28,9 +29,9 @@ export async function createBookingService({ createBookingDTO, userId }: { creat
 
                 const booking = await createBookingRecord(tx, {
                     userId: userId,
+                    userEmail: userEmail,
                     hotelId: createBookingDTO.hotelId,
                     roomId: createBookingDTO.roomId,
-
                     totalGuests: createBookingDTO.totalGuests,
                     bookingAmount: createBookingDTO.bookingAmount,
                     checkIn: new Date(createBookingDTO.checkIn),
@@ -43,13 +44,25 @@ export async function createBookingService({ createBookingDTO, userId }: { creat
                 const idempotencyKey = await generateIdempotencyKey();
                 await createIdempotencyKey(tx, idempotencyKey, booking.id);
 
-                logger.info("Booking record and idempotency key created", { bookingId: booking.id, idempotencyKey });
+                await insertOutboxEvent(tx, BOOKING_CREATED_EVENT, {
+                    bookingId: booking.id,
+                    userId: booking.userId,
+                    hotelId: booking.hotelId,
+                    roomId: booking.roomId,
+                    checkIn: booking.checkIn.toISOString(),
+                    checkOut: booking.checkOut.toISOString(),
+                    bookingAmount: booking.bookingAmount,
+                    totalGuests: booking.totalGuests,
+                    userEmail: userEmail,
+                });
+
+                logger.info("Booking record, idempotency key, and outbox event created", { bookingId: booking.id, idempotencyKey });
 
                 return {
                     bookingId: booking.id,
                     idempotencyKey: idempotencyKey,
+                    expiresAt: booking.expiresAt,
                 };
-
             }
         )
 
@@ -66,66 +79,6 @@ export async function createBookingService({ createBookingDTO, userId }: { creat
             }
         }
     }
-}
-
-export async function confirmBookingService(idempotencyKey: string) {
-    logger.info("Confirming booking in service", { idempotencyKey });
-    return await prisma.$transaction(async (tx: any) => {
-        const idempotencyKeyData = await getIdempotencyKey(tx, idempotencyKey);
-
-        if (!idempotencyKeyData || !idempotencyKeyData.bookingId) {
-            logger.info("Invalid idempotency key", { idempotencyKey });
-            throw new NotFoundError("Invalid idempotency key");
-        }
-        if (idempotencyKeyData.finalized) {
-            logger.info("Idempotency key already finalized", { idempotencyKey });
-            throw new BadRequestError("Idempotency key already finalized");
-        }
-        const booking = await tx.booking.findUnique({
-            where: {
-                id: idempotencyKeyData.bookingId
-            }
-        });
-
-        if (!booking) {
-            logger.info("Booking not found for idempotency key", { idempotencyKey, bookingId: idempotencyKeyData.bookingId });
-            throw new NotFoundError(
-                "Booking not found"
-            );
-        }
-
-        if (booking.status === "PENDING" && booking.expiresAt && booking.expiresAt < new Date()) {
-            logger.info("Booking session expired", { bookingId: booking.id });
-            throw new BadRequestError("Booking session expired");
-        }
-
-        const confirmedBooking = await confirmBooking(tx, booking.id);
-        await finalizeIdempotencyKey(tx, idempotencyKey);
-
-        logger.info("Booking confirmed and idempotency key finalized", { bookingId: booking.id, idempotencyKey });
-
-        try {
-            const redisKey = `room_availability:hotel:${confirmedBooking.hotelId}` + `:room:${confirmedBooking.roomId}`;
-
-            const dates: string[] = [];
-            const startDate = new Date(confirmedBooking.checkIn);
-            const endDate = new Date(confirmedBooking.checkOut);
-
-            for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
-                dates.push(d.toISOString().split("T")[0]);
-            }
-
-            if (dates.length > 0) {
-                await redisClient.sadd(redisKey, ...dates);
-                logger.info("Availability cache updated", { redisKey, dates });
-            }
-        } catch (redisError) {
-            logger.error("Failed to update availability cache", { error: (redisError as Error).message });
-            logger.info("Booking confirmed and idempotency key finalized", { bookingId: booking.id, idempotencyKey });
-        }
-
-        return confirmedBooking;
-    })
 }
 
 export async function getBookingsByUserService(userId: number) {
@@ -147,7 +100,7 @@ export async function getBookingByIdService(bookingId: number) {
     return booking;
 }
 
-export async function cancelBookingService(bookingId: number, userId: number) {
+export async function cancelBookingService(bookingId: number, userId: number, userEmail: string) {
     logger.info("Cancelling booking in service", { bookingId, userId });
     return await prisma.$transaction(async (tx: any) => {
         const booking = await tx.booking.findUnique({
@@ -166,7 +119,23 @@ export async function cancelBookingService(bookingId: number, userId: number) {
             throw new BadRequestError("Booking is already cancelled");
         }
 
-        return await cancelBooking(tx, bookingId);
+        const updatedBooking = await tx.booking.update({
+            where: { id: bookingId },
+            data: { status: "CANCELLED" },
+        });
+
+        await insertOutboxEvent(tx, BOOKING_CANCELLED_EVENT, {
+            bookingId: updatedBooking.id,
+            userId: updatedBooking.userId,
+            hotelId: updatedBooking.hotelId,
+            roomId: updatedBooking.roomId,
+            userEmail: userEmail,
+            status: "CANCELLED",
+            reason: "User cancelled",
+        });
+
+        logger.info("Booking cancelled and outbox event created", { bookingId });
+        return updatedBooking;
     });
 }
 

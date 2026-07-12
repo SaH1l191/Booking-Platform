@@ -7,6 +7,9 @@ import { serverConfig } from "./config/index";
 import logger from "./config/logger";
 import { metricsMiddleware } from "./middlewares/metrics.middleware";
 import { register } from "./metrics/metrics";
+import { startOutboxPublisher } from "./workers/outbox-publisher";
+import { startPaymentEventConsumer } from "./workers/payment-event-consumer";
+import { startReconciliationCron } from "./workers/reconciliation-cron";
 dotenv.config();
 
 const app = express();
@@ -29,6 +32,12 @@ app.use(genericErrorHandler);
 
 const server = app.listen(serverConfig.port, async () => {
   logger.info("Booking Service started successfully", { port: serverConfig.port });
+
+  startOutboxPublisher();
+  // startPaymentEventConsumer();
+  // startBookingExpiryCron(); //commented
+  // startReconciliationCron();  // commented but verify p.paymetnt & p.booking  
+  logger.info("All BookingService workers started");
 });
 
 async function gracefulShutdown(signal: string) {

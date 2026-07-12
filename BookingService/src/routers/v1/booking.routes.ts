@@ -1,7 +1,7 @@
 import express from 'express';
 import { validateSchemaBody, validateSchemaParams, validateSchemaQuery } from '../../validators/index';
-import { bookingIdParamSchema, checkAvailabilitySchema, confirmBookingSchema, createBookingSchema, getBookingsByHotelSchema } from '../../validators/booking.validator';
-import { cancelBookingHandler, checkAvailabilityHandler, confirmBookingHandler, createBookingHandler, getBookingByIdHandler, getBookingsByHotelHandler, getBookingsByUserHandler } from '../../controllers/booking.controller';
+import { bookingIdParamSchema, checkAvailabilitySchema, createBookingSchema, getBookingsByHotelSchema } from '../../validators/booking.validator';
+import { cancelBookingHandler, checkAvailabilityHandler, createBookingHandler, getBookingByIdHandler, getBookingsByHotelHandler, getBookingsByUserHandler } from '../../controllers/booking.controller';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requirePermission } from '../../middlewares/rbac.middleware';
 
@@ -10,9 +10,6 @@ const bookingRouter = express.Router();
 
 // Create booking - customer only
 bookingRouter.post('/', authMiddleware, requirePermission("booking:create"), validateSchemaBody(createBookingSchema), createBookingHandler);
-
-// Confirm booking - customer only
-bookingRouter.post('/confirm/:idempotencyKey', authMiddleware, requirePermission("booking:confirm"), validateSchemaParams(confirmBookingSchema), confirmBookingHandler);
 
 // Check availability - any authenticated user
 bookingRouter.get('/availability', authMiddleware, requirePermission("booking:read"), validateSchemaQuery(checkAvailabilitySchema), checkAvailabilityHandler);
