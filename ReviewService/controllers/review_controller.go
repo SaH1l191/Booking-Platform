@@ -118,7 +118,7 @@ func (rc *ReviewController) GetAllReviews(w http.ResponseWriter, r *http.Request
 func (rc *ReviewController) GetReviewsByUserId(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Info("Fetching reviews by user ID in ReviewController")
 
-	userId := r.URL.Query().Get("user_id")
+	userId := chi.URLParam(r, "id")
 	if userId == "" {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "User ID is required", fmt.Errorf("missing user ID"))
 		return
@@ -137,7 +137,7 @@ func (rc *ReviewController) GetReviewsByUserId(w http.ResponseWriter, r *http.Re
 func (rc *ReviewController) GetReviewsByHotelId(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Info("Fetching reviews by hotel ID in ReviewController")
 
-	hotelId := r.URL.Query().Get("hotel_id")
+	hotelId := chi.URLParam(r, "id")
 	if hotelId == "" {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Hotel ID is required", fmt.Errorf("missing hotel ID"))
 		return
@@ -156,7 +156,7 @@ func (rc *ReviewController) GetReviewsByHotelId(w http.ResponseWriter, r *http.R
 func (rc *ReviewController) GetReviewsByBookingId(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Info("Fetching reviews by booking ID in ReviewController")
 
-	bookingId := r.URL.Query().Get("booking_id")
+	bookingId := chi.URLParam(r, "id")
 	if bookingId == "" {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Booking ID is required", fmt.Errorf("missing booking ID"))
 		return

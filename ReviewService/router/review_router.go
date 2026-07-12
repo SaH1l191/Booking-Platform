@@ -25,9 +25,9 @@ func (rr *ReviewRouter) Register(chiRouter chi.Router) {
 			auth.With(middlewares.RequirePermission("review:read")).Get("/{id}", rr.reviewController.GetReviewById)
 			auth.With(middlewares.RequirePermission("review:create")).With(middlewares.UpdateReviewValidator).Put("/{id}", rr.reviewController.UpdateReview)
 			auth.With(middlewares.RequirePermission("review:delete")).Delete("/{id}", rr.reviewController.DeleteReview)
-			auth.With(middlewares.RequirePermission("review:read")).Get("/user", rr.reviewController.GetReviewsByUserId)
-			auth.With(middlewares.RequirePermission("review:read")).Get("/hotel", rr.reviewController.GetReviewsByHotelId)
-			auth.With(middlewares.RequirePermission("review:read")).Get("/booking", rr.reviewController.GetReviewsByBookingId)
+			auth.With(middlewares.RequirePermission("review:read")).Get("/user/{id}", rr.reviewController.GetReviewsByUserId)
+			auth.With(middlewares.RequirePermission("review:read")).Get("/hotels/{id}", rr.reviewController.GetReviewsByHotelId)
+			auth.With(middlewares.RequirePermission("review:read")).Get("/booking/{id}", rr.reviewController.GetReviewsByBookingId)
 		})
 	})
 }
