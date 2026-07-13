@@ -6,21 +6,23 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/razorpay/razorpay-go"
 	"goPayment/config/env"
+	db "goPayment/db/repositories"
 	"goPayment/dto"
 	"goPayment/models"
 	"goPayment/pkg/logger"
-	db "goPayment/db/repositories"
+
+	"github.com/razorpay/razorpay-go"
 )
 
 type PaymentService interface {
-	CreateOrder(userId int64, payload *dto.CreateOrderRequestDTO) (map[string]interface{}, error)
+	CreateOrder(userId int64, userEmail string, payload *dto.CreateOrderRequestDTO) (map[string]interface{}, error)
 	VerifyPayment(payload *dto.VerifyPaymentRequestDTO) (*models.Payment, error)
 	RefundPayment(payload *dto.RefundRequestDTO) (map[string]interface{}, error)
 	GetPaymentByBookingId(bookingId int64) (*models.Payment, error)
 	HandleWebhook(payload []byte, signature string) error
 	FetchPaymentsWithStaleStatus() ([]*models.Payment, error)
+	GetRazorpayKeyId() string
 }
 
 type PaymentServiceImpl struct {
@@ -38,10 +40,8 @@ func NewPaymentService(paymentRepo *db.PaymentRepository) PaymentService {
 	}
 }
 
-func (s *PaymentServiceImpl) CreateOrder(userId int64, payload *dto.CreateOrderRequestDTO) (map[string]interface{}, error) {
+func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload *dto.CreateOrderRequestDTO) (map[string]interface{}, error) {
 	logger.Log.Info("Creating Razorpay order", "bookingId", payload.BookingId, "amount", payload.Amount)
-
-	// TODO: Validate booking exists and amount matches (call BookingService)
 
 	orderData := map[string]interface{}{
 		"amount":   payload.Amount,
@@ -63,6 +63,7 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, payload *dto.CreateOrderR
 	payment := &models.Payment{
 		BookingId:       payload.BookingId,
 		UserId:          userId,
+		UserEmail:       userEmail,
 		RazorpayOrderId: orderId,
 		Amount:          payload.Amount,
 		Currency:        "INR",
@@ -113,9 +114,6 @@ func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO)
 		return nil, err
 	}
 
-	// TODO: Call BookingService to confirm booking
-	// PATCH /bookings/confirm/{bookingId}
-
 	payment.Status = "CAPTURED"
 	payment.RazorpayPaymentId = payload.RazorpayPaymentId
 	payment.RazorpaySignature = payload.RazorpaySignature
@@ -125,7 +123,7 @@ func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO)
 }
 
 func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[string]interface{}, error) {
-	logger.Log.Info("Processing refund", "paymentId", payload.PaymentId, "amount", payload.Amount)
+	logger.Log.Info("Processing refund", "paymentId", payload.PaymentId)
 
 	payment, err := s.paymentRepo.GetPaymentById(payload.PaymentId)
 	if err != nil {
@@ -133,34 +131,18 @@ func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[s
 		return nil, err
 	}
 
-	refundAmount := payment.Amount
-	if payload.Amount != nil {
-		refundAmount = *payload.Amount
-	}
-
 	notes := map[string]interface{}{
 		"reason": "booking_cancelled",
 	}
 
-	refund, err := s.razorpayClient.Payment.Refund(payment.RazorpayPaymentId, refundAmount, notes, nil)
+	refund, err := s.razorpayClient.Payment.Refund(payment.RazorpayPaymentId, payment.Amount, notes, nil)
 	if err != nil {
 		logger.Log.Error("Failed to create Razorpay refund", "error", err)
 		return nil, err
 	}
 
 	refundId, _ := refund["id"].(string)
-	newRefundAmount := payment.RefundAmount
-	if payload.Amount != nil {
-		newRefundAmount += *payload.Amount
-	} else {
-		newRefundAmount = payment.Amount
-	}
-
-	status := "REFUNDED"
-	if newRefundAmount < payment.Amount {
-		status = "PARTIAL_REFUNDED"
-	}
-	s.paymentRepo.UpdatePaymentRefund(payment.Id, newRefundAmount, status)
+	s.paymentRepo.UpdatePaymentRefund(payment.Id, payment.Amount, "REFUNDED")
 
 	result := map[string]interface{}{
 		"refundId": refundId,
@@ -179,7 +161,6 @@ func (s *PaymentServiceImpl) GetPaymentByBookingId(bookingId int64) (*models.Pay
 func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) error {
 	logger.Log.Info("Processing webhook event")
 
-	// Verify webhook signature
 	webhookSecret := env.GetEnv("RAZORPAY_WEBHOOK_SECRET", "")
 	if webhookSecret != "" {
 		expectedSig := ComputeHmacSha256(string(rawBody), webhookSecret)
@@ -189,7 +170,6 @@ func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) err
 		}
 	}
 
-	// Parse webhook payload
 	var webhookPayload dto.WebhookPayload
 	if err := json.Unmarshal(rawBody, &webhookPayload); err != nil {
 		logger.Log.Error("Failed to parse webhook payload", "error", err)
@@ -198,14 +178,60 @@ func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) err
 
 	switch webhookPayload.Event {
 	case "payment.captured":
-		logger.Log.Info("Payment captured via webhook", "orderId", webhookPayload.Payload.Payment.Entity.OrderId)
-		// TODO: Update payment status and confirm booking
+		orderId := webhookPayload.Payload.Payment.Entity.OrderId
+		paymentId := webhookPayload.Payload.Payment.Entity.Id
+		logger.Log.Info("Payment captured via webhook", "orderId", orderId, "paymentId", paymentId)
+
+		payment, err := s.paymentRepo.GetPaymentByOrderId(orderId)
+		if err != nil {
+			logger.Log.Warn("Payment not found for webhook order", "orderId", orderId)
+			return nil
+		}
+
+		if payment.Status == "CAPTURED" {
+			logger.Log.Info("Payment already captured, skipping duplicate webhook", "orderId", orderId)
+			return nil
+		}
+
+		if payment.Status != "CREATED" {
+			logger.Log.Warn("Payment in unexpected status for capture webhook", "orderId", orderId, "status", payment.Status)
+			return nil
+		}
+
+		err = s.paymentRepo.UpdatePaymentStatus(payment.Id, "CAPTURED", paymentId, "")
+		if err != nil {
+			logger.Log.Error("Failed to update payment status from webhook", "error", err)
+			return err
+		}
+
 	case "payment.failed":
-		logger.Log.Info("Payment failed via webhook", "orderId", webhookPayload.Payload.Payment.Entity.OrderId)
-		// TODO: Update payment status and release room hold
+		orderId := webhookPayload.Payload.Payment.Entity.OrderId
+		logger.Log.Info("Payment failed via webhook", "orderId", orderId)
+
+		payment, err := s.paymentRepo.GetPaymentByOrderId(orderId)
+		if err != nil {
+			logger.Log.Warn("Payment not found for webhook order", "orderId", orderId)
+			return nil
+		}
+
+		if payment.Status == "FAILED" {
+			logger.Log.Info("Payment already failed, skipping duplicate webhook", "orderId", orderId)
+			return nil
+		}
+
+		if payment.Status != "CREATED" {
+			logger.Log.Warn("Payment in unexpected status for failure webhook", "orderId", orderId, "status", payment.Status)
+			return nil
+		}
+
+		err = s.paymentRepo.UpdatePaymentFailure(payment.Id, "Failed via webhook")
+		if err != nil {
+			logger.Log.Error("Failed to update payment failure from webhook", "error", err)
+			return err
+		}
+
 	case "refund.processed":
 		logger.Log.Info("Refund processed via webhook")
-		// TODO: Update refund status
 	default:
 		logger.Log.Info("Unhandled webhook event", "event", webhookPayload.Event)
 	}
@@ -217,6 +243,10 @@ func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) err
 func (s *PaymentServiceImpl) FetchPaymentsWithStaleStatus() ([]*models.Payment, error) {
 	logger.Log.Info("Fetching stale payments for reconciliation")
 	return s.paymentRepo.GetStalePayments()
+}
+
+func (s *PaymentServiceImpl) GetRazorpayKeyId() string {
+	return env.GetEnv("RAZORPAY_KEY_ID", "")
 }
 
 func ComputeHmacSha256(message string, secret string) string {

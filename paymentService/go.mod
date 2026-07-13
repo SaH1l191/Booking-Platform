@@ -9,8 +9,8 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.23.2
+	github.com/rabbitmq/amqp091-go v1.11.0
 	github.com/razorpay/razorpay-go v1.4.1
-	github.com/rs/cors v1.11.1
 )
 
 require (

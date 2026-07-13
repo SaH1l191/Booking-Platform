@@ -23,6 +23,7 @@ func NewPaymentController(paymentService services.PaymentService) *PaymentContro
 func (pc *PaymentController) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	payload := r.Context().Value("payload").(dto.CreateOrderRequestDTO)
 	userIDStr := r.Context().Value("userID").(string)
+	userEmail := r.Context().Value("email").(string)
 
 	userId, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
@@ -32,7 +33,7 @@ func (pc *PaymentController) CreateOrder(w http.ResponseWriter, r *http.Request)
 
 	logger.Log.Info("Creating order", "userId", userId, "bookingId", payload.BookingId)
 
-	result, err := pc.PaymentService.CreateOrder(userId, &payload)
+	result, err := pc.PaymentService.CreateOrder(userId, userEmail, &payload)
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to create order", err)
 		return
@@ -88,7 +89,21 @@ func (pc *PaymentController) GetPaymentByBookingId(w http.ResponseWriter, r *htt
 		return
 	}
 
-	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Payment fetched successfully", payment)
+	result := map[string]interface{}{
+		"id":                payment.Id,
+		"bookingId":         payment.BookingId,
+		"userId":            payment.UserId,
+		"razorpayOrderId":   payment.RazorpayOrderId,
+		"razorpayPaymentId": payment.RazorpayPaymentId,
+		"amount":            payment.Amount,
+		"currency":          payment.Currency,
+		"status":            payment.Status,
+		"createdAt":         payment.CreatedAt,
+		"updatedAt":         payment.UpdatedAt,
+		"keyId":             pc.PaymentService.GetRazorpayKeyId(),
+	}
+
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Payment fetched successfully", result)
 }
 
 func (pc *PaymentController) HandleWebhook(w http.ResponseWriter, r *http.Request) {

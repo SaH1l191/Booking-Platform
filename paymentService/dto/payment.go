@@ -34,7 +34,6 @@ func (dto *VerifyPaymentRequestDTO) Validate() error {
 
 type RefundRequestDTO struct {
 	PaymentId int64 `json:"paymentId"`
-	Amount    *int  `json:"amount,omitempty"`
 }
 
 func (dto *RefundRequestDTO) Validate() error {
