@@ -16,9 +16,9 @@ export async function getHotelByIdService(hotelId: number) {
     return hotel;
 }
 
-export async function getAllHotelsService(query: any, userId?: number) {
-    logger.info("Searching hotels", { latitude: query.latitude, longitude: query.longitude });
-    const hotels = await getAllHotels(query, userId);
+export async function getAllHotelsService(query: any) {
+    logger.info("Searching hotels", { search: query.search, category: query.category });
+    const hotels = await getAllHotels(query);
     return hotels;
 }
 

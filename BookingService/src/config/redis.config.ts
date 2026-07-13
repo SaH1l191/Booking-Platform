@@ -6,7 +6,7 @@ import logger from './logger';
 function connectToRedis() {
     try {
         let connection: Redis | null = null;
-
+        
         return () => {
             if (!connection) { 
                 connection = new IORedis(serverConfig.REDIS_SERVER_URL,{ maxRetriesPerRequest: null,});

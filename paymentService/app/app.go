@@ -9,8 +9,10 @@ import (
 	"goPayment/controllers"
 	"goPayment/db/repositories"
 	"goPayment/pkg/logger"
+	rabbitmqconfig "goPayment/config/rabbitmq"
 	"goPayment/router"
 	"goPayment/services"
+	"goPayment/workers"
 	"net/http"
 	"time"
 )
@@ -28,6 +30,10 @@ type App struct {
 
 	// controllers
 	PaymentController *controllers.PaymentController
+
+	// workers
+	bookingConsumer *workers.BookingConsumer
+	outboxPublisher *workers.OutboxPublisher
 }
 
 func New(ctx context.Context) (*App, error) {
@@ -53,6 +59,11 @@ func (a *App) Start(ctx context.Context) error {
 	a.database = db
 	logger.Log.Info("Database connection established")
 
+	logger.Log.Info("Connecting to RabbitMQ")
+	if err := rabbitmqconfig.Connect(); err != nil {
+		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
+	}
+
 	// Repositories
 	logger.Log.Info("Initializing repositories")
 	a.PaymentRepo = repositories.NewPaymentRepository(db)
@@ -67,6 +78,16 @@ func (a *App) Start(ctx context.Context) error {
 	logger.Log.Info("Initializing controllers")
 	a.PaymentController = controllers.NewPaymentController(a.PaymentService)
 	logger.Log.Info("Controllers initialized")
+
+	// Start booking event consumer
+	a.bookingConsumer = workers.NewBookingConsumer(a.PaymentService)
+	if err := a.bookingConsumer.Start(); err != nil {
+		return fmt.Errorf("failed to start booking consumer: %w", err)
+	}
+
+	// Start outbox publisher
+	a.outboxPublisher = workers.NewOutboxPublisher(db)
+	a.outboxPublisher.Start()
 
 	// Router
 	paymentRouter := router.NewPaymentRouter(a.PaymentController)
@@ -112,6 +133,8 @@ func (a *App) Stop(ctx context.Context) error {
 		}
 		logger.Log.Info("Database connection closed")
 	}
+
+	rabbitmqconfig.Close()
 	logger.Log.Info("Payment service shutdown complete")
 	return nil
 }

@@ -12,7 +12,7 @@ export interface User {
   updatedAt: string;
 }
 
-export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
+export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "EXPIRED";
 
 export interface Booking {
   id: number;
@@ -58,10 +58,9 @@ export interface Hotel {
   rating: number;
   ratingCount: number;
   amenities: string[];
+  distance?: number | null;
   categories: Category[];
   images: HotelImage[];
-  isLiked: boolean;
-  likeCount: number;
   createdAt: string;
   updatedAt: string;
   rooms?: Room[];

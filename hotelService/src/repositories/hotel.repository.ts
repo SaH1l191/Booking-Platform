@@ -1,4 +1,5 @@
-import { Op, fn, col, literal, where as sequelizeWhere } from "sequelize";
+import { Op, literal, where as sequelizeWhere } from "sequelize";
+import sequelize from "../db/models/sequelize";
 import logger from "../config/logger"
 import Hotel from "../db/models/hotel";
 import HotelCategory from "../db/models/hotelCategory";
@@ -43,170 +44,117 @@ export async function createHotel(hotelData: createHotelDto) {
 }
 
 export async function getHotelById(hotelId: number) {
-    const hotel = await Hotel.findByPk(hotelId);
+    const hotel = await Hotel.findByPk(hotelId, {
+        include: [
+            {
+                model: HotelCategory,
+                as: "hotelCategories",
+                include: [
+                    {
+                        model: Category,
+                        as: "category",
+                    }
+                ]
+            },
+            {
+                model: HotelImage,
+                as: "images"
+            }
+        ]
+    });
     if (!hotel) {
         logger.warn("Hotel not found");
         throw new NotFoundError("Hotel not found");
     }
-
-    const [categories, images] = await Promise.all([
-        HotelCategory.findAll({
-            where: { hotelId },
-            include: [{ model: Category, as: "category" }],
-        }),
-        HotelImage.findAll({
-            where: { hotelId },
-            order: [["display_order", "ASC"]],
-        }),
-    ]);
-
+    const hotelJson = hotel.toJSON() as any;
     return {
-        ...hotel.toJSON(),
-        categories: categories.map((hc: any) => hc.category),
-        images,
+        ...hotelJson,
+        categories: hotelJson.hotelCategories?.map((hc: any) => hc.category) || [],
+        images : hotelJson.images || [],
         amenities: hotel.amenities || [],
     };
 }
 
-export async function getAllHotels(query: any, userId?: number) {
+export async function getAllHotels(query: any) {
     const page = Math.max(1, parseInt(query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(query.limit) || 10));
     const offset = (page - 1) * limit;
-    const sortBy = query.sortBy || '-createdAt';
-    const search = query.search;
-    const minRating = query.minRating;
-    const maxRating = query.maxRating;
-    const latitude = query.latitude;
-    const longitude = query.longitude;
-    const radius = query.radius;
-    const category = query.category;
-    const minPrice = query.minPrice;
-    const maxPrice = query.maxPrice;
 
     const where: any = { deletedAt: null };
 
-    if (search) {
-        where.name = { [Op.like]: `%${search}%` };
+    if (query.search) {
+        where.name = { [Op.like]: `%${query.search}%` };
     }
 
-    if (minRating || maxRating) {
-        where.rating = {};
-        if (minRating !== undefined && minRating !== '') where.rating[Op.gte] = minRating;
-        if (maxRating !== undefined && maxRating !== '') where.rating[Op.lte] = maxRating;
+    if (query.minRating) {
+        where.rating = where.rating || {};
+        where.rating[Op.gte] = parseFloat(query.minRating);
+    }
+    if (query.maxRating) {
+        where.rating = where.rating || {};
+        where.rating[Op.lte] = parseFloat(query.maxRating);
     }
 
-    const attributes: any = {};
-    const sortOrder: any = [];
 
-    if (latitude !== undefined && longitude !== undefined && latitude !== '' && longitude !== '') {
-        const lat = parseFloat(latitude);
-        const lng = parseFloat(longitude);
-        const r = parseFloat(radius || 10);
+    if (query.minPrice) {
+        where.price = where.price || {};
+        where.price[Op.gte] = parseFloat(query.minPrice);
+    }
+    if (query.maxPrice) {
+        where.price = where.price || {};
+        where.price[Op.lte] = parseFloat(query.maxPrice);
+    }
 
-        const latDelta = r / 111;
-        const lngDelta = r / (111 * Math.cos(lat * Math.PI / 180));
+    //  (bounding box + distance check)
+    let distanceField: ReturnType<typeof literal> | null = null;
+    if (query.latitude && query.longitude) {
+        const lat = parseFloat(query.latitude);
+        const lng = parseFloat(query.longitude);
+        const r = parseFloat(query.radius) || 10;
 
-        where.latitude = { [Op.between]: [lat - latDelta, lat + latDelta] };
-        where.longitude = { [Op.between]: [lng - lngDelta, lng + lngDelta] };
+        if (!isNaN(lat) && !isNaN(lng)) {
+            const latDelta = r / 111;
+            const lngDelta = r / (111 * Math.cos((lat * Math.PI) / 180));
 
-        const distanceField = literal(`
+            where.latitude = { [Op.between]: [lat - latDelta, lat + latDelta] };
+            where.longitude = { [Op.between]: [lng - lngDelta, lng + lngDelta] };
+
+            distanceField = literal(`
                 ST_Distance_Sphere(
                     POINT(longitude, latitude),
-                    POINT(${lng}, ${lat})
+                    POINT(${sequelize.escape(lng)}, ${sequelize.escape(lat)})
                 ) / 1000
-                `);
-        attributes.include = [[distanceField, 'distance']];
+            `);
 
-        where[Op.and] = [
-            sequelizeWhere(distanceField, { [Op.lte]: r })
-        ];
-
-        sortOrder.push([literal('distance'), 'ASC']);
-    }
-
-    if (sortBy) {
-        const parts = sortBy.split(',');
-        parts.forEach((part: string) => {
-            const isDesc = part.startsWith('-');
-            const field = isDesc ? part.substring(1) : part;
-            if (field !== 'distance' || sortOrder.length === 0) {
-                sortOrder.push([field, isDesc ? 'DESC' : 'ASC']);
-            }
-        });
-    }
-
-    const findOptions: any = {
-        where,
-        order: sortOrder,
-        limit,
-        offset,
-    };
-
-    if (attributes.include) {
-        findOptions.attributes = attributes;
-    }
-
-    // Filter by category slug
-    if (category) {
-        const categorySlugs = category.split(',').map((s: string) => s.trim());
-        const categoryRecords = await Category.findAll({
-            where: { slug: { [Op.in]: categorySlugs } },
-        });
-        const categoryIds = categoryRecords.map((c) => c.id);
-
-        if (categoryIds.length > 0) {
-            const hotelIdsInCategory = await HotelCategory.findAll({
-                where: { categoryId: { [Op.in]: categoryIds } },
-                attributes: ["hotelId"],
-                group: ["hotelId"],
-            });
-            const hotelIds = hotelIdsInCategory.map((hc) => hc.hotelId);
-            where.id = { [Op.in]: hotelIds };
-        } else {
-            // No matching categories, return empty
-            return { hotels: [], total: 0, page, limit, totalPages: 0 };
+            where[Op.and] = [
+                sequelizeWhere(distanceField, { [Op.lte]: r })
+            ];
         }
     }
 
-    const { count, rows } = await Hotel.findAndCountAll(findOptions);
-
-    // Enrich hotels with categories, images, likes
-    const hotelIds = rows.map((h) => h.id);
-
-    const allHotelCategories = await HotelCategory.findAll({
-        where: { hotelId: { [Op.in]: hotelIds } },
-        include: [{ model: Category, as: "category" }],
-    });
-
-    const allHotelImages = await HotelImage.findAll({
-        where: { hotelId: { [Op.in]: hotelIds } },
-        order: [["display_order", "ASC"]],
-    });
-
-    const hotelsEnriched = rows.map((hotel) => {
-        const hotelCategories = allHotelCategories
-            .filter((hc) => hc.hotelId === hotel.id)
-            .map((hc: any) => hc.category);
-
-        const hotelImages = allHotelImages
-            .filter((img) => img.hotelId === hotel.id);
-
-        return {
-            ...hotel.toJSON(),
-            categories: hotelCategories,
-            images: hotelImages,
-            amenities: hotel.amenities || []
-        };
-    });
-
-    logger.info("Hotels fetched", { count: hotelsEnriched.length, total: count });
-    return {
-        hotels: hotelsEnriched,
-        total: count,
-        page,
+    const { count, rows } = await Hotel.findAndCountAll({
+        where,
+        distinct: true,
         limit,
-        totalPages: Math.ceil(count / limit),
-    };
+        offset,
+        include: [
+            {
+                model: HotelCategory,
+                as: "hotelCategories",
+                include: [{ model: Category, as: "category", attributes: ["id", "name", "slug", "icon"] }],
+                attributes: [],
+            },
+            {
+                model: HotelImage,
+                as: "images",
+                attributes: ["id", "url", "altText", "displayOrder"],
+                separate: true, //removes the N+1 problem by fetching images in a separate query (instaed of a cartesian product of 1hotel - 3categories,3images => 9 rows)
+            },
+        ],
+    });
+
+    logger.info("Hotels fetched", { count, page, limit, offset, search: query.search, category: query.category });
+    return { hotels: rows, total: count, page, limit, totalPages: Math.ceil(count / limit) };
 }
 
 export async function updateHotel(hotelId: number, hotelData: Partial<createHotelDto>) {

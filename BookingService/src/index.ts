@@ -42,7 +42,6 @@ const server = app.listen(serverConfig.port, async () => {
 
 async function gracefulShutdown(signal: string) {
   logger.info("Graceful shutdown initiated", { signal });
-
   server.close(async (err) => {
     if (err) {
       logger.error("Error while closing server", { error: err.message });

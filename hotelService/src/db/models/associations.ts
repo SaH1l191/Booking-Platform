@@ -3,6 +3,9 @@ import HotelCategory from "./hotelCategory";
 import Category from "./category";
 import HotelImage from "./hotelImage";
 
+Hotel.hasMany(HotelCategory, { foreignKey: "hotelId", as: "hotelCategories" });
+HotelCategory.belongsTo(Hotel, { foreignKey: "hotelId", as: "hotel" });
+
 HotelCategory.belongsTo(Category, { foreignKey: "categoryId", as: "category" });
 Category.belongsToMany(Hotel, { through: HotelCategory, foreignKey: "categoryId", otherKey: "hotelId", as: "hotels" });
 Hotel.belongsToMany(Category, { through: HotelCategory, foreignKey: "hotelId", otherKey: "categoryId", as: "categories" });

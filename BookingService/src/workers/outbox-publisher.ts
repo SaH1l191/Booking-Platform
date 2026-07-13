@@ -72,7 +72,4 @@ async function processPendingEvents() {
     }
 }
 
-export function stopOutboxPublisher() {
-    isRunning = false;
-    logger.info("Booking outbox publisher stopped");
-}
+

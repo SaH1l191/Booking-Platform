@@ -55,8 +55,11 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			// Path rewrite
 			// ---------------------------
 			originalPath := in.URL.Path
+			logger.Log.Info("Original request path", "original_path", originalPath, "path_prefix", pathPrefix)
 			stripPrefix := strings.TrimPrefix(originalPath, pathPrefix)
+			logger.Log.Info("Stripped prefix from path", "stripped_path", stripPrefix)
 			finalPath := "/" + strings.TrimPrefix(stripPrefix, "/")
+			logger.Log.Info("Final request path after rewrite", "final_path", finalPath)
 			out.URL.Path = finalPath
 
 			// ---------------------------

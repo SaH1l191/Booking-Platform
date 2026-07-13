@@ -16,7 +16,6 @@ interface PaymentEvent {
         currency: string;
         status: string;
         failureReason?: string;
-        refundAmount?: number;
     };
 }
 
@@ -42,9 +41,6 @@ export const paymentNotificationWorker = async () => {
                     await handlePaymentFailed(event);
                     break;
                 case "PAYMENT_REFUNDED":
-                    await handlePaymentRefunded(event);
-                    break;
-                case "PAYMENT_PARTIAL_REFUNDED":
                     await handlePaymentRefunded(event);
                     break;
                 default:
@@ -132,7 +128,7 @@ async function handlePaymentFailed(event: PaymentEvent) {
 }
 
 async function handlePaymentRefunded(event: PaymentEvent) {
-    const { userEmail, bookingId, amount, refundAmount } = event.payload;
+    const { userEmail, bookingId, amount } = event.payload;
 
     if (!userEmail) {
         logger.warn("No userEmail for PAYMENT_REFUNDED, skipping email", { bookingId });
@@ -142,7 +138,7 @@ async function handlePaymentRefunded(event: PaymentEvent) {
     try {
         const emailContent = await renderMailTemplate("payment-confirmation", {
             bookingId: bookingId,
-            amount: refundAmount || amount,
+            amount: amount,
             currency: "INR",
             paymentId: event.payload.paymentId,
             status: "REFUNDED",

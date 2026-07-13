@@ -43,7 +43,8 @@ export const bookingNotificationWorker = async () => {
                     await handleBookingExpired(event);
                     break;
                 default:
-                    logger.info("Unhandled booking event", { eventType: event.eventType });
+                    logger.info("Unhandled booking event", { eventType: event.eventType }); //need to modify the exchange , on confirm booking repo 
+                    // it sends booking_created event which is not neceesarry to implmenet here to notificaiton service , as payment will confirm and emit event
             }
 
             channel.ack(msg);
@@ -101,13 +102,10 @@ async function handleBookingCancelled(event: BookingEvent) {
     }
 
     try {
-        const emailContent = await renderMailTemplate("payment-confirmation", {
+        const emailContent = await renderMailTemplate("booking-cancelled", {
+            userName: userEmail.split("@")[0],
             bookingId: bookingId,
-            amount: 0,
-            currency: "INR",
-            paymentId: 0,
-            status: "CANCELLED",
-            reason: reason || "Booking cancelled",
+            reason: reason || "",
         });
 
         await sendEmail(
