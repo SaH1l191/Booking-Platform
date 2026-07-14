@@ -10,7 +10,7 @@ import { useHotelsStore } from "@/stores";
 const fallbackImage = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop";
 
 export default function Home() {
-  const { hotels, categories, isLoading, fetchHotels, fetchCategories, selectedCategory, setSelectedCategory, toggleLike } = useHotelsStore();
+  const { hotels, categories, isLoading, fetchHotels, fetchCategories, selectedCategory, setSelectedCategory } = useHotelsStore();
 
   useEffect(() => {
     fetchCategories();
@@ -104,23 +104,6 @@ export default function Home() {
                         alt={hotel.images?.[0]?.altText || hotel.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleLike(hotel.id);
-                        }}
-                        className="absolute top-3 right-3 p-2.5 rounded-xl bg-white/90 backdrop-blur-sm hover:bg-white transition-all shadow-luxury"
-                      >
-                        <svg
-                          className={`w-4 h-4 ${hotel.isLiked ? "text-danger fill-danger" : "text-navy"}`}
-                          fill={hotel.isLiked ? "currentColor" : "none"}
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </svg>
-                      </button>
                       {hotel.categories?.length > 0 && (
                         <div className="absolute top-3 left-3 glass px-3 py-1.5 rounded-xl">
                           <span className="text-xs font-semibold text-navy">{hotel.categories[0].name}</span>

@@ -7,7 +7,6 @@ export const BOOKING_EVENTS_QUEUE = "booking-events";
 export const BOOKING_CREATED_EVENT = "BOOKING_CREATED";
 export const BOOKING_CONFIRMED_EVENT = "BOOKING_CONFIRMED";
 export const BOOKING_CANCELLED_EVENT = "BOOKING_CANCELLED";
-export const BOOKING_EXPIRED_EVENT = "BOOKING_EXPIRED";
 
 export interface BookingCreatedPayload {
     bookingId: number;

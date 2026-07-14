@@ -2,7 +2,7 @@ import { getRabbitMQChannel } from "../queues/event-queue";
 import { prisma } from "../lib/prisma";
 import logger from "../config/logger";
 import { BOOKING_CANCELLED_EVENT } from "../producers/booking-producer";
-
+import axios from "axios";
 
 interface PaymentEvent {
     eventType: string;
@@ -98,8 +98,22 @@ async function handlePaymentCaptured(event: PaymentEvent) {
 
         //preventing race condition by checking if the booking has expired Vs the payment capture time
         if(booking.expiresAt < new Date()){
-            logger.warn("Booking has expired but payment was captured, skipping confirmation", { bookingId });
-            //refund payment logic can be added here if needed
+            logger.warn("Booking has expired but payment was captured, initiating refund", { bookingId });
+            
+            try {
+                const paymentServiceUrl = process.env.PAYMENT_SERVICE_URL || "http://payment-service:3003";
+                await axios.post(`${paymentServiceUrl}/payments/refund`, {
+                    bookingId: bookingId,
+                    reason: "BOOKING_EXPIRED"
+                });
+                logger.info("Refund initiated successfully", { bookingId });
+            } catch (refundError) {
+                logger.error("Failed to initiate refund", { 
+                    bookingId, 
+                    error: (refundError as Error).message 
+                });
+            }
+            
             return;
         }
 

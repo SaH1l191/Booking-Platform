@@ -11,6 +11,7 @@ import (
 	"goPayment/dto"
 	"goPayment/models"
 	"goPayment/pkg/logger"
+	"time"
 
 	"github.com/razorpay/razorpay-go"
 )
@@ -46,6 +47,7 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload
 	orderData := map[string]interface{}{
 		"amount":   payload.Amount,
 		"currency": "INR",
+		"expire_by": time.Now().Add(10 * time.Minute).Unix(),
 		"receipt":  fmt.Sprintf("booking_%d", payload.BookingId),
 		"notes": map[string]interface{}{
 			"bookingId": payload.BookingId,
@@ -87,6 +89,8 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload
 	return result, nil
 }
 
+
+//Fix: VerifyPayment should check booking.expiresAt before confirming
 func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO) (*models.Payment, error) {
 	logger.Log.Info("Verifying payment signature", "orderId", payload.RazorpayOrderId, "paymentId", payload.RazorpayPaymentId)
 
@@ -123,11 +127,19 @@ func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO)
 }
 
 func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[string]interface{}, error) {
-	logger.Log.Info("Processing refund", "paymentId", payload.PaymentId)
+	logger.Log.Info("Processing refund", "paymentId", payload.PaymentId, "bookingId", payload.BookingId)
 
-	payment, err := s.paymentRepo.GetPaymentById(payload.PaymentId)
+	var payment *models.Payment
+	var err error
+
+	if payload.PaymentId > 0 {
+		payment, err = s.paymentRepo.GetPaymentById(payload.PaymentId)
+	} else {
+		payment, err = s.paymentRepo.GetPaymentByBookingId(payload.BookingId)
+	}
+
 	if err != nil {
-		logger.Log.Error("Payment not found", "paymentId", payload.PaymentId, "error", err)
+		logger.Log.Error("Payment not found", "paymentId", payload.PaymentId, "bookingId", payload.BookingId, "error", err)
 		return nil, err
 	}
 
@@ -149,7 +161,7 @@ func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[s
 		"status":   "processed",
 	}
 
-	logger.Log.Info("Refund processed", "paymentId", payload.PaymentId, "refundId", refundId)
+	logger.Log.Info("Refund processed", "paymentId", payload.PaymentId, "bookingId", payload.BookingId, "refundId", refundId)
 	return result, nil
 }
 

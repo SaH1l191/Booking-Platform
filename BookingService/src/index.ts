@@ -9,7 +9,7 @@ import { metricsMiddleware } from "./middlewares/metrics.middleware";
 import { register } from "./metrics/metrics";
 import { startOutboxPublisher } from "./workers/outbox-publisher";
 import { startPaymentEventConsumer } from "./workers/payment-event-consumer";
-import { startReconciliationCron } from "./workers/reconciliation-cron";
+
 dotenv.config();
 
 const app = express();
@@ -35,8 +35,6 @@ const server = app.listen(serverConfig.port, async () => {
 
   startOutboxPublisher();
   // startPaymentEventConsumer();
-  // startBookingExpiryCron(); //commented
-  // startReconciliationCron();  // commented but verify p.paymetnt & p.booking  
   logger.info("All BookingService workers started");
 });
 

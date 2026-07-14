@@ -34,11 +34,13 @@ func (dto *VerifyPaymentRequestDTO) Validate() error {
 
 type RefundRequestDTO struct {
 	PaymentId int64 `json:"paymentId"`
+	BookingId int64 `json:"bookingId"`
 }
 
 func (dto *RefundRequestDTO) Validate() error {
 	return validation.ValidateStruct(dto,
-		validation.Field(&dto.PaymentId, validation.Required),
+		validation.Field(&dto.PaymentId, validation.Required.When(dto.BookingId == 0)),
+		validation.Field(&dto.BookingId, validation.Required.When(dto.PaymentId == 0)),
 	)
 }
 
