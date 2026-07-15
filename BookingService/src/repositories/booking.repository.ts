@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { CheckAvailabilityDTO, CreateBookingDTO } from "../dto/booking.dto";
+import { CreateBookingDTO } from "../dto/booking.dto";
 import logger from "../config/logger";
 
 export interface OutboxPayload {
@@ -22,32 +22,15 @@ export async function createIdempotencyKey(tx: any, key: string, bookingId: numb
     })
     return idempotencyKey
 }
-// export async function getIdempotencyKey(tx: any, key: string) {
 
-//     if (!isValidUUID(key)) {
-//         logger.info("Invalid idempotency key format", { key });
-//         throw new BadRequestError("Invalid idempotency key format");
-//     }
-
-//     const idempotencyKey: any[] =
-//         await tx.$queryRaw`
-//             SELECT *
-//             FROM IdempotencyKey
-//             WHERE \`key\` = ${key}
-//             FOR UPDATE
-//         `;
-//     if (!idempotencyKey || idempotencyKey.length === 0) {
-//         logger.info("Idempotency key not found in raw query", { key });
-//         throw new NotFoundError("Idempotency key not found");
-//     }
-
-//     const keyData = await tx.idempotencykey.findUnique({
-//         where: { key },
-//     });
-//     logger.info("Idempotency key found", { key: keyData?.key, finalized: keyData?.finalized });
-//     return keyData;
-// }
-
+export async function getIdempotencyKey(key: string) {
+    logger.info("Checking idempotency key", { key });
+    const idempotencyKey = await prisma.idempotencykey.findUnique({
+        where: { key },
+        include: { booking: true },
+    });
+    return idempotencyKey;
+}
 
 export async function getBookingById(bookingId: number) {
     logger.info("Fetching booking by ID in repository", { bookingId });
@@ -101,35 +84,23 @@ export async function createBooking(bookingInput: any) {
 }
 
 export async function conflictBooking(tx: any, createBookingDTO: CreateBookingDTO) {
-    logger.info("Checking for conflicting bookings", { hotelId: createBookingDTO.hotelId, roomId: createBookingDTO.roomId });
-    return await tx.booking.findFirst({
-        where: {
-            hotelId: createBookingDTO.hotelId,
-            roomId: createBookingDTO.roomId,
-            AND: [
-                {
-                    checkIn: {
-                        lt: new Date(createBookingDTO.checkOut),
-                    }
-                },
-                {
-                    checkOut: {
-                        gt: new Date(createBookingDTO.checkIn),
-                    }
-                }
-            ],
-            OR: [
-                { status: 'CONFIRMED' },
-                {
-                    AND: [
-                        { status: "PENDING" },
-                        { expiresAt: { gt: new Date() } }
-                    ]
-                }
-            ],
-        }
-    });
+    logger.info("Checking for conflicting bookings (FOR UPDATE)", { hotelId: createBookingDTO.hotelId, roomId: createBookingDTO.roomId });
+    const now = new Date();
+    const rows: any[] = await tx.$queryRaw`
+        SELECT id FROM booking
+        WHERE hotelId = ${createBookingDTO.hotelId}
+          AND roomId = ${createBookingDTO.roomId}
+          AND checkIn < ${new Date(createBookingDTO.checkOut)}
+          AND checkOut > ${new Date(createBookingDTO.checkIn)}
+          AND (
+            status = 'CONFIRMED'
+            OR (status = 'PENDING' AND expiresAt > ${now})
+          )
+        FOR UPDATE
+    `;
+    return rows.length > 0 ? rows[0] : null;
 }
+
 export async function createBookingRecord(
     tx: any,
     input: {
@@ -150,6 +121,13 @@ export async function createBookingRecord(
     });
 }
 
+export async function getAllBookings() {
+    logger.info("Fetching all bookings for admin");
+    return await prisma.booking.findMany({
+        orderBy: { createdAt: 'desc' }
+    });
+}
+
 export async function getBookingsByUserId(userId: number) {
     logger.info("Fetching bookings for user in repository", { userId });
     return await prisma.booking.findMany({
@@ -166,36 +144,6 @@ export async function getBookingsByHotelId(hotelId: number) {
     });
 }
 
-export async function checkHotelRoomAvailability(data: CheckAvailabilityDTO) {
-    return await prisma.booking.findFirst({
-        where: {
-            hotelId: data.hotelId,
-            roomId: data.roomId,
-            AND: [
-                {
-                    checkIn: {
-                        lt: new Date(data.checkOut),
-                    }
-                },
-                {
-                    checkOut: {
-                        gt: new Date(data.checkIn),
-                    }
-                }
-            ],
-            OR: [
-                { status: 'CONFIRMED' },
-                {
-                    AND: [
-                        { status: "PENDING" },
-                        { expiresAt: { gt: new Date() } }
-                    ]
-                }
-            ],
-        }
-    });
-}
-
 export async function insertOutboxEvent(tx: any, eventType: string, payload: Record<string, any>) {
     logger.info("Inserting outbox event", { eventType, payload });
     return tx.outbox.create({
@@ -208,20 +156,14 @@ export async function insertOutboxEvent(tx: any, eventType: string, payload: Rec
 
 export async function expireStaleBookings() {
     logger.info("Expiring stale PENDING bookings");
+    const now = new Date();
     const result = await prisma.$executeRaw`
         UPDATE booking
-        SET status = 'EXPIRED', updatedAt = NOW()
-        WHERE status = 'PENDING' AND expiresAt < NOW()
+        SET status = 'EXPIRED', updatedAt = ${now}
+        WHERE status = 'PENDING' AND expiresAt < ${now}
     `;
     logger.info("Expired stale bookings", { count: result });
     return result;
-}
-
-export async function getBookingWithPayment(tx: any, bookingId: number) {
-    return tx.booking.findUnique({
-        where: { id: bookingId },
-        include: { payments: true },
-    });
 }
 
 export async function getUserEmailByBookingId(bookingId: number) {

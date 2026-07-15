@@ -3,3 +3,4 @@
 **/build/
 **/generated/
 **/prisma/generated/
+.env

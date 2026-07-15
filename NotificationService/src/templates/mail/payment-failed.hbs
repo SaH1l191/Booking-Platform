@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Failed</title>
+</head>
+
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+
+    <div style="max-width: 600px; margin: auto; background: #ffffff; padding: 20px; border-radius: 8px;">
+
+        <h2 style="color: #d9534f;">Payment Failed</h2>
+
+        <p>Hi,</p>
+
+        <p>We were unable to process your payment. Here are the details:</p>
+
+        <hr />
+
+        <p><strong>Booking ID:</strong> {{bookingId}}</p>
+        <p><strong>Amount:</strong> {{amount}}</p>
+        <p><strong>Currency:</strong> {{currency}}</p>
+
+        {{#if failureReason}}
+        <p><strong>Reason:</strong> {{failureReason}}</p>
+        {{/if}}
+
+        <hr />
+
+        <p style="margin-top: 20px;">
+            Your booking has been cancelled. No amount was charged. If you wish to book again, please create a new booking.
+        </p>
+
+        <p style="margin-top: 30px;">
+            Regards,<br/>
+            <strong>Haven Booking Team</strong>
+        </p>
+
+    </div>
+
+</body>
+</html>

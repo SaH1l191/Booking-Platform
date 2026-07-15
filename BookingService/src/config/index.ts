@@ -17,5 +17,5 @@ export const serverConfig: ServerConfig = {
     REDIS_SERVER_URL: process.env.REDIS_SERVER_URL || "redis://localhost:6379",
     REDLOCK_TTL: Number(process.env.REDLOCK_TTL) || 900000,
     REDIS_LOCK_TTL: Number(process.env.REDIS_LOCK_TTL) || 900000,
-    BOOKING_EXPIRY_MS: Number(process.env.BOOKING_EXPIRY_MS) || 900000
+    BOOKING_EXPIRY_MS: Number(process.env.BOOKING_EXPIRY_MS) || 900000 // 15 min hold
 }

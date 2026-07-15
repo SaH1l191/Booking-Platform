@@ -101,7 +101,7 @@ async function handlePaymentCaptured(event: PaymentEvent) {
             logger.warn("Booking has expired but payment was captured, initiating refund", { bookingId });
             
             try {
-                const paymentServiceUrl = process.env.PAYMENT_SERVICE_URL || "http://payment-service:3003";
+                const paymentServiceUrl = process.env.PAYMENT_SERVICE_URL || "http://payment-service:3005";
                 await axios.post(`${paymentServiceUrl}/payments/refund`, {
                     bookingId: bookingId,
                     reason: "BOOKING_EXPIRED"
@@ -136,9 +136,10 @@ async function handlePaymentCaptured(event: PaymentEvent) {
             const { redisClient } = await import("../config/redis.config");
             const redisKey = `room_availability:hotel:${booking.hotelId}:room:${booking.roomId}`;
             const dates: string[] = [];
+
             const startDate = new Date(booking.checkIn);
             const endDate = new Date(booking.checkOut);
-
+            const expiry = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
             for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
                 dates.push(d.toISOString().split("T")[0]);
             }

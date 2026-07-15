@@ -1,7 +1,7 @@
 import express from 'express';
 import { validateSchemaBody, validateSchemaParams, validateSchemaQuery } from '../../validators/index';
 import { bookingIdParamSchema, checkAvailabilitySchema, createBookingSchema, getBookingsByHotelSchema } from '../../validators/booking.validator';
-import { cancelBookingHandler, checkAvailabilityHandler, createBookingHandler, getBookingByIdHandler, getBookingsByHotelHandler, getBookingsByUserHandler } from '../../controllers/booking.controller';
+import { cancelBookingHandler, checkAvailabilityHandler, createBookingHandler, getAllBookingsHandler, getBookingByIdHandler, getBookingsByHotelHandler, getBookingsByUserHandler } from '../../controllers/booking.controller';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requirePermission } from '../../middlewares/rbac.middleware';
 
@@ -17,7 +17,8 @@ bookingRouter.get('/availability', authMiddleware, requirePermission("booking:re
 // Get own bookings - any authenticated user
 bookingRouter.get('/me', authMiddleware, requirePermission("booking:read"), getBookingsByUserHandler);
 
-// Get bookings by hotel - hotel_manager and admin
+// Get bookings by hotel - hotel_manager and admin - (here normal user can also read bug - update the permission)
+//RBAC permissions also update 
 bookingRouter.get('/hotel/:hotelId', authMiddleware, requirePermission("booking:read"), validateSchemaParams(getBookingsByHotelSchema), getBookingsByHotelHandler);
 
 // Get booking by ID - any authenticated user

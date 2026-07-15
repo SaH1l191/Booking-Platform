@@ -1,11 +1,12 @@
 export type CreateBookingDTO = {
-    userId: number;
+    userId?: number;
     hotelId: number;
-    totalGuests: number;
-    bookingAmount: number;
+    totalGuests?: number;
+    bookingAmount?: number;
     roomId: number;
     checkIn: Date;
     checkOut: Date;
+    idempotencyKey?: string;
 }
 
 export type CheckAvailabilityDTO = {

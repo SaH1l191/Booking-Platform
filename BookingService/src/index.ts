@@ -34,7 +34,7 @@ const server = app.listen(serverConfig.port, async () => {
   logger.info("Booking Service started successfully", { port: serverConfig.port });
 
   startOutboxPublisher();
-  // startPaymentEventConsumer();
+  startPaymentEventConsumer();
   logger.info("All BookingService workers started");
 });
 

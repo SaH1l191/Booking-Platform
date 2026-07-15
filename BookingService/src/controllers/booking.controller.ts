@@ -1,4 +1,4 @@
-import { cancelBookingService, checkAvailabilityService, createBookingService, getBookingByIdService, getBookingsByHotelService, getBookingsByUserService } from '../services/booking.service';
+import { cancelBookingService, checkAvailabilityService, createBookingService, getAllBookingsService, getBookingByIdService, getBookingsByHotelService, getBookingsByUserService } from '../services/booking.service';
 import { Response } from 'express';
 import logger from '../config/logger';
 import { sendSuccess } from '../utils/response';
@@ -10,19 +10,26 @@ export async function createBookingHandler(req: AuthRequest, res: Response) {
     logger.info("Creating booking", { body: req.body });
 
     const userId = req.user.userId!;
-    const userEmail = req.user.email || "";
+    const userEmail = req.user.email!;
+    const idempotencyKey = req.body.idempotencyKey;
 
-    const booking = await createBookingService({ createBookingDTO: req.body, userId, userEmail });
+    const booking = await createBookingService({ createBookingDTO: req.body, userId, userEmail, idempotencyKey });
     logger.info("Booking created successfully", { bookingId: booking.bookingId });
 
-    sendSuccess(res, { bookingId: booking.bookingId, idempotencyKey: booking.idempotencyKey, expiresAt: booking.expiresAt }, 'Booking created')
+    sendSuccess(res, { bookingId: booking.bookingId, idempotencyKey: booking.idempotencyKey, expiresAt: booking.expiresAt, duplicated: booking.duplicated }, 'Booking created', 201);
+}
+
+export async function getAllBookingsHandler(req: AuthRequest, res: Response) {
+    logger.info("Fetching all bookings for admin");
+    const bookings = await getAllBookingsService();
+    sendSuccess(res, bookings, 'All bookings fetched', 200);
 }
 
 export async function getBookingsByUserHandler(req: AuthRequest, res: Response) {
     const userId = req.user.userId!;
     logger.info("Fetching bookings for user", { userId });
     const bookings = await getBookingsByUserService(userId);
-    sendSuccess(res, bookings, 'User bookings fetched');
+    sendSuccess(res, bookings, 'User bookings fetched', 200);
 }
 
 export async function getBookingsByHotelHandler(req: AuthRequest, res: Response) {
@@ -30,7 +37,7 @@ export async function getBookingsByHotelHandler(req: AuthRequest, res: Response)
     const hotelId = parseInt(hotelIdParam);
     logger.info("Fetching bookings for hotel", { hotelId });
     const bookings = await getBookingsByHotelService(hotelId);
-    sendSuccess(res, bookings, 'Hotel bookings fetched');
+    sendSuccess(res, bookings, 'Hotel bookings fetched', 200);
 }
 
 export async function getBookingByIdHandler(req: AuthRequest, res: Response) {
@@ -38,7 +45,7 @@ export async function getBookingByIdHandler(req: AuthRequest, res: Response) {
     const bookingId = parseInt(bookingIdParam);
     logger.info("Fetching booking by ID", { bookingId });
     const booking = await getBookingByIdService(bookingId);
-    sendSuccess(res, booking, 'Booking fetched');
+    sendSuccess(res, booking, 'Booking fetched', 200);
 }
 
 export async function cancelBookingHandler(req: AuthRequest, res: Response) {
@@ -48,7 +55,7 @@ export async function cancelBookingHandler(req: AuthRequest, res: Response) {
     const userEmail = req.user.email || "";
     logger.info("Cancelling booking", { bookingId, userId });
     const booking = await cancelBookingService(bookingId, userId, userEmail);
-    sendSuccess(res, booking, 'Booking cancelled');
+    sendSuccess(res, booking, 'Booking cancelled', 200);
 }
 
 export async function checkAvailabilityHandler(req: AuthRequest, res: Response) {
@@ -57,5 +64,5 @@ export async function checkAvailabilityHandler(req: AuthRequest, res: Response) 
 
     const availability = await checkAvailabilityService(data);
     logger.info("Availability checked successfully", { available: availability });
-    sendSuccess(res, availability, 'Availability checked');
+    sendSuccess(res, availability, 'Availability checked', 200);
 }
