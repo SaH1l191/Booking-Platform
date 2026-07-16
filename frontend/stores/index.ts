@@ -4,16 +4,9 @@ export { useBookingsStore } from "./bookings";
 export { useRoomsStore } from "./rooms";
 export { useRoomCategoriesStore } from "./roomCategories";
 export { useReviewsStore } from "./reviews";
+export { usePaymentStore, openRazorpayCheckout } from "./payment";
 export type {
-  User,
-  Hotel,
-  Room,
-  RoomCategory,
-  RoomType,
-  Booking,
   BookingStatus,
-  CreateBookingPayload,
-  Category,
-  HotelImage,
-  Review,
+  RoomType,
+  RoomCategory,
 } from "./types";

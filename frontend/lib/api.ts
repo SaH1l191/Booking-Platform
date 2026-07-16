@@ -26,40 +26,37 @@ function getAuthState() {
   try {
     const stored = localStorage.getItem("auth-storage");
     return stored ? JSON.parse(stored).state : null;
-  } catch {
+  } catch (err) {
+    console.error("Failed to read auth state:", err);
     return null;
   }
 }
 
 function setAuthTokens(accessToken: string, refreshToken: string) {
-  const stored = JSON.parse(localStorage.getItem("auth-storage") || "{}");
-  stored.state = { ...stored.state, tokens: { accessToken, refreshToken } };
-  localStorage.setItem("auth-storage", JSON.stringify(stored));
-
-  // Sync back to Zustand store so components get fresh tokens
   try {
-    // Dynamic import to avoid circular dependency
-    import("@/stores").then(({ useAuthStore }) => {
-      useAuthStore.setState({
-        tokens: { accessToken, refreshToken },
-      });
+    const { useAuthStore } = require("@/stores");
+    useAuthStore.setState({
+      tokens: { accessToken, refreshToken },
     });
   } catch {
-    // Non-critical: store will rehydrate from localStorage on next read
+    // Fallback: write directly to localStorage if store import fails
+    const stored = JSON.parse(localStorage.getItem("auth-storage") || "{}");
+    stored.state = { ...stored.state, tokens: { accessToken, refreshToken } };
+    localStorage.setItem("auth-storage", JSON.stringify(stored));
   }
 }
 
 function clearAuth() {
-  localStorage.removeItem("auth-storage");
   try {
-    import("@/stores").then(({ useAuthStore }) => {
-      useAuthStore.setState({
-        user: null,
-        tokens: null,
-        isAuthenticated: false,
-      });
+    const { useAuthStore } = require("@/stores");
+    useAuthStore.setState({
+      user: null,
+      tokens: null,
+      isAuthenticated: false,
     });
-  } catch {}
+  } catch {
+    localStorage.removeItem("auth-storage");
+  }
   window.location.href = "/login";
 }
 

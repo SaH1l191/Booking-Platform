@@ -2,17 +2,10 @@ import { prisma } from "../lib/prisma";
 import { getRabbitMQChannel } from "../queues/event-queue";
 import logger from "../config/logger";
 
-
-
-// If  tried to publish to RabbitMQ directly inside the transaction and RabbitMQ was down, the whole transaction would fail.
-//  The outbox decouples it — the transaction only writes to the local DB (always succeeds), and the publisher handles delivery asynchronously.
-//  If the server crashes between commit and publish, the publisher picks it up on restart.
-// In short: DB transaction guarantees atomicity of data + event. Publisher guarantees eventual delivery of the event.
-
-
+// The outbox decouples publish from transaction — the transaction only writes to the local DB,
+// and the publisher handles delivery asynchronously.
 
 const POLL_INTERVAL_MS = 5000;
-
 let isRunning = false;
 
 export function startOutboxPublisher() {
@@ -33,11 +26,13 @@ function poll() {
 async function processPendingEvents() {
     try {
         await prisma.$transaction(async (tx: any) => {
-            const events = await tx.outbox.findMany({
-                where: { published: false },
-                orderBy: { createdAt: 'asc' },
-                take: 50,
-            });
+            const events = await tx.$queryRaw`
+                SELECT * FROM outbox
+                WHERE published = false
+                ORDER BY \`createdAt\` ASC
+                LIMIT 50
+                FOR UPDATE SKIP LOCKED
+            `;
 
             if (events.length === 0) return;
 
@@ -50,10 +45,12 @@ async function processPendingEvents() {
                     payload: event.payload,
                 };
 
-                const sent = channel.publish("booking_events_exchange", "", Buffer.from(JSON.stringify(message)), {
-                    persistent: true,
-                    contentType: 'application/json',
-                });
+                const sent = channel.publish(
+                    "booking_events_exchange",
+                    "",
+                    Buffer.from(JSON.stringify(message)),
+                    { persistent: true, contentType: 'application/json' }
+                );
 
                 if (sent) {
                     await tx.outbox.update({
@@ -71,5 +68,3 @@ async function processPendingEvents() {
         logger.error("Failed to process booking outbox", { error: (error as Error).message });
     }
 }
-
-

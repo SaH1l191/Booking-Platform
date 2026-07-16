@@ -7,14 +7,12 @@ export interface BookingsState {
   filterStatus: BookingStatus | "ALL";
   isLoading: boolean;
   error: string | null;
-  idempotencyKey: string | "";
 
   fetchMyBookings: () => Promise<void>;
+  fetchAllBookings: () => Promise<void>;
   createBooking: (payload: CreateBookingPayload) => Promise<Booking>;
-  confirmBooking: (idempotencyKey: string) => Promise<void>;
   cancelBooking: (id: number) => Promise<void>;
   setFilterStatus: (status: BookingStatus | "ALL") => void;
-  clearError: () => void;
 }
 
 export const useBookingsStore = create<BookingsState>()((set) => ({
@@ -22,7 +20,6 @@ export const useBookingsStore = create<BookingsState>()((set) => ({
   filterStatus: "ALL",
   isLoading: false,
   error: null,
-  idempotencyKey: "",
 
   fetchMyBookings: async () => {
     set({ isLoading: true, error: null });
@@ -31,6 +28,16 @@ export const useBookingsStore = create<BookingsState>()((set) => ({
       set({ bookings: data, isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to fetch bookings" });
+    }
+  },
+
+  fetchAllBookings: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await api.get("/api/v1/bookings/all");
+      set({ bookings: data, isLoading: false });
+    } catch (err) {
+      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to fetch all bookings" });
     }
   },
 
@@ -51,24 +58,10 @@ export const useBookingsStore = create<BookingsState>()((set) => ({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      set((state) => ({ bookings: [...state.bookings, newBooking], isLoading: false , idempotencyKey : data.idempotencyKey }));
+      set((state) => ({ bookings: [...state.bookings, newBooking], isLoading: false }));
       return newBooking;
     } catch (err) {
       set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to create booking" });
-      throw err;
-    }
-  },
-
-  confirmBooking: async (idempotencyKey) => {
-    set({ isLoading: true, error: null });
-    try {
-      const { data } = await api.post(`/api/v1/bookings/confirm/${idempotencyKey}`);
-      set((state) => ({
-        bookings: state.bookings.map((b) => b.id === data.bookingId ? { ...b, status: "CONFIRMED" as const } : b),
-        isLoading: false,
-      }));
-    } catch (err) {
-      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to confirm booking" });
       throw err;
     }
   },
@@ -88,5 +81,4 @@ export const useBookingsStore = create<BookingsState>()((set) => ({
   },
 
   setFilterStatus: (status) => set({ filterStatus: status }),
-  clearError: () => set({ error: null }),
 }));

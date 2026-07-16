@@ -16,6 +16,7 @@ function decodeToken(token: string): User | null {
       id: Number(payload.userId),
       username: payload.username || "",
       email: payload.email || "",
+      roles: payload.roles || [],
       createdAt: "",
       updatedAt: "",
     };
@@ -29,12 +30,10 @@ export interface AuthState {
   tokens: { accessToken: string; refreshToken: string } | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  error: string | null;
 
   signup: (username: string, email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -44,10 +43,9 @@ export const useAuthStore = create<AuthState>()(
       tokens: null,
       isAuthenticated: false,
       isLoading: false,
-      error: null,
 
       signup: async (username, email, password) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true });
         try {
           const { data } = await api.post<AuthResponse>("/users/signup", { username, email, password });
           const user = data.user || decodeToken(data.accessToken);
@@ -58,14 +56,13 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Signup failed";
-          set({ isLoading: false, error: message });
+          set({ isLoading: false });
           throw err;
         }
       },
 
       login: async (email, password) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true });
         try {
           const { data } = await api.post<AuthResponse>("/users/login", { email, password });
           const user = data.user || decodeToken(data.accessToken);
@@ -76,8 +73,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Login failed";
-          set({ isLoading: false, error: message });
+          set({ isLoading: false });
           throw err;
         }
       },
@@ -85,11 +81,11 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try {
           await api.post("/users/logout");
-        } catch {}
+        } catch (err) {
+          console.error("Logout request failed:", err);
+        }
         set({ user: null, tokens: null, isAuthenticated: false });
       },
-
-      clearError: () => set({ error: null }),
     }),
     {
       name: "auth-storage",
