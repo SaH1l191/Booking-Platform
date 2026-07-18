@@ -12,6 +12,7 @@ var RolePermissions = map[string][]string{
 		"room:read",
 		"room:update",
 		"room:delete",
+		"user:read",
 		"booking:read",
 		"payment:read",
 		"payment:create",
@@ -20,6 +21,7 @@ var RolePermissions = map[string][]string{
 	"customer": {
 		"hotel:read",
 		"room:read",
+		"user:read",
 		"booking:create",
 		"booking:read",
 		"booking:confirm",

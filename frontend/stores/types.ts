@@ -1,7 +1,10 @@
+export type UserRole = "customer" | "hotel_manager" | "admin";
+
 export interface User {
   id: number;
   username: string;
   email: string;
+  roles: UserRole[];
   avatar?: string;
   bio?: string;
   phoneNumber?: string;
@@ -94,6 +97,7 @@ export interface CreateBookingPayload {
   bookingAmount: number;
   checkIn: string;
   checkOut: string;
+  idempotencyKey?: string;
 }
 
 export interface Review {

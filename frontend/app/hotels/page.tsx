@@ -13,6 +13,9 @@ function HotelsContent() {
   const searchParams = useSearchParams();
   const urlLocation = searchParams.get("location") || "";
   const urlCategory = searchParams.get("category") || "";
+  const urlCheckIn = searchParams.get("checkIn") || "";
+  const urlCheckOut = searchParams.get("checkOut") || "";
+  const urlGuests = searchParams.get("guests") || "";
 
   const [categorySearch, setCategorySearch] = useState("");
 
@@ -27,7 +30,6 @@ function HotelsContent() {
     fetchCategories,
     setSearchQuery,
     setSelectedCategory,
-    toggleLike,
     clearError,
   } = useHotelsStore();
 
@@ -148,9 +150,21 @@ function HotelsContent() {
 
         {/* Results Count */}
         <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-20 py-5">
-          <p className="text-sm text-muted">
-            {isLoading ? "Loading..." : `${filtered.length} stays${activeCategoryName ? ` in ${activeCategoryName}` : ""}`}
-          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-sm text-muted">
+              {isLoading ? "Loading..." : `${filtered.length} stays${activeCategoryName ? ` in ${activeCategoryName}` : ""}`}
+            </p>
+            {urlCheckIn && urlCheckOut && (
+              <span className="text-xs px-2.5 py-1 bg-cream-dark rounded-lg text-primary-soft">
+                {new Date(urlCheckIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {new Date(urlCheckOut).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </span>
+            )}
+            {urlGuests && (
+              <span className="text-xs px-2.5 py-1 bg-cream-dark rounded-lg text-primary-soft">
+                {urlGuests} guest{Number(urlGuests) !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Error */}
@@ -201,23 +215,6 @@ function HotelsContent() {
                         alt={hotel.images?.[0]?.altText || hotel.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleLike(hotel.id);
-                        }}
-                        className="absolute top-3 right-3 p-2.5 rounded-xl bg-white/90 backdrop-blur-sm hover:bg-white transition-all shadow-luxury"
-                      >
-                        <svg
-                          className={`w-4 h-4 ${hotel.isLiked ? "text-danger fill-danger" : "text-navy"}`}
-                          fill={hotel.isLiked ? "currentColor" : "none"}
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </svg>
-                      </button>
                       {hotel.categories?.length > 0 && (
                         <div className="absolute top-3 left-3 glass px-3 py-1.5 rounded-xl">
                           <span className="text-xs font-semibold text-navy">{hotel.categories[0].name}</span>

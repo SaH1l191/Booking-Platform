@@ -99,17 +99,15 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	tokenString := ""
 
-	// if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
-	// 	tokenString = strings.TrimPrefix(authHeader, "Bearer ")
-	// }
-
-	// if tokenString == "" {
-
-	if cookie, err := r.Cookie("refresh_token"); err == nil {
-		tokenString = cookie.Value
+	if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+		tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 	}
 
-	// }
+	if tokenString == "" {
+		if cookie, err := r.Cookie("refresh_token"); err == nil {
+			tokenString = cookie.Value
+		}
+	}
 
 	tokenString = strings.TrimSpace(tokenString)
 	if tokenString == "" {
@@ -125,6 +123,7 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid refresh token", err)
 		return
 	}
+	logger.Log.Info("claims", claims)
 
 	if typ, ok := claims["type"].(string); ok && typ != "refresh" {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid token type", fmt.Errorf("expected refresh token"))

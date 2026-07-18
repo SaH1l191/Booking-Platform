@@ -50,15 +50,15 @@ func ReadJsonRequest(r *http.Request, result any) error {
 }
 
 func SetAuthCookies(r *http.Request, w http.ResponseWriter, accessToken, refreshToken string) {
-	// secureFlag := r.TLS != nil
+	secureFlag := r.TLS != nil
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
 		Path:     "/",
-		// HttpOnly: true,
-		// Secure:   secureFlag,
-		// SameSite: http.SameSiteLaxMode,
+		HttpOnly: true,
+		Secure:   secureFlag,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   15 * 60,
 	})
 
@@ -66,9 +66,9 @@ func SetAuthCookies(r *http.Request, w http.ResponseWriter, accessToken, refresh
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		Path:     "/",
-		// HttpOnly: true,
-		// Secure:   secureFlag,
-		// SameSite: http.SameSiteLaxMode,
+		HttpOnly: true,
+		Secure:   secureFlag,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   7 * 24 * 60 * 60,
 	})
 }
@@ -80,7 +80,7 @@ func ClearAuthCookies(w http.ResponseWriter) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
 	http.SetCookie(w, &http.Cookie{
@@ -89,7 +89,7 @@ func ClearAuthCookies(w http.ResponseWriter) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
 }

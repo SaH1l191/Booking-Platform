@@ -1,8 +1,8 @@
 import { Response } from 'express';
 
 
-export function sendSuccess<T>(res: Response, data: T, message = 'OK') {
-  return res.status(200).json({
+export function sendSuccess<T>(res: Response, data: T, message = 'OK',status = 200) {
+  return res.status(status).json({
     success: true,
     message,
     data,
