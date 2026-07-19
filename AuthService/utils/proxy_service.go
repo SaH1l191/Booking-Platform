@@ -1,11 +1,14 @@
 package utils
 
 import (
+	// "context"
 	"goAuth/pkg/logger"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 )
 
 func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
@@ -13,11 +16,26 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 
 	if err != nil {
 		logger.Log.Error("Error parsing service URL", "error", err)
-		return nil
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "Service temporarily unavailable", http.StatusBadGateway)
+		})
 	}
 	logger.Log.Info("Setting up proxy to service", "targetURL", targetURL.String(), "pathPrefix", pathPrefix)
 
 	proxy := &httputil.ReverseProxy{
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 30 * time.Second,
+			DialContext: (&net.Dialer{
+				Timeout:   10 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			logger.Log.Error("Proxy error", "error", err)
+			http.Error(w, "Service temporarily unavailable", http.StatusBadGateway)
+		},
 		Rewrite: func(pr *httputil.ProxyRequest) {
 
 			// ---------------------------

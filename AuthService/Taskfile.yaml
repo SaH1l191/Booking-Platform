@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  DB_DSN: root:password@tcp(127.0.0.1:3306)/auth_db
+  DB_DSN: root:root@tcp(127.0.0.1:3306)/auth_db
 
 tasks:
   migrate-up:
@@ -17,7 +17,8 @@ tasks:
       - goose -dir db/migrations create {{.CLI_ARGS | default "migration"}} sql
 
   seed-up:
-
+    cmds:
+      - goose -dir ./db/seeds mysql "{{.DB_DSN}}"  up -allow-missing
   seed-reset:
     cmds:
       

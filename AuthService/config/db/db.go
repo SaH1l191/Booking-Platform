@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"goAuth/config/env"
 	"goAuth/pkg/logger"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -24,6 +25,11 @@ func SetupDB() (*sql.DB, error) {
 		logger.Log.Error("Failed to open database", "error", err)
 		return nil, err
 	}
+
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(30 * time.Minute)
+	db.SetConnMaxIdleTime(10 * time.Minute)
 
 	if err := db.Ping(); err != nil {
 		logger.Log.Error("Failed to ping database", "error", err)

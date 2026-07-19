@@ -1,3 +1,4 @@
+-- +goose Up
 INSERT INTO users (username, password, email) VALUES
   ('admin',      '$2a$10$ebSeQ39DyRQyiOIy7aMN/O.v.Pitoa.q6xgqapA4frSqce4CRYnzu', 'admin@example.com'),
   ('alice',      '$2a$10$ebSeQ39DyRQyiOIy7aMN/O.v.Pitoa.q6xgqapA4frSqce4CRYnzu', 'alice@example.com'),
@@ -26,3 +27,12 @@ INSERT INTO users (username, password, email) VALUES
   ('xavier',     '$2a$10$ebSeQ39DyRQyiOIy7aMN/O.v.Pitoa.q6xgqapA4frSqce4CRYnzu', 'xavier@example.com'),
   ('yasmin',     '$2a$10$ebSeQ39DyRQyiOIy7aMN/O.v.Pitoa.q6xgqapA4frSqce4CRYnzu', 'yasmin@example.com'),
   ('zack',       '$2a$10$ebSeQ39DyRQyiOIy7aMN/O.v.Pitoa.q6xgqapA4frSqce4CRYnzu', 'zack@example.com');
+
+-- +goose Down
+-- Rollback: Delete the seed users
+DELETE FROM users WHERE username IN (
+  'admin', 'alice', 'bob', 'charlie', 'david', 'eva', 'frank', 'grace', 
+  'henry', 'irene', 'jack', 'karen', 'leo', 'mia', 'nancy', 'oliver', 
+  'paul', 'queen', 'ryan', 'sophia', 'thomas', 'uma', 'victor', 'wendy', 
+  'xavier', 'yasmin', 'zack'
+);   
