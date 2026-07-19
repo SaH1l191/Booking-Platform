@@ -11,6 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:status": "prisma migrate status",
     "prisma:seed": "prisma db seed",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset --force && prisma db seed",
     "postinstall": "npm run prisma:generate"
   },
   "type": "commonjs",

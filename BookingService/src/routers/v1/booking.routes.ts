@@ -8,6 +8,9 @@ import { requirePermission } from '../../middlewares/rbac.middleware';
 
 const bookingRouter = express.Router();
 
+// Get all bookings - admin only
+bookingRouter.get('/', authMiddleware, requirePermission("booking:read"), getAllBookingsHandler);
+
 // Create booking - customer only
 bookingRouter.post('/', authMiddleware, requirePermission("booking:create"), validateSchemaBody(createBookingSchema), createBookingHandler);
 

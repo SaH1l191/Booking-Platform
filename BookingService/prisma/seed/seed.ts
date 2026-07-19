@@ -1,201 +1,141 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, booking_status } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('Starting seed...')
-  
-  const hotelData = [
-    { name: 'Grand Hotel', address: '123 Luxury Ave, New York', location: 'New York', rating: 4.5, ratingCount: 120 },
-    { name: 'Beach Resort', address: '456 Ocean Blvd, Miami', location: 'Miami', rating: 4.2, ratingCount: 85 },
-    { name: 'Mountain Lodge', address: '789 Peak St, Denver', location: 'Denver', rating: 4.0, ratingCount: 60 }
+
+  // ── Users (matching AuthService seed: IDs 1-27) ────────────────────────
+  const users = [
+    { id: 1,  email: 'admin@example.com' },
+    { id: 2,  email: 'alice@example.com' },
+    { id: 3,  email: 'bob@example.com' },
+    { id: 4,  email: 'charlie@example.com' },
+    { id: 5,  email: 'david@example.com' },
+    { id: 6,  email: 'eva@example.com' },
+    { id: 7,  email: 'frank@example.com' },
+    { id: 8,  email: 'grace@example.com' },
+    { id: 9,  email: 'henry@example.com' },
+    { id: 10, email: 'irene@example.com' },
+    { id: 11, email: 'jack@example.com' },
+    { id: 12, email: 'karen@example.com' },
+    { id: 13, email: 'leo@example.com' },
+    { id: 14, email: 'mia@example.com' },
+    { id: 15, email: 'nancy@example.com' },
+    { id: 16, email: 'oliver@example.com' },
+    { id: 17, email: 'paul@example.com' },
+    { id: 18, email: 'queen@example.com' },
+    { id: 19, email: 'ryan@example.com' },
+    { id: 20, email: 'sophia@example.com' },
+    { id: 21, email: 'thomas@example.com' },
+    { id: 22, email: 'uma@example.com' },
+    { id: 23, email: 'victor@example.com' },
+    { id: 24, email: 'wendy@example.com' },
+    { id: 25, email: 'xavier@example.com' },
+    { id: 26, email: 'yasmin@example.com' },
+    { id: 27, email: 'zack@example.com' },
   ]
 
-  for (const hotel of hotelData) {
-    await prisma.hotel.upsert({
-      where: { name: hotel.name },
-      update: hotel,
-      create: hotel
+  // ── Bookings (28 total, matching payment + review seeds exactly) ────────
+  // hotelId/roomId reference hotelService database (airbnb_development)
+  // Booking 1-8:   hotel 1, rooms 1-8   (Grand Hotel)
+  // Booking 9-15:  hotel 2, rooms 9-15  (Beach Resort)
+  // Booking 16-23: hotel 3, rooms 16-23 (Mountain Lodge)
+  // Booking 24-28: cycle through hotels 1-3
+  //
+  // Status mapping: CAPTURED→CONFIRMED, CREATED→PENDING, FAILED→CANCELLED,
+  //                 REFUNDED→CANCELLED, PARTIAL_REFUNDED→CANCELLED
+
+  type BookingDef = {
+    user: (typeof users)[number]
+    hotelId: number
+    roomId: number
+    status: booking_status
+    daysFromNow: number
+    stayNights: number
+    guests: number
+    amount: number
+  }
+
+  const bookingDefs: BookingDef[] = [
+    // Bookings 1-8: CONFIRMED, $300 each (Grand Hotel, hotel 1)
+    { user: users[1],  hotelId: 1, roomId: 1,  status: 'CONFIRMED', daysFromNow: 1,  stayNights: 2, guests: 2, amount: 300 },   // 1  alice
+    { user: users[2],  hotelId: 1, roomId: 2,  status: 'CONFIRMED', daysFromNow: 2,  stayNights: 2, guests: 2, amount: 300 },   // 2  bob
+    { user: users[3],  hotelId: 1, roomId: 3,  status: 'CONFIRMED', daysFromNow: 3,  stayNights: 2, guests: 2, amount: 300 },   // 3  charlie
+    { user: users[4],  hotelId: 1, roomId: 4,  status: 'CONFIRMED', daysFromNow: 4,  stayNights: 2, guests: 2, amount: 300 },   // 4  david
+    { user: users[5],  hotelId: 1, roomId: 5,  status: 'CONFIRMED', daysFromNow: 5,  stayNights: 2, guests: 2, amount: 300 },   // 5  eva
+    { user: users[6],  hotelId: 1, roomId: 6,  status: 'CONFIRMED', daysFromNow: 6,  stayNights: 2, guests: 2, amount: 300 },   // 6  frank
+    { user: users[7],  hotelId: 1, roomId: 7,  status: 'CONFIRMED', daysFromNow: 7,  stayNights: 2, guests: 2, amount: 300 },   // 7  grace
+    { user: users[8],  hotelId: 1, roomId: 8,  status: 'CONFIRMED', daysFromNow: 8,  stayNights: 2, guests: 2, amount: 300 },   // 8  henry
+
+    // Bookings 9-13: CONFIRMED, $450 each (Beach Resort, hotel 2)
+    { user: users[9],  hotelId: 2, roomId: 9,  status: 'CONFIRMED', daysFromNow: 9,  stayNights: 3, guests: 2, amount: 450 },   // 9  irene
+    { user: users[10], hotelId: 2, roomId: 10, status: 'CONFIRMED', daysFromNow: 10, stayNights: 3, guests: 2, amount: 450 },   // 10 jack
+    { user: users[11], hotelId: 2, roomId: 11, status: 'CONFIRMED', daysFromNow: 11, stayNights: 3, guests: 2, amount: 450 },   // 11 karen
+    { user: users[12], hotelId: 2, roomId: 12, status: 'CONFIRMED', daysFromNow: 12, stayNights: 3, guests: 2, amount: 450 },   // 12 leo
+    { user: users[13], hotelId: 2, roomId: 13, status: 'CONFIRMED', daysFromNow: 13, stayNights: 3, guests: 2, amount: 450 },   // 13 mia
+
+    // Bookings 14-15: PENDING, $450 each (Beach Resort, hotel 2)
+    { user: users[14], hotelId: 2, roomId: 14, status: 'PENDING',   daysFromNow: 1,  stayNights: 3, guests: 2, amount: 450 },   // 14 nancy
+    { user: users[15], hotelId: 2, roomId: 15, status: 'PENDING',   daysFromNow: 2,  stayNights: 3, guests: 2, amount: 450 },   // 15 oliver
+
+    // Bookings 16-23: CONFIRMED, $400 each (Mountain Lodge, hotel 3)
+    { user: users[16], hotelId: 3, roomId: 16, status: 'CONFIRMED', daysFromNow: 14, stayNights: 2, guests: 2, amount: 400 },   // 16 paul
+    { user: users[17], hotelId: 3, roomId: 17, status: 'CONFIRMED', daysFromNow: 15, stayNights: 2, guests: 2, amount: 400 },   // 17 queen
+    { user: users[18], hotelId: 3, roomId: 18, status: 'CONFIRMED', daysFromNow: 16, stayNights: 2, guests: 2, amount: 400 },   // 18 ryan
+    { user: users[19], hotelId: 3, roomId: 19, status: 'CONFIRMED', daysFromNow: 17, stayNights: 2, guests: 2, amount: 400 },   // 19 sophia
+    { user: users[20], hotelId: 3, roomId: 20, status: 'CONFIRMED', daysFromNow: 18, stayNights: 2, guests: 2, amount: 400 },   // 20 thomas
+    { user: users[21], hotelId: 3, roomId: 21, status: 'CONFIRMED', daysFromNow: 19, stayNights: 2, guests: 2, amount: 400 },   // 21 uma
+    { user: users[22], hotelId: 3, roomId: 22, status: 'CONFIRMED', daysFromNow: 20, stayNights: 2, guests: 2, amount: 400 },   // 22 victor
+    { user: users[23], hotelId: 3, roomId: 23, status: 'CONFIRMED', daysFromNow: 21, stayNights: 2, guests: 2, amount: 400 },   // 23 wendy
+
+    // Bookings 24-25: CANCELLED (failed payments, different hotels)
+    { user: users[24], hotelId: 1, roomId: 24, status: 'CANCELLED', daysFromNow: -3, stayNights: 2, guests: 2, amount: 300 },   // 24 xavier
+    { user: users[25], hotelId: 2, roomId: 25, status: 'CANCELLED', daysFromNow: -2, stayNights: 3, guests: 2, amount: 450 },   // 25 yasmin
+
+    // Bookings 26-28: CANCELLED (refunded / partial refund, different hotels)
+    { user: users[26], hotelId: 3, roomId: 26, status: 'CANCELLED', daysFromNow: -5, stayNights: 2, guests: 2, amount: 400 },   // 26 zack
+    { user: users[1],  hotelId: 2, roomId: 27, status: 'CANCELLED', daysFromNow: -1, stayNights: 3, guests: 2, amount: 450 },   // 27 alice (2nd booking, refunded)
+    { user: users[2],  hotelId: 3, roomId: 28, status: 'CANCELLED', daysFromNow: -1, stayNights: 2, guests: 2, amount: 400 },   // 28 bob (2nd booking, partial refund)
+
+    // Bookings 29-30: COMPLETED stays, CAPTURED payments, NO reviews yet
+    { user: users[14], hotelId: 1, roomId: 29, status: 'CONFIRMED', daysFromNow: -10, stayNights: 2, guests: 2, amount: 300 },  // 29 nancy (completed, no review)
+    { user: users[15], hotelId: 3, roomId: 30, status: 'CONFIRMED', daysFromNow: -8,  stayNights: 2, guests: 2, amount: 400 },  // 30 oliver (completed, no review)
+  ]
+
+  for (const def of bookingDefs) {
+    const checkIn = new Date()
+    checkIn.setDate(checkIn.getDate() + def.daysFromNow)
+    checkIn.setHours(14, 0, 0, 0)
+
+    const checkOut = new Date(checkIn)
+    checkOut.setDate(checkOut.getDate() + def.stayNights)
+    checkOut.setHours(11, 0, 0, 0)
+
+    const expiresAt =
+      def.status === 'PENDING'
+        ? new Date(Date.now() + 30 * 60 * 1000)
+        : def.status === 'EXPIRED'
+          ? new Date(checkIn.getTime() - 24 * 60 * 60 * 1000)
+          : null
+
+    await prisma.booking.create({
+      data: {
+        userId: def.user.id,
+        userEmail: def.user.email,
+        hotelId: def.hotelId,
+        roomId: def.roomId,
+        checkIn,
+        checkOut,
+        bookingAmount: def.amount,
+        status: def.status,
+        totalGuests: def.guests,
+        expiresAt,
+      },
     })
   }
-  
-  console.log('Created/updated sample hotels')
-  
-  // Get the hotel IDs
-  const hotelRecords = await prisma.hotel.findMany()
-  const hotelIds = hotelRecords.map(h => h.id)
-  
-  // Create room categories for each hotel if they don't exist
-  const roomTypes = ['SINGLE', 'DOUBLE', 'FAMILY', 'DELUXE', 'SUITE']
-  const prices = [100, 150, 250, 350, 500]
-  
-  for (const hotelId of hotelIds) {
-    for (let i = 0; i < roomTypes.length; i++) {
-      await prisma.roomCategory.upsert({
-        where: { 
-          hotelId_roomType: {
-            hotelId: hotelId,
-            roomType: roomTypes[i]
-          }
-        },
-        update: { price: prices[i], roomCount: 10 },
-        create: {
-          roomType: roomTypes[i],
-          price: prices[i],
-          hotelId: hotelId,
-          roomCount: 10
-        }
-      });
-    }
-  }
-  
-  console.log(`Created/updated room categories for ${hotelIds.length} hotels`)
-  
-  // Get all room category IDs
-  const categoryRecords = await prisma.roomCategory.findMany()
-  const categoryIds = categoryRecords.map(c => c.id)
-  
-  // Create sample rooms for each hotel if they don't exist (2 rooms per category)
-  for (const hotelId of hotelIds) {
-    // Get categories for this hotel
-    const hotelCategories = await prisma.roomCategory.findMany({
-      where: { hotelId: hotelId }
-    });
-    
-    for (const category of hotelCategories) {
-      // Create two rooms per category with unique room numbers
-      const roomNum1 = Math.floor(Math.random() * 900) + 100;
-      const roomNum2 = Math.floor(Math.random() * 900) + 100;
-      
-      // Ensure room numbers are unique
-      let roomNum2Unique = roomNum2;
-      while (roomNum2Unique === roomNum1) {
-        roomNum2Unique = Math.floor(Math.random() * 900) + 100;
-      }
-      
-      await prisma.room.upsert({
-        where: { 
-          hotelId_roomNo: {
-            hotelId: hotelId,
-            roomNo: roomNum1
-          }
-        },
-        update: { roomCategoryId: category.id },
-        create: {
-          hotelId: hotelId,
-          roomNo: roomNum1,
-          roomCategoryId: category.id
-        }
-      });
-      
-      await prisma.room.upsert({
-        where: { 
-          hotelId_roomNo: {
-            hotelId: hotelId,
-            roomNo: roomNum2Unique
-          }
-        },
-        update: { roomCategoryId: category.id },
-        create: {
-          hotelId: hotelId,
-          roomNo: roomNum2Unique,
-          roomCategoryId: category.id
-        }
-      });
-    }
-  }
-  
-  console.log(`Created/updated rooms for ${hotelIds.length} hotels`)
-  
-  // Get all room IDs
-  const roomRecords = await prisma.room.findMany()
-  const roomIds = roomRecords.map(r => r.id)
-  
-  // Create confirmed bookings for users 57-84 (from AuthService)
-  // Using user IDs 57-84 as referenced in the question
-  const userIds = Array.from({length: 28}, (_, i) => 57 + i); // 57 to 84
-  
-  // Create bookings for each user
-  for (let i = 0; i < userIds.length; i++) {
-    const userId = userIds[i];
-    const roomId = roomIds[i % roomIds.length]; // Cycle through rooms
-    
-    // Get room details to find hotel
-    const room = await prisma.room.findUnique({
-      where: { id: roomId }
-    });
-    
-    // Calculate dates (check-in tomorrow, check-out 3 days later)
-    const checkIn = new Date();
-    checkIn.setDate(checkIn.getDate() + 1);
-    const checkOut = new Date(checkIn);
-    checkOut.setDate(checkOut.getDate() + 3);
-    
-    await prisma.booking.upsert({
-      where: { 
-        userId_checkIn: {
-          userId: userId,
-          checkIn: checkIn
-        }
-      },
-      update: {
-        hotelId: room.hotelId,
-        roomId: roomId,
-        checkOut: checkOut,
-        status: 'CONFIRMED',
-        totalGuests: 2,
-        bookingAmount: 300, // $300 for 3 nights
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Expires in 24 hours
-      },
-      create: {
-        userId: userId,
-        hotelId: room.hotelId,
-        roomId: roomId,
-        checkIn: checkIn,
-        checkOut: checkOut,
-        status: 'CONFIRMED',
-        totalGuests: 2,
-        bookingAmount: 300, // $300 for 3 nights
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Expires in 24 hours
-      }
-    });
-  }
-  
-  console.log(`Created/updated ${userIds.length} confirmed bookings`)
-  
-  // Create room availability entries for booked rooms
-  for (let i = 0; i < userIds.length; i++) {
-    const userId = userIds[i];
-    const roomId = roomIds[i % roomIds.length];
-    const checkIn = new Date();
-    checkIn.setDate(checkIn.getDate() + 1);
-    const checkOut = new Date(checkIn);
-    checkOut.setDate(checkOut.getDate() + 3);
-    
-    // Create availability entries for each night of the stay
-    let currentDate = new Date(checkIn);
-    while (currentDate < checkOut) {
-      await prisma.roomAvailability.upsert({
-        where: { 
-          roomId_date: {
-            roomId: roomId,
-            date: currentDate
-          }
-        },
-        update: { status: 'booked' },
-        create: {
-          roomId: roomId,
-          date: currentDate,
-          status: 'booked'
-        }
-      });
-      
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-  }
-  
-  console.log('Created/updated room availability entries')
+
+  console.log(`Created ${bookingDefs.length} bookings (22 confirmed, 2 pending, 6 cancelled)`)
 }
 
 main()

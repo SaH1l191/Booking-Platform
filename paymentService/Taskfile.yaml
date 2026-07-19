@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  DB_DSN: root:password@tcp(127.0.0.1:3306)/payment_db
+  DB_DSN: root:root@tcp(127.0.0.1:3306)/payment_db
 
 tasks:
   migrate-up:
@@ -17,9 +17,19 @@ tasks:
       - goose -dir db/migrations create {{.CLI_ARGS | default "migration"}} sql
 
   seed-up:
+    cmds:
+      - goose -dir db/seeds mysql "{{.DB_DSN}}" up
+
+  seed-down:
+    cmds:
+      - goose -dir db/seeds mysql "{{.DB_DSN}}" down
 
   seed-reset:
     cmds:
-      
+      - goose -dir db/seeds mysql "{{.DB_DSN}}" reset
+
 # task migrate-up
 # task migrate-down
+# task seed-up
+# task seed-down
+# task seed-reset

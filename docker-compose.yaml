@@ -1,4 +1,4 @@
-# services:
+services:
 
 #   # mysql:
 #   #   image: mysql:8.0
@@ -19,21 +19,21 @@
 #   #     timeout: 5s
 #   #     retries: 5
 
-#   redis:
-#     image: redis:7-alpine
-#     container_name: booking-redis
-#     restart: unless-stopped
-#     ports:
-#       - "6379:6379"
-#     volumes:
-#       - redis_data:/data
-#     networks:
-#       - booking-network
-#     healthcheck:
-#       test: ["CMD", "redis-cli", "ping"]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: booking-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - booking-network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
 #   auth-service:
 #     build:
@@ -48,21 +48,22 @@
 #       - ./AuthService:/app
 #     environment:
 #       PORT: 3000
-
+#
 #       DBName: auth_db
 #       DB_ADDR: host.docker.internal:3306
 #       DB_USER: root
 #       DB_PASSWORD: password
 #       DB_NET: tcp
-
+#
 #       DB_DSN: "root:password@tcp(host.docker.internal:3306)/auth_db"
-
+#
 #       JWT_ACCESS_SECRET: secret
 #       JWT_REFRESH_SECRET: secret
-
+#
 #       HOTEL_SERVICE_URL: http://hotel-service:3001
 #       BOOKING_SERVICE_URL: http://booking-service:3002
 #       REVIEW_SERVICE_URL: http://review-service:3003
+#       PAYMENT_SERVICE_URL: http://payment-service:3005
 #     extra_hosts:
 #       - "host.docker.internal:host-gateway"
 #     networks:
@@ -85,17 +86,17 @@
 #       - /app/node_modules
 #     environment:
 #       PORT: 3001
-
+#
 #       DB_USER: root
 #       DB_PASSWORD: password
 #       DB_HOST: host.docker.internal
 #       DB_DATABASE: airbnb_development
-
+#
 #       REDIS_SERVER_URL: redis://redis:6379
-
+#
 #       JWT_ACCESS_SECRET: secret
 #       JWT_REFRESH_SECRET: secret
-
+#
 #       LOCK_TTL: 900000
 #     extra_hosts:
 #       - "host.docker.internal:host-gateway"
@@ -119,19 +120,21 @@
 #       - /app/node_modules
 #     environment:
 #       PORT: 3002
-
+#
 #       DATABASE_URL: "mysql://root:password@host.docker.internal:3306/airbnb_development1"
-
+#
 #       DB_HOST: host.docker.internal
 #       DB_PORT: 3306
 #       DB_USER: root
 #       DB_PASSWORD: password
 #       DB_NAME: airbnb_development1
-
+#
 #       REDIS_SERVER_URL: redis://redis:6379
-
+#
 #       LOCK_TTL: 900000
 #       BOOKING_EXPIRY_MS: 900000
+#
+#       PAYMENT_SERVICE_URL: http://payment-service:3005
 #     extra_hosts:
 #       - "host.docker.internal:host-gateway"
 #     networks:
@@ -180,18 +183,56 @@
 #       - /app/node_modules
 #     environment:
 #       PORT: 3004
-
+#
 #       DB_USER: root
 #       DB_PASSWORD: password
 #       DB_HOST: host.docker.internal
 #       DB_DATABASE: airbnb_development
-
+#
 #       REDIS_HOST: redis
 #       REDIS_PORT: 6379
 #       REDIS_SERVER_URL: redis://redis:6379
-
+#
 #       MAIL_USER: ${MAIL_USER}
 #       MAIL_PASS: ${MAIL_PASS}
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"
+#     networks:
+#       - booking-network
+
+#   payment-service:
+#     build:
+#       context: ./PaymentService
+#     container_name: payment-service
+#     # depends_on:
+#     #   mysql:
+#     #     condition: service_healthy
+#     depends_on:
+#       rabbitmq:
+#         condition: service_healthy
+#     ports:
+#       - "3005:3005"
+#     volumes:
+#       - ./PaymentService:/app
+#       - /app/node_modules
+#     environment:
+#       PORT: 3005
+#
+#       DB_HOST: host.docker.internal
+#       DB_PORT: 3306
+#       DB_USER: root
+#       DB_PASSWORD: password
+#       DB_NAME: payment_service
+#
+#       DATABASE_URL: "mysql://root:password@host.docker.internal:3306/payment_service"
+#
+#       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+#
+#       JWT_ACCESS_SECRET: secret
+#       JWT_REFRESH_SECRET: secret
+#
+#       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+#       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
 #     extra_hosts:
 #       - "host.docker.internal:host-gateway"
 #     networks:
@@ -226,7 +267,6 @@
 
 # #docker compose down -v && docker compose up --build
 
-services:
   prometheus:
     image: prom/prometheus:latest
     container_name: booking-prometheus
@@ -277,30 +317,30 @@ services:
     networks:
       - booking-network
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: booking-rabbitmq
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - booking-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: booking-rabbitmq
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: guest
+  #     RABBITMQ_DEFAULT_PASS: guest
+  #   volumes:
+  #     - rabbitmq_data:/var/lib/rabbitmq
+  #   networks:
+  #     - booking-network
+  #   healthcheck:
+  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
 volumes:
   prometheus_data:
   grafana_data:
-  rabbitmq_data:
+  # rabbitmq_data:
 
 networks:
   booking-network:
