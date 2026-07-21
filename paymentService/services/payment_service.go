@@ -10,9 +10,7 @@ import (
 	db "goPayment/db/repositories"
 	"goPayment/dto"
 	"goPayment/models"
-	"goPayment/pkg/logger"
-	"time"
-
+	"goPayment/pkg/logger"  
 	"github.com/razorpay/razorpay-go"
 )
 
@@ -46,8 +44,7 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload
 
 	orderData := map[string]interface{}{
 		"amount":   payload.Amount,
-		"currency": "INR",
-		"expire_by": time.Now().Add(10 * time.Minute).Unix(),
+		"currency": "INR", 
 		"receipt":  fmt.Sprintf("booking_%d", payload.BookingId),
 		"notes": map[string]interface{}{
 			"bookingId": payload.BookingId,
@@ -146,7 +143,14 @@ func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[s
 	notes := map[string]interface{}{
 		"reason": "booking_cancelled",
 	}
+	//idemopotency on payment id ( to prevent deuplicate refunds  OR can create a idempotency key based on bookingId and paymentId)
+	if payment.Status == "REFUNDED" || payment.RefundAmount > 0{
+		return nil, fmt.Errorf("Already Refunded ")
+	}
 
+	logger.Log.Info("Refund payment details", "paymentId", payment.Id, "razorpayPaymentId", payment.RazorpayPaymentId, "amount", payment.Amount, "status", payment.Status)
+
+	//this external call to razorpay can fail
 	refund, err := s.razorpayClient.Payment.Refund(payment.RazorpayPaymentId, payment.Amount, notes, nil)
 	if err != nil {
 		logger.Log.Error("Failed to create Razorpay refund", "error", err)

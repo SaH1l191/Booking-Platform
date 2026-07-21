@@ -2,6 +2,8 @@ package utils
 
 import (
 	// "context"
+	"crypto/rand"
+	"fmt"
 	"goAuth/pkg/logger"
 	"net"
 	"net/http"
@@ -10,6 +12,12 @@ import (
 	"strings"
 	"time"
 )
+
+func generateRequestID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
 
 func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 	targetURL, err := url.Parse(targetBaseURL)
@@ -99,7 +107,20 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 				out.Header.Set("Authorization", authHeader)
 				logger.Log.Info("Authorization header propagated", "auth_header", authHeader)
 			}
- 
+
+			
+			// X-Request-ID propagation
+			//  ignoring client value
+			
+			requestID := generateRequestID()
+			out.Header.Set("X-Request-ID", requestID)
+
+			
+			// X-Original-Path propagation
+			// Records what the client originally called
+		
+			out.Header.Set("X-Original-Path", originalPath)
+
 			out.Header.Del("Cookie")
 
 			logger.Log.Info("=== Proxy Request End ===",

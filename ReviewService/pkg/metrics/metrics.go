@@ -2,8 +2,11 @@ package metrics
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -58,8 +61,10 @@ func MetricsMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 
 		duration := time.Since(start).Seconds()
-		statusCode := http.StatusText(rw.statusCode)
-		route := r.URL.Path
+		statusCode := strconv.Itoa(rw.statusCode)
+
+		routePatterns := chi.RouteContext(r.Context()).RoutePatterns
+		route := strings.Join(routePatterns, "")
 
 		HTTPRequestsTotal.WithLabelValues(r.Method, route, statusCode).Inc()
 		HTTPRequestDuration.WithLabelValues(r.Method, route, statusCode).Observe(duration)

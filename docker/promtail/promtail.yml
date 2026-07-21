@@ -57,3 +57,10 @@ scrape_configs:
           job: NotificationService
           service: NotificationService
           __path__: /logs/notification-service.log
+
+      - targets:
+          - localhost
+        labels:
+          job: PaymentService
+          service: PaymentService
+          __path__: /logs/payment-service.log

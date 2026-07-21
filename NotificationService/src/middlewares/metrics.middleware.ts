@@ -5,7 +5,9 @@ export const metricsMiddleware = (req: Request, res: Response, next: NextFunctio
   const end = httpRequestDuration.startTimer();
 
   res.on('finish', () => {
-    const route = req.route?.path || req.path;
+    const route = req.route?.path
+      ? `${req.baseUrl}${req.route.path}`
+      : req.path;
     const labels = {
       method: req.method,
       route,

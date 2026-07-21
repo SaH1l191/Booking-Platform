@@ -43,6 +43,8 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 			"X-User-ID",
 			"X-User-Email",
 			"X-User-Role",
+			"X-Request-ID",
+			"X-Original-Path",
 		},
 	}).Handler)
 

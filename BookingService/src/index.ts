@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import dotenv from "dotenv";
 import { appErrorHandler, genericErrorHandler } from "./middlewares/error.middleware";
+import { requestContextMiddleware } from "./middlewares/request-context.middleware";
 import v1Router from "./routers/v1/routes";
 import { serverConfig } from "./config/index";
 import logger from "./config/logger";
@@ -15,11 +16,7 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(helmet());
-
-app.use((req, res, next) => {
-  logger.info("Incoming request", { method: req.method, path: req.path, query: req.query });
-  next();
-});
+app.use(requestContextMiddleware);
 app.use(metricsMiddleware);
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
