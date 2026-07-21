@@ -2,10 +2,10 @@ import { serverConfig } from "../config/index";
 import { redisClient, redlock, } from '../config/redis.config';
 import { CreateBookingDTO } from '../dto/booking.dto';
 import { prisma } from "../lib/prisma";
-import {conflictBooking, createBookingRecord, createIdempotencyKey, expireStaleBookings, getAllBookings, getBookingById, getBookingsByHotelId, getBookingsByUserId, getIdempotencyKey, insertOutboxEvent } from "../repositories/booking.repository";
+import {conflictBooking, createBookingRecord, createIdempotencyKey, expireStaleBookings, getAllBookings, getBookingById, getBookingsByHotelId, getBookingsByUserId, getCompletedBookingsByUserId, getIdempotencyKey, insertOutboxEvent } from "../repositories/booking.repository";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import logger from "../config/logger";
-import { BOOKING_CREATED_EVENT, BOOKING_CANCELLED_EVENT } from "../producers/booking-producer";
+import { BOOKING_CREATED_EVENT, BOOKING_CANCELLED_EVENT, BOOKING_STAY_COMPLETED_EVENT } from "../producers/booking-producer";
 
 const BOOKING_HOLD_MS = 15 * 60 * 1000; // 15 minutes
 const REDIS_TTL_BUFFER_S = 3600; // 1 hour buffer after checkout
@@ -89,6 +89,7 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
                     bookingAmount: booking.bookingAmount,
                     totalGuests: booking.totalGuests,
                     userEmail: userEmail,
+                    createdAt: booking.createdAt.toISOString(),
                 });
 
                 // Step 6: Update Redis cache with booked dates + TTL
@@ -132,7 +133,23 @@ export async function getAllBookingsService() {
 }
 
 export async function getBookingsByUserService(userId: number) {
+    logger.info("Fetching bookings for user in service", { userId });
     await expireStaleBookings();
+
+    const completedBookings = await getCompletedBookingsByUserId(userId);
+    if (completedBookings.length > 0) {
+        for (const booking of completedBookings) {
+            await prisma.$transaction(async (tx: any) => {
+                await insertOutboxEvent(tx, BOOKING_STAY_COMPLETED_EVENT, {
+                    bookingId: booking.id,
+                    userId: booking.userId,
+                    hotelId: booking.hotelId,
+                    roomId: booking.roomId,
+                });
+            });
+        }
+        logger.info("Emitted BOOKING_STAY_COMPLETED events", { count: completedBookings.length, userId });
+    }
     logger.info("Fetching bookings for user in service", { userId });
     return await getBookingsByUserId(userId);
 }
@@ -178,6 +195,10 @@ export async function cancelBookingService(bookingId: number, userId: number, us
 
         if (!booking) {
             throw new NotFoundError("Booking not found");
+        }
+
+        if(booking.status === 'CONFIRMED' && new Date(booking.checkOut) < new Date()) {
+            throw new BadRequestError("Cannot cancel a booking after check out Date");
         }
 
         if (booking.userId !== userId) {

@@ -25,6 +25,9 @@ app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 });
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'BookingService', timestamp: new Date().toISOString() });
+});
 
 app.use(v1Router);
 app.use(appErrorHandler);

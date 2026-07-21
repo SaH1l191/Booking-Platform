@@ -154,7 +154,17 @@ export async function getAllHotels(query: any) {
     });
 
     logger.info("Hotels fetched", { count, page, limit, offset, search: query.search, category: query.category });
-    return { hotels: rows, total: count, page, limit, totalPages: Math.ceil(count / limit) };
+
+    const hotels = rows.map((hotel: any) => {
+        const hotelJson = hotel.toJSON() as any;
+        return {
+            ...hotelJson,
+            categories: hotelJson.hotelCategories?.map((hc: any) => hc.category) || [],
+            images: hotelJson.images || [],
+        };
+    });
+
+    return { hotels, total: count, page, limit, totalPages: Math.ceil(count / limit) };
 }
 
 export async function updateHotel(hotelId: number, hotelData: Partial<createHotelDto>) {

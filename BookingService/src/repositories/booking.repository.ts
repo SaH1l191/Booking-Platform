@@ -40,18 +40,20 @@ export async function getBookingById(bookingId: number) {
     return booking
 }
 
-export async function confirmBooking(tx: any, bookingId: number) {
-    logger.info("Confirming booking in repository", { bookingId });
-    const booking = await tx.booking.update({
-        where: {
-            id: bookingId
-        },
-        data: {
-            status: "CONFIRMED"
-        }
-    })
-    return booking
-}
+//  confirmBooking is never called (confirmation handled by payment-event-consumer)
+// export async function confirmBooking(tx: any, bookingId: number) {
+//     logger.info("Confirming booking in repository", { bookingId });
+//     const booking = await tx.booking.update({
+//         where: {
+//             id: bookingId
+//         },
+//         data: {
+//             status: "CONFIRMED"
+//         }
+//     })
+//     return booking
+// }
+
 export async function cancelBooking(tx: any, bookingId: number) {
     logger.info("Cancelling booking in repository", { bookingId });
     const booking = await tx.booking.update({
@@ -164,6 +166,17 @@ export async function expireStaleBookings() {
     `;
     logger.info("Expired stale bookings", { count: result });
     return result;
+}
+
+export async function getCompletedBookingsByUserId(userId: number) {
+    logger.info("Fetching completed bookings for user in repository", { userId });
+    return await prisma.booking.findMany({
+        where : {userId, 
+            status: 'CONFIRMED',
+            checkOut : { lt: new Date() }
+        },
+        
+    })
 }
 
 export async function getUserEmailByBookingId(bookingId: number) {

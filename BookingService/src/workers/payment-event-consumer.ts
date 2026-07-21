@@ -91,8 +91,22 @@ async function handlePaymentCaptured(event: PaymentEvent) {
             return;
         }
 
+        //here two conditons : cancelled OR  payment_captured->razoaypay processing -> user immedaitely cancels booking -> razerpay caputres and payment success -> intiiate refund
         if (booking.status === "CANCELLED") {
             logger.warn("Booking is cancelled but payment was captured, skipping confirmation", { bookingId });
+            if(event.payload.status === "CAPTURED"){
+                try{
+                    const paymentServiceUrl = process.env.PAYMENT_SERVICE_URL || "http://payment-service:3005";
+                    await axios.post(`${paymentServiceUrl}/payments/refund`, {
+                        bookingId: bookingId,
+                        reason: "LATE_CAPTURE_AFTER_CANCEL"
+                    });
+                    logger.info("Late refund initiated successfully", { bookingId });
+                }
+                catch(error){
+                    logger.error("Failed to initiate late refund",{ bookingId, error: (error as Error).message });
+                }
+            }
             return;
         }
 
@@ -216,20 +230,20 @@ async function handlePaymentRefunded(event: PaymentEvent) {
             data: { status: "CANCELLED" },
         });
 
-        await tx.outbox.create({
-            data: {
-                eventType: BOOKING_CANCELLED_EVENT,
-                payload: {
-                    bookingId: booking.id,
-                    userId: booking.userId,
-                    hotelId: booking.hotelId,
-                    roomId: booking.roomId,
-                    userEmail: event.payload.userEmail || "",
-                    status: "CANCELLED",
-                    reason: "Payment refunded",
-                },
-            },
-        });
+        // await tx.outbox.create({
+        //     data: {
+        //         eventType: BOOKING_CANCELLED_EVENT,
+        //         payload: {
+        //             bookingId: booking.id,
+        //             userId: booking.userId,
+        //             hotelId: booking.hotelId,
+        //             roomId: booking.roomId,
+        //             userEmail: event.payload.userEmail || "",
+        //             status: "CANCELLED",
+        //             reason: "Payment refunded",
+        //         },
+        //     },
+        // });
 
         logger.info("Booking cancelled due to refund", { bookingId });
     });

@@ -19,6 +19,8 @@ type Route interface {
 func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	chiRouter := chi.NewRouter()
 
+	metrics.Init()
+
 	chiRouter.Use(cors.New(cors.Options{
 		AllowedOrigins: []string{
 			"http://localhost:3000",
@@ -47,12 +49,17 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	chiRouter.Use(middlewares.SecureHeaders)
 
 	chiRouter.Use(middleware.Logger) // built in logger middleware
+	chiRouter.Use(metrics.MetricsMiddleware)
 	// chiRouter.Use(middlewares.RequestValidator)
 
 	UserRouter.Register(chiRouter)
 	RoleRouter.Register(chiRouter)
 
 	chiRouter.Handle("/metrics", metrics.MetricsHandler())
+	chiRouter.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok","service":"AuthService"}`))
+	})
 
 	//Api-Gateway proxy routes
 	hotelServiceURL := env.GetEnv("HOTEL_SERVICE_URL", "http://localhost:3001")
