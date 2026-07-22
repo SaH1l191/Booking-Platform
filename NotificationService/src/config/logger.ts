@@ -1,6 +1,9 @@
 import winston from "winston";
+import path from "path";
 
 const SERVICE_NAME = "NotificationService";
+const LOG_PATH = process.env.LOG_PATH || "../logs";
+const LOG_FILE = path.join(LOG_PATH, "notification-service.log");
 
 const logger = winston.createLogger({
   level: "info",
@@ -17,7 +20,7 @@ const logger = winston.createLogger({
 
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: "C:/Users/aspha/OneDrive/Desktop/Booking-Platform-Complete/Booking-Platform/logs/notification-service.log" }),
+    new winston.transports.File({ filename: LOG_FILE }),
   ],
 });
 

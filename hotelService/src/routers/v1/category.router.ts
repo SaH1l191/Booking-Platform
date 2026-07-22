@@ -14,6 +14,10 @@ import { requirePermission } from "../../middlewares/rbac.middleware";
 
 const categoryRouter = express.Router();
 
+categoryRouter.get("/error-test", (req, res) => {
+  res.status(500).json({ success: false, message: "Dummy 500 Internal Server Error" });
+});
+
 categoryRouter.post("/", authMiddleware, requirePermission("category:create"), validateSchemaBody(categorySchema), createCategoryHandler);
 categoryRouter.get("/", authMiddleware, requirePermission("category:read"), getAllCategoriesHandler);
 categoryRouter.get("/:id", authMiddleware, requirePermission("category:read"), validateSchemaParams(idParamSchema), getCategoryByIdHandler);

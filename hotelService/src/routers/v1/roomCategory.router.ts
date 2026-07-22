@@ -14,6 +14,10 @@ import { requirePermission } from "../../middlewares/rbac.middleware";
 
 const router = express.Router();
 
+router.get("/error-test", (req, res) => {
+  res.status(500).json({ success: false, message: "Dummy 500 Internal Server Error" });
+});
+
 router.post("/", authMiddleware, requirePermission("roomCategory:create"), validateSchemaBody(roomCategorySchema), createRoomCategoryHandler);
 router.get("/", authMiddleware, requirePermission("roomCategory:read"), getAllRoomCategoriesHandler);
 router.get("/:id", authMiddleware, requirePermission("roomCategory:read"), validateSchemaParams(idParamSchema), getRoomCategoryByIdHandler);

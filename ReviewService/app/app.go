@@ -8,6 +8,7 @@ import (
 	"ReviewService/pkg/logger"
 	"ReviewService/router"
 	"ReviewService/services"
+	"ReviewService/workers"
 	"context"
 	"database/sql"
 	"fmt"
@@ -50,6 +51,12 @@ func (app *Application) Start() error {
 	reviewRouter := router.NewReviewRouter(reviewController)
 
 	r := router.SetupRouter(reviewRouter)
+
+	// Start booking event consumer for review eligibility
+	bookingConsumer := workers.NewBookingConsumer(app.database)
+	if err := bookingConsumer.Start(); err != nil {
+		logger.Log.Error("Failed to start booking consumer", "error", err)
+	}
 
 	app.server = &http.Server{
 		Addr:         ":" + env.GetEnv("PORT", "3004"),

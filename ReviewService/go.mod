@@ -26,4 +26,5 @@ require (
 	github.com/go-chi/chi v1.5.5
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/prometheus/client_golang v1.23.2
+	github.com/rabbitmq/amqp091-go v1.12.0
 )

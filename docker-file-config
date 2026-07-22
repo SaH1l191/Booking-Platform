@@ -1,9 +1,0 @@
-Service	Port	Notes
-mysql	3306	Creates auth_db, airbnb_development, airbnb_development1, review_service on first run
-redis	6379	Persists data to redis_data volume
-auth-service	3000	API gateway, proxies to hotel/booking/review via env-configurable URLs
-hotel-service	3001	Sequelize migrations run on startup
-booking-service	3002	Prisma migrations
-review-service	3003	Goose migrations
-notification-service	3004	 
-frontend	3005	Next.js standalone build, hits auth-service on localhost:3000

@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"github.com/rs/cors"
 )
 
@@ -49,10 +48,8 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	}).Handler)
 
 	chiRouter.Use(middlewares.SecureHeaders)
-
-	chiRouter.Use(middleware.Logger) // built in logger middleware
+	chiRouter.Use(middlewares.RequestContext)
 	chiRouter.Use(metrics.MetricsMiddleware)
-	// chiRouter.Use(middlewares.RequestValidator)
 
 	UserRouter.Register(chiRouter)
 	RoleRouter.Register(chiRouter)
@@ -61,6 +58,11 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	chiRouter.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok","service":"AuthService"}`))
+	})
+	chiRouter.Get("/error-test", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"success":false,"message":"Dummy 500 Internal Server Error"}`))
 	})
 
 	//Api-Gateway proxy routes
@@ -95,11 +97,13 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 
 	chiRouter.Route("/api/v1/reviews", func(r chi.Router) {
 		// r.Use(middlewares.RateLimitMiddleware(20))
+		r.Use(middlewares.JWTAuthMiddleware)
 		r.Handle("/*", utils.ProxyToService(reviewServiceURL, "/api/v1"))
 	})
 
 	chiRouter.Route("/api/v1/categories", func(r chi.Router) {
 		// r.Use(middlewares.RateLimitMiddleware(20))
+		r.Use(middlewares.JWTAuthMiddleware)
 		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
 	})
  

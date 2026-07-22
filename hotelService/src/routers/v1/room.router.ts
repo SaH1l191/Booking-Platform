@@ -15,6 +15,10 @@ import { requirePermission } from "../../middlewares/rbac.middleware";
 
 const roomRouter = express.Router();
 
+roomRouter.get("/error-test", (req, res) => {
+  res.status(500).json({ success: false, message: "Dummy 500 Internal Server Error" });
+});
+
 roomRouter.get("/hotel/:hotelId", authMiddleware, requirePermission("room:read"), validateSchemaParams(hotelIdParamSchema), getRoomsByHotelHandler);
 roomRouter.post("/", authMiddleware, requirePermission("room:create"), validateSchemaBody(roomSchema), createRoomHandler);
 roomRouter.get("/", authMiddleware, requirePermission("room:read"), getAllRoomsHandler);
