@@ -50,7 +50,23 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
 
         return await prisma.$transaction(
             async (tx: any) => {
-                // Step 2: DB conflict check with FOR UPDATE
+                // Step 2: Check user :  already having  PENDING booking for same dates
+                const existingUserBooking = await tx.$queryRaw`
+                    SELECT id FROM booking
+                    WHERE userId = ${userId}
+                      AND hotelId = ${createBookingDTO.hotelId}
+                      AND roomId = ${createBookingDTO.roomId}
+                      AND checkIn < ${new Date(createBookingDTO.checkOut)}
+                      AND checkOut > ${new Date(createBookingDTO.checkIn)}
+                      AND status = 'PENDING'
+                      AND expiresAt > ${new Date()}
+                    LIMIT 1
+                `;
+                if (existingUserBooking.length > 0) {
+                    throw new BadRequestError("You already have a pending booking for these dates");
+                }
+
+                // Step 3: DB conflict check with FOR UPDATE
                 const conflictingBooking = await conflictBooking(tx, createBookingDTO)
                 if (conflictingBooking) {
                     // Update Redis cache to reflect DB state
@@ -61,7 +77,7 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
                     throw new BadRequestError("Selected room is not available for the chosen dates");
                 }
 
-                // Step 3: Create booking (15 min hold)
+                // Step 4: Create booking (15 min hold)
                 const booking = await createBookingRecord(tx, {
                     userId: userId,
                     userEmail: userEmail,
@@ -74,7 +90,7 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
                     expiresAt: new Date(Date.now() + BOOKING_HOLD_MS)
                 });
 
-                // Step 4: Store idempotency key
+                // Step 5: Store idempotency key
                 const key = idempotencyKey || crypto.randomUUID();
                 await createIdempotencyKey(tx, key, booking.id);
 
@@ -127,13 +143,13 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
 }
 
 export async function getAllBookingsService() {
-    logger.info("Fetching all bookings for admin in service");
+    console.log("Fetching all bookings for admin in service");
     await expireStaleBookings();
     return await getAllBookings();
 }
 
 export async function getBookingsByUserService(userId: number) {
-    logger.info("Fetching bookings for user in service", { userId });
+    console.log("Fetching bookings for user in service", { userId });
     await expireStaleBookings();
 
     const completedBookings = await getCompletedBookingsByUserId(userId);
@@ -150,18 +166,18 @@ export async function getBookingsByUserService(userId: number) {
         }
         logger.info("Emitted BOOKING_STAY_COMPLETED events", { count: completedBookings.length, userId });
     }
-    logger.info("Fetching bookings for user in service", { userId });
+    console.log("Fetching bookings for user in service", { userId });
     return await getBookingsByUserId(userId);
 }
 
 export async function getBookingsByHotelService(hotelId: number) {
-    logger.info("Fetching bookings for hotel in service", { hotelId });
+    console.log("Fetching bookings for hotel in service", { hotelId });
     await expireStaleBookings();
     return await getBookingsByHotelId(hotelId);
 }
 
 export async function getBookingByIdService(bookingId: number) {
-    logger.info("Fetching booking by ID in service", { bookingId });
+    console.log("Fetching booking by ID in service", { bookingId });
     await expireStaleBookings();
     const booking = await getBookingById(bookingId);
     if (!booking) {

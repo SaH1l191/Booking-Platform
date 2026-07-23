@@ -43,6 +43,7 @@ model idempotencykey {
 
 model outbox {
   id        Int      @id @default(autoincrement())
+  eventId   String   @unique
   eventType String
   payload   Json
   published Boolean  @default(false)

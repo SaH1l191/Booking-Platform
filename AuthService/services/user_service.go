@@ -41,7 +41,7 @@ func (u *UserServiceImpl) GetUserById(id string) (*models.User, error) {
 }
 
 func (u *UserServiceImpl) CreateUser(payload *dto.CreateUserRequestDTO) (*models.User, error) {
-	logger.Log.Info("Creating user in service", "email", payload.Email)
+	fmt.Println("Creating user in service", "email", payload.Email)
 	hashedPass, err := utils.HashPassword(payload.Password)
 	if err != nil {
 		logger.Log.Error("Failed to hash password", "error", err)

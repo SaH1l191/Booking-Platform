@@ -72,43 +72,45 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	paymentServiceURL := env.GetEnv("PAYMENT_SERVICE_URL", "http://localhost:3005")
 
 	chiRouter.Route("/api/v1/hotels", func(r chi.Router) {
-		// r.Use(middlewares.RateLimitMiddleware(10))
-		r.Use(middlewares.JWTAuthMiddleware)
+		//// r.Use(middlewares.RateLimitMiddleware(10))
+		r.Use(middlewares.OptionalAuthMiddleware)
 		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
 	})
 
 	chiRouter.Route("/api/v1/rooms", func(r chi.Router) {
-		// r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
+		/// r.Use(middlewares.RateLimitMiddleware(20))
+		r.Use(middlewares.OptionalAuthMiddleware)
 		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
 	})
 
 	chiRouter.Route("/api/v1/roomCategories", func(r chi.Router) {
-		r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
+		//r.Use(middlewares.RateLimitMiddleware(20))
+		r.Use(middlewares.OptionalAuthMiddleware)
+		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
+	})
+
+	chiRouter.Route("/api/v1/categories", func(r chi.Router) {
+		//	// r.Use(middlewares.RateLimitMiddleware(20))
+		r.Use(middlewares.OptionalAuthMiddleware)
 		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
 	})
 
 	chiRouter.Route("/api/v1/bookings", func(r chi.Router) {
-		// r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
+		//// r.Use(middlewares.RateLimitMiddleware(20))
+		r.Use(middlewares.OptionalAuthMiddleware)
 		r.Handle("/*", utils.ProxyToService(bookingServiceURL, "/"))
 	})
 
 	chiRouter.Route("/api/v1/reviews", func(r chi.Router) {
-		// r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
+		//// r.Use(middlewares.RateLimitMiddleware(20))
+		r.Use(middlewares.OptionalAuthMiddleware)
 		r.Handle("/*", utils.ProxyToService(reviewServiceURL, "/api/v1"))
 	})
 
-	chiRouter.Route("/api/v1/categories", func(r chi.Router) {
-		// r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
-	})
- 
 	chiRouter.Route("/api/v1/payments", func(r chi.Router) {
-		r.Use(middlewares.JWTAuthMiddleware)
+
+		///// r.Use(middlewares.RateLimitMiddleware(20))
+		r.Use(middlewares.OptionalAuthMiddleware)
 		r.Handle("/*", utils.ProxyToService(paymentServiceURL, "/api/v1"))
 	})
 

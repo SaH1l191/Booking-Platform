@@ -25,7 +25,7 @@ func NewUserController(userService services.UserService) *UserController {
 func (uc *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	payload := r.Context().Value("payload").(dto.CreateUserRequestDTO)
-	logger.Log.Info("Creating user", "username", payload.Username, "email", payload.Email)
+	fmt.Println("Creating user", "username", payload.Username, "email", payload.Email)
 
 	user, err := uc.UserService.CreateUser(&payload)
 	if err != nil {
@@ -38,7 +38,7 @@ func (uc *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 func (uc *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	userId := chi.URLParam(r, "id")
-	logger.Log.Info("Fetching user by ID", "userId", userId)
+	fmt.Println("Fetching user by ID", "userId", userId)
 
 	if userId == "" {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "USER ID is required", fmt.Errorf("missing user ID"))
@@ -57,7 +57,7 @@ func (uc *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User fetched successfully", user)
-	logger.Log.Info("User fetched successfully", "userId", userId)
+	fmt.Println("User fetched successfully", "userId", userId)
 }
 
 func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +78,7 @@ func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
 
 func (uc *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userId := chi.URLParam(r, "id")
-	logger.Log.Info("Deleting user", "userId", userId)
+	fmt.Println("Deleting user", "userId", userId)
 
 	if userId == "" {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "USER ID is required", fmt.Errorf("missing user ID"))
@@ -92,7 +92,7 @@ func (uc *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User deleted successfully", nil)
-	logger.Log.Info("User deleted successfully", "userId", userId)
+	fmt.Println("User deleted successfully", "userId", userId)
 }
 
 func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +123,7 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid refresh token", err)
 		return
 	}
-	logger.Log.Info("claims", claims)
+	fmt.Println("claims", claims)
 
 	if typ, ok := claims["type"].(string); ok && typ != "refresh" {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid token type", fmt.Errorf("expected refresh token"))
@@ -159,7 +159,7 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Fetching all users")
+	fmt.Println("Fetching all users")
 	users, err := uc.UserService.GetAllUsers()
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to fetch users", err)
@@ -167,12 +167,12 @@ func (uc *UserController) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Users fetched successfully", users)
-	logger.Log.Info("Users fetched successfully", "count", len(users))
+	fmt.Println("Users fetched successfully", "count", len(users))
 }
 
 func (uc *UserController) LogoutUser(w http.ResponseWriter, r *http.Request) {
 	utils.ClearAuthCookies(w)
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User logged out successfully", nil)
-	logger.Log.Info("User logged out successfully")
+	fmt.Println("User logged out successfully")
 }

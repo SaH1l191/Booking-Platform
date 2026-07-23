@@ -91,7 +91,7 @@ func RequirePermission(requiredPerm string) func(http.Handler) http.Handler {
 				http.Error(w, "Unauthorized: no roles in context", http.StatusUnauthorized)
 				return
 			}
-			logger.Log.Info("Checking permissions for user", "required_permission", requiredPerm, "user_roles", roles)
+			logger.Log.Info("Checking permissions for user", "requiredPermission", requiredPerm, "userRoles", roles)
 
 			for _, role := range roles {
 				permissions, exists := RolePermissions[role]
@@ -100,7 +100,7 @@ func RequirePermission(requiredPerm string) func(http.Handler) http.Handler {
 				}
 				for _, p := range permissions {
 					if p == "*" || p == requiredPerm {
-						logger.Log.Info("Permission granted", "user_roles", roles, "required_permission", requiredPerm)
+						logger.Log.Info("Permission granted", "userRoles", roles, "requiredPermission", requiredPerm)
 						next.ServeHTTP(w, r)
 						return
 					}

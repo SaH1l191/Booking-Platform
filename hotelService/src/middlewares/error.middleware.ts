@@ -7,7 +7,7 @@ export const appErrorHandler = (err: AppError, req: Request, res: Response, next
         return next(err);
     }
 
-    logger.error(`App Error: ${err.message}`, { 
+    logger.error(`App Error: ${err.message}`, {
         statusCode: err.statusCode,
         stack: err.stack,
         path: req.path,

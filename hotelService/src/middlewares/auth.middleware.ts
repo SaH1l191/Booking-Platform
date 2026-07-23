@@ -26,4 +26,21 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
         logger.error("Invalid token", { error: err });
         return res.status(401).json({ message: "Invalid token" });
     }
-}
+};
+
+export const optionalAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        next();
+        return;
+    }
+    const token = authHeader.split(" ")[1];
+    try {
+        const secret = process.env.JWT_ACCESS_SECRET || "secret";
+        const decoded = jwt.verify(token, secret!);
+        req.user = decoded;
+    } catch {
+        console.warn("Invalid token provided in optionalAuth middleware");
+    }
+    next();
+};

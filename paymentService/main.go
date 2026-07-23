@@ -9,10 +9,18 @@ import (
 	"syscall"
 )
 
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	logger.Init("PaymentService", "C:/Users/aspha/OneDrive/Desktop/Booking-Platform-Complete/Booking-Platform/logs/payment-service.log")
+	logger.Init("PaymentService", getEnv("LOG_PATH", "../logs")+"/payment-service.log")
 	application, err := app.New(ctx)
 	if err != nil {
 		logger.Log.Error("Failed to initialize application", "error", err)

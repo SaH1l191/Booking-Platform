@@ -80,7 +80,7 @@ func (a *App) Start(ctx context.Context) error {
 	logger.Log.Info("Controllers initialized")
 
 	// Start booking event consumer
-	a.bookingConsumer = workers.NewBookingConsumer(a.PaymentService)
+	a.bookingConsumer = workers.NewBookingConsumer(a.PaymentService, db)
 	if err := a.bookingConsumer.Start(); err != nil {
 		return fmt.Errorf("failed to start booking consumer: %w", err)
 	}
