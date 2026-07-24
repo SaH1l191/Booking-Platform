@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	"goPayment/dto"
-	"goPayment/pkg/logger"
 	"goPayment/services"
 	"goPayment/utils"
 	"io"
@@ -31,7 +30,7 @@ func (pc *PaymentController) CreateOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	logger.Log.Info("Creating order", "userId", userId, "bookingId", payload.BookingId)
+	fmt.Println("Creating order", "userId", userId, "bookingId", payload.BookingId)
 
 	result, err := pc.PaymentService.CreateOrder(userId, userEmail, &payload)
 	if err != nil {
@@ -45,7 +44,7 @@ func (pc *PaymentController) CreateOrder(w http.ResponseWriter, r *http.Request)
 func (pc *PaymentController) VerifyPayment(w http.ResponseWriter, r *http.Request) {
 	payload := r.Context().Value("payload").(dto.VerifyPaymentRequestDTO)
 
-	logger.Log.Info("Verifying payment", "orderId", payload.RazorpayOrderId)
+	fmt.Println("Verifying payment", "orderId", payload.RazorpayOrderId)
 
 	payment, err := pc.PaymentService.VerifyPayment(&payload)
 	if err != nil {
@@ -62,7 +61,7 @@ func (pc *PaymentController) VerifyPayment(w http.ResponseWriter, r *http.Reques
 func (pc *PaymentController) RefundPayment(w http.ResponseWriter, r *http.Request) {
 	payload := r.Context().Value("payload").(dto.RefundRequestDTO)
 
-	logger.Log.Info("Refunding payment", "paymentId", payload.PaymentId)
+	fmt.Println("Refunding payment", "paymentId", payload.PaymentId)
 
 	result, err := pc.PaymentService.RefundPayment(&payload)
 	if err != nil {
@@ -81,7 +80,7 @@ func (pc *PaymentController) GetPaymentByBookingId(w http.ResponseWriter, r *htt
 		return
 	}
 
-	logger.Log.Info("Fetching payment by booking ID", "bookingId", bookingId)
+	fmt.Println("Fetching payment by booking ID", "bookingId", bookingId)
 
 	payment, err := pc.PaymentService.GetPaymentByBookingId(bookingId)
 	if err != nil {
@@ -116,7 +115,7 @@ func (pc *PaymentController) HandleWebhook(w http.ResponseWriter, r *http.Reques
 
 	signature := r.Header.Get("X-Razorpay-Signature")
 
-	logger.Log.Info("Webhook received")
+	fmt.Println("Webhook received")
 
 	err = pc.PaymentService.HandleWebhook(rawBody, signature)
 	if err != nil {

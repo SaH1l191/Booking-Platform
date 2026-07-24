@@ -8,6 +8,7 @@ import v1Router from "./routers/v1/index.router";
 import { emailWorker } from "./workers/email.worker";
 import { paymentNotificationWorker } from "./workers/payment-notification.worker";
 import { bookingNotificationWorker } from "./workers/booking-notification.worker";
+import { ensureProcessedEventsTable } from "./lib/db";
 import { register } from "./metrics/metrics";
 import { metricsMiddleware } from "./middlewares/metrics.middleware";
 
@@ -32,6 +33,7 @@ app.use(genericErrorHandler)
 
 app.listen(PORT, async () => {
   logger.info("Notification Server started successfully", { port: serverConfig.PORT });
+  await ensureProcessedEventsTable();
   emailWorker()
   paymentNotificationWorker();
   bookingNotificationWorker();

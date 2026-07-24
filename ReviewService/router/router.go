@@ -1,7 +1,7 @@
 package router
 
-import ( 
-	"ReviewService/pkg/metrics" 
+import (
+	"ReviewService/pkg/metrics"
 	"ReviewService/middlewares"
 	"net/http"
 
@@ -20,7 +20,6 @@ func SetupRouter(reviewRouter *ReviewRouter) chi.Router {
 	metrics.Init()
 
 	r.Use(middlewares.RequestContext)
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(metrics.MetricsMiddleware)
 

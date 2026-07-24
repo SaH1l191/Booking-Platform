@@ -33,7 +33,7 @@ export async function getIdempotencyKey(key: string) {
 }
 
 export async function getBookingById(bookingId: number) {
-    logger.info("Fetching booking by ID in repository", { bookingId });
+    console.log("Fetching booking by ID in repository", { bookingId });
     const booking = await prisma.booking.findUnique({
         where: { id: bookingId },
     })
@@ -124,14 +124,14 @@ export async function createBookingRecord(
 }
 
 export async function getAllBookings() {
-    logger.info("Fetching all bookings for admin");
+    console.log("Fetching all bookings for admin");
     return await prisma.booking.findMany({
         orderBy: { createdAt: 'desc' }
     });
 }
 
 export async function getBookingsByUserId(userId: number) {
-    logger.info("Fetching bookings for user in repository", { userId });
+    console.log("Fetching bookings for user in repository", { userId });
     return await prisma.booking.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' }
@@ -139,7 +139,7 @@ export async function getBookingsByUserId(userId: number) {
 }
 
 export async function getBookingsByHotelId(hotelId: number) {
-    logger.info("Fetching bookings for hotel in repository", { hotelId });
+    console.log("Fetching bookings for hotel in repository", { hotelId });
     return await prisma.booking.findMany({
         where: { hotelId },
         orderBy: { createdAt: 'desc' }
@@ -150,6 +150,7 @@ export async function insertOutboxEvent(tx: any, eventType: string, payload: Rec
     logger.info("Inserting outbox event", { eventType, payload });
     return tx.outbox.create({
         data: {
+            eventId: crypto.randomUUID(),
             eventType,
             payload,
         },
@@ -169,7 +170,7 @@ export async function expireStaleBookings() {
 }
 
 export async function getCompletedBookingsByUserId(userId: number) {
-    logger.info("Fetching completed bookings for user in repository", { userId });
+    console.log("Fetching completed bookings for user in repository", { userId });
     return await prisma.booking.findMany({
         where : {userId, 
             status: 'CONFIRMED',

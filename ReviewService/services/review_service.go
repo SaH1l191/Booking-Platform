@@ -31,7 +31,7 @@ func NewReviewService(reviewRepository db.ReviewRepository) ReviewService {
 }
 
 func (r *ReviewServiceImpl) GetReviewById(id string) (*models.Review, error) {
-	logger.Log.Info("Fetching review by ID", "reviewId", id)
+	fmt.Println("Fetching review by ID", "reviewId", id)
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
@@ -48,14 +48,34 @@ func (r *ReviewServiceImpl) GetReviewById(id string) (*models.Review, error) {
 }
 
 func (r *ReviewServiceImpl) CreateReview(payload *dto.CreateReviewRequestDTO) (*models.Review, error) {
-	logger.Log.Info("Creating review", "userId", payload.UserId, "hotelId", payload.HotelId, "rating", payload.Rating)
+	fmt.Println("Creating review", "userId", payload.UserId, "hotelId", payload.HotelId, "rating", payload.Rating)
 
-	// Validate rating range
+	
 	if payload.Rating < 1 || payload.Rating > 5 {
 		return nil, fmt.Errorf("rating must be between 1 and 5")
 	}
 
-	// Call the repository to create the review
+	// Check if stay is completed (eligibility)
+	eligible, err := r.reviewRepository.CheckEligibility(payload.BookingId)
+	if err != nil {
+		logger.Log.Error("Error checking eligibility", "error", err)
+		return nil, fmt.Errorf("failed to check eligibility")
+	}
+	if !eligible {
+		return nil, fmt.Errorf("not eligible to review this booking")
+	}
+
+	//   if already reviewed
+	existing, err := r.reviewRepository.CheckExistingReview(payload.BookingId)
+	if err != nil {
+		logger.Log.Error("Error checking existing review", "error", err)
+		return nil, fmt.Errorf("failed to check existing review")
+	}
+	if existing {
+		return nil, fmt.Errorf("already reviewed this booking")
+	}
+
+	//  
 	review, err := r.reviewRepository.Create(payload.UserId, payload.BookingId, payload.HotelId, payload.Comment, payload.Rating)
 	if err != nil {
 		logger.Log.Error("Error creating review", "error", err)
@@ -67,7 +87,7 @@ func (r *ReviewServiceImpl) CreateReview(payload *dto.CreateReviewRequestDTO) (*
 }
 
 func (r *ReviewServiceImpl) UpdateReview(id string, payload *dto.UpdateReviewRequestDTO) (*models.Review, error) {
-	logger.Log.Info("Updating review", "reviewId", id)
+	fmt.Println("Updating review", "reviewId", id)
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
@@ -92,7 +112,7 @@ func (r *ReviewServiceImpl) UpdateReview(id string, payload *dto.UpdateReviewReq
 }
 
 func (r *ReviewServiceImpl) DeleteReview(id string) error {
-	logger.Log.Info("Deleting review", "reviewId", id)
+	fmt.Println("Deleting review", "reviewId", id)
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
@@ -112,7 +132,7 @@ func (r *ReviewServiceImpl) DeleteReview(id string) error {
 }
 
 func (r *ReviewServiceImpl) GetAllReviews() ([]*models.Review, error) {
-	logger.Log.Info("Fetching all reviews")
+	fmt.Println("Fetching all reviews")
 
 	reviews, err := r.reviewRepository.GetAll()
 	if err != nil {
@@ -123,7 +143,7 @@ func (r *ReviewServiceImpl) GetAllReviews() ([]*models.Review, error) {
 }
 
 func (r *ReviewServiceImpl) GetReviewsByUserId(userId string) ([]*models.Review, error) {
-	logger.Log.Info("Fetching reviews by user ID", "userId", userId)
+	fmt.Println("Fetching reviews by user ID", "userId", userId)
 
 	userIdInt, err := strconv.ParseInt(userId, 10, 64)
 	if err != nil {
@@ -140,7 +160,7 @@ func (r *ReviewServiceImpl) GetReviewsByUserId(userId string) ([]*models.Review,
 }
 
 func (r *ReviewServiceImpl) GetReviewsByHotelId(hotelId string) ([]*models.Review, error) {
-	logger.Log.Info("Fetching reviews by hotel ID", "hotelId", hotelId)
+	fmt.Println("Fetching reviews by hotel ID", "hotelId", hotelId)
 
 	hotelIdInt, err := strconv.ParseInt(hotelId, 10, 64)
 	if err != nil {
@@ -157,7 +177,7 @@ func (r *ReviewServiceImpl) GetReviewsByHotelId(hotelId string) ([]*models.Revie
 }
 
 func (r *ReviewServiceImpl) GetReviewsByBookingId(bookingId string) ([]*models.Review, error) {
-	logger.Log.Info("Fetching reviews by booking ID", "bookingId", bookingId)
+	fmt.Println("Fetching reviews by booking ID", "bookingId", bookingId)
 
 	bookingIdInt, err := strconv.ParseInt(bookingId, 10, 64)
 	if err != nil {

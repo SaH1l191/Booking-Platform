@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"goPayment/pkg/logger"
+	"goAuth/pkg/logger"
 )
 
 type contextKey string

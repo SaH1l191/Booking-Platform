@@ -2,10 +2,12 @@ import { getRabbitMQChannel } from '../queues/mail.queue';
 import logger from '../config/logger';
 import { renderMailTemplate } from '../templates/template.hanlder';
 import { sendEmail } from '../services/mail.service';
+import { getDB } from '../lib/db';
 
 const PAYMENT_QUEUE = "payment-events";
 
 interface PaymentEvent {
+    eventId: string;
     eventType: string;
     payload: {
         paymentId: number;
@@ -33,6 +35,16 @@ export const paymentNotificationWorker = async () => {
         try {
             const event: PaymentEvent = JSON.parse(msg.content.toString());
 
+            if (event.eventId) {
+                const db = await getDB();
+                const [rows]: any = await db.execute("SELECT 1 FROM processed_events WHERE event_id = ?", [event.eventId]);
+                if (rows.length > 0) {
+                    logger.info("Event already processed, skipping", { eventId: event.eventId, eventType: event.eventType });
+                    channel.ack(msg);
+                    return;
+                }
+            }
+
             switch (event.eventType) {
                 case "PAYMENT_CAPTURED":
                     await handlePaymentCaptured(event);
@@ -45,6 +57,11 @@ export const paymentNotificationWorker = async () => {
                     break;
                 default:
                     logger.info("Unhandled payment event", { eventType: event.eventType });
+            }
+
+            if (event.eventId) {
+                const db = await getDB();
+                await db.execute("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", [event.eventId]);
             }
 
             channel.ack(msg);
@@ -100,12 +117,10 @@ async function handlePaymentFailed(event: PaymentEvent) {
     }
 
     try {
-        const emailContent = await renderMailTemplate("payment-confirmation", {
+        const emailContent = await renderMailTemplate("payment-failed", {
             bookingId: bookingId,
             amount: 0,
             currency: "INR",
-            paymentId: 0,
-            status: "FAILED",
             failureReason: failureReason || "Payment failed",
         });
 
@@ -136,12 +151,11 @@ async function handlePaymentRefunded(event: PaymentEvent) {
     }
 
     try {
-        const emailContent = await renderMailTemplate("payment-confirmation", {
+        const emailContent = await renderMailTemplate("payment-refunded", {
             bookingId: bookingId,
             amount: amount,
             currency: "INR",
             paymentId: event.payload.paymentId,
-            status: "REFUNDED",
         });
 
         await sendEmail(

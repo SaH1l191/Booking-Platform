@@ -16,6 +16,8 @@ type ReviewRepository interface {
 	GetByUserId(userId int64) ([]*models.Review, error)
 	GetByHotelId(hotelId int64) ([]*models.Review, error)
 	GetByBookingId(bookingId int64) ([]*models.Review, error)
+	CheckEligibility(bookingId int64) (bool, error)
+	CheckExistingReview(bookingId int64) (bool, error)
 }
 
 type ReviewRepositoryImpl struct {
@@ -123,7 +125,6 @@ func (r *ReviewRepositoryImpl) Update(id int64, comment string, rating int) (*mo
 		return nil, fmt.Errorf("review not found")
 	}
 
-	// Fetch the updated review
 	return r.GetByID(id)
 }
 
@@ -228,4 +229,29 @@ func (r *ReviewRepositoryImpl) GetByBookingId(bookingId int64) ([]*models.Review
 	}
 
 	return reviews, nil
+}
+
+func (r *ReviewRepositoryImpl) CheckEligibility(bookingId int64) (bool, error) {
+	query := "SELECT eligible FROM review_eligibility WHERE booking_id = ?"
+	var eligible bool
+	err := r.db.QueryRow(query, bookingId).Scan(&eligible)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		logger.Log.Error("Error checking eligibility", "error", err, "bookingId", bookingId)
+		return false, err
+	}
+	return eligible, nil
+}
+
+func (r *ReviewRepositoryImpl) CheckExistingReview(bookingId int64) (bool, error) {
+	query := "SELECT COUNT(*) FROM reviews WHERE booking_id = ? AND deleted_at IS NULL"
+	var count int
+	err := r.db.QueryRow(query, bookingId).Scan(&count)
+	if err != nil {
+		logger.Log.Error("Error checking existing review", "error", err, "bookingId", bookingId)
+		return false, err
+	}
+	return count > 0, nil
 }

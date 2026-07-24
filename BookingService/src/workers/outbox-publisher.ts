@@ -25,45 +25,54 @@ function poll() {
 
 async function processPendingEvents() {
     try {
-        await prisma.$transaction(async (tx: any) => {
-            const events = await tx.$queryRaw`
+        const events = await prisma.$transaction(async (tx: any) => {
+            return await tx.$queryRaw`
                 SELECT * FROM outbox
                 WHERE published = false
                 ORDER BY \`createdAt\` ASC
                 LIMIT 50
                 FOR UPDATE SKIP LOCKED
             `;
-
-            if (events.length === 0) return;
-
-            const channel = await getRabbitMQChannel();
-            await channel.assertExchange("booking_events_exchange", "fanout", { durable: true });
-
-            for (const event of events) {
-                const message = {
-                    eventType: event.eventType,
-                    payload: event.payload,
-                };
-
-                const sent = channel.publish(
-                    "booking_events_exchange",
-                    "",
-                    Buffer.from(JSON.stringify(message)),
-                    { persistent: true, contentType: 'application/json' }
-                );
-
-                if (sent) {
-                    await tx.outbox.update({
-                        where: { id: event.id },
-                        data: { published: true },
-                    });
-                    logger.info("Booking outbox event published", { eventId: event.id, eventType: event.eventType });
-                } else {
-                    logger.warn("Channel buffer full, stopping outbox processing", { eventId: event.id });
-                    break;
-                }
-            }
         });
+
+        if (!events || events.length === 0) return;
+
+        const channel = await getRabbitMQChannel();
+        await channel.assertExchange("booking_events_exchange", "fanout", { durable: true });
+
+        const publishedIds: number[] = [];
+        for (const event of events) {
+            const message = {
+                eventId: event.eventId,
+                eventType: event.eventType,
+                payload: event.payload,
+            };
+
+            const sent = channel.publish(
+                "booking_events_exchange",
+                "",
+                Buffer.from(JSON.stringify(message)),
+                { persistent: true, contentType: 'application/json' }
+            );
+
+            if (sent) {
+                publishedIds.push(event.id);
+                logger.info("Booking outbox event published", { eventId: event.id, eventType: event.eventType });
+            } else {
+                logger.warn("Channel buffer full, stopping outbox processing", { eventId: event.id });
+                break;
+            }
+        }
+
+        if (publishedIds.length > 0) {
+            await prisma.$transaction(async (tx: any) => {
+                await tx.outbox.updateMany({
+                    where: { id: { in: publishedIds } },
+                    data: { published: true },
+                });
+            });
+        }
+        // consumer should dedup this msg in case of crash after publish but before marking as published
     } catch (error) {
         logger.error("Failed to process booking outbox", { error: (error as Error).message });
     }

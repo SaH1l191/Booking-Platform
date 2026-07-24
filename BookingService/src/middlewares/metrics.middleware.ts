@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { httpRequestDuration, httpRequestTotal } from '../metrics/metrics';
 
 export const metricsMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  if (req.path === "/metrics" || req.path === "/health") {
+    return next();
+  }
+
   const end = httpRequestDuration.startTimer();
 
   res.on('finish', () => {

@@ -153,7 +153,6 @@ async function handlePaymentCaptured(event: PaymentEvent) {
 
             const startDate = new Date(booking.checkIn);
             const endDate = new Date(booking.checkOut);
-            const expiry = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
             for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
                 dates.push(d.toISOString().split("T")[0]);
             }
@@ -193,6 +192,7 @@ async function handlePaymentFailed(event: PaymentEvent) {
 
         await tx.outbox.create({
             data: {
+                eventId: crypto.randomUUID(),
                 eventType: BOOKING_CANCELLED_EVENT,
                 payload: {
                     bookingId: booking.id,
@@ -230,20 +230,21 @@ async function handlePaymentRefunded(event: PaymentEvent) {
             data: { status: "CANCELLED" },
         });
 
-        // await tx.outbox.create({
-        //     data: {
-        //         eventType: BOOKING_CANCELLED_EVENT,
-        //         payload: {
-        //             bookingId: booking.id,
-        //             userId: booking.userId,
-        //             hotelId: booking.hotelId,
-        //             roomId: booking.roomId,
-        //             userEmail: event.payload.userEmail || "",
-        //             status: "CANCELLED",
-        //             reason: "Payment refunded",
-        //         },
-        //     },
-        // });
+        //uncommented - 22-7- check for event looping payment refunded -> booking cancelled....
+        await tx.outbox.create({
+            data: {
+                eventType: BOOKING_CANCELLED_EVENT,
+                payload: {
+                    bookingId: booking.id,
+                    userId: booking.userId,
+                    hotelId: booking.hotelId,
+                    roomId: booking.roomId,
+                    userEmail: event.payload.userEmail || "",
+                    status: "CANCELLED",
+                    reason: "Payment refunded",
+                },
+            },
+        });
 
         logger.info("Booking cancelled due to refund", { bookingId });
     });

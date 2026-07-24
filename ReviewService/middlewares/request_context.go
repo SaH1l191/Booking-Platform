@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"net/http"
+	"time"
 
 	"ReviewService/pkg/logger"
 )
@@ -13,6 +14,16 @@ type contextKey string
 
 const RequestIDKey contextKey = "request_id"
 const OriginalPathKey contextKey = "original_path"
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
 
 func generateRequestID() string {
 	b := make([]byte, 16)
@@ -35,13 +46,18 @@ func RequestContext(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), RequestIDKey, requestID)
 		ctx = context.WithValue(ctx, OriginalPathKey, originalPath)
 
-		logger.Log.Info("Incoming request",
-			"request_id", requestID,
-			"original_path", originalPath,
-			"method", r.Method,
-			"path", r.URL.Path,
-		)
+		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+		start := time.Now()
 
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(rw, r.WithContext(ctx))
+
+		latency := time.Since(start)
+		logger.Log.Info("HTTP Request",
+			"requestId", requestID,
+			"method", r.Method,
+			"route", originalPath,
+			"status", rw.statusCode,
+			"latency", latency.Milliseconds(),
+		)
 	})
 }

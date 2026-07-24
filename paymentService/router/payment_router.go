@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/go-chi/chi"
 	"goPayment/controllers"
 	"goPayment/middlewares"
@@ -16,6 +18,11 @@ func NewPaymentRouter(paymentController *controllers.PaymentController) *Payment
 
 func (pr *PaymentRouter) Register(chiRouter chi.Router) {
 	chiRouter.Route("/payments", func(r chi.Router) {
+		r.Get("/error-test", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"success":false,"message":"Dummy 500 Internal Server Error"}`))
+		})
 
 		r.Group(func(protected chi.Router) {
 			protected.Use(middlewares.JWTAuthMiddleware)

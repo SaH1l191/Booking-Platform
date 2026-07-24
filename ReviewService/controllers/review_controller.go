@@ -4,10 +4,11 @@ import (
 	"ReviewService/dto"
 	"ReviewService/services"
 	"ReviewService/utils"
-	"ReviewService/pkg/logger"
 	"fmt"
-	"github.com/go-chi/chi"
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi"
 )
 
 type ReviewController struct {
@@ -21,7 +22,7 @@ func NewReviewController(reviewService services.ReviewService) *ReviewController
 }
 
 func (rc *ReviewController) GetReviewById(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Fetching review by ID in ReviewController")
+	fmt.Println("Fetching review by ID in ReviewController")
 
 	reviewId := chi.URLParam(r, "id")
 	if reviewId == "" {
@@ -39,13 +40,18 @@ func (rc *ReviewController) GetReviewById(w http.ResponseWriter, r *http.Request
 		return
 	}
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Review fetched successfully", review)
-	logger.Log.Info("Review fetched successfully", "review", review)
+	fmt.Println("Review fetched successfully", "reviewId", reviewId)
 }
 
 func (rc *ReviewController) CreateReview(w http.ResponseWriter, r *http.Request) {
 	payload := r.Context().Value("payload").(dto.CreateReviewRequestDTO)
-
-	logger.Log.Info("Payload received", "payload", payload)
+	jwtUserID := r.Context().Value("userID").(string)
+	parsed, _ := strconv.ParseInt(jwtUserID, 10, 64)
+	if payload.UserId != parsed {
+		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "User ID does not match the authenticated user", fmt.Errorf("user ID mismatch"))
+		return
+	}
+	fmt.Println("Payload received", "payload", payload)
 
 	review, err := rc.ReviewService.CreateReview(&payload)
 
@@ -55,11 +61,11 @@ func (rc *ReviewController) CreateReview(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusCreated, "Review created successfully", review)
-	logger.Log.Info("Review created successfully", "review", review)
+	fmt.Println("Review created successfully", "reviewId", review.Id)
 }
 
 func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Updating review in ReviewController")
+	fmt.Println("Updating review in ReviewController")
 
 	reviewId := chi.URLParam(r, "id")
 	if reviewId == "" {
@@ -69,7 +75,7 @@ func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request)
 
 	payload := r.Context().Value("payload").(dto.UpdateReviewRequestDTO)
 
-	logger.Log.Info("Payload received", "payload", payload)
+	fmt.Println("Payload received", "payload", payload)
 
 	review, err := rc.ReviewService.UpdateReview(reviewId, &payload)
 
@@ -79,11 +85,11 @@ func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Review updated successfully", review)
-	logger.Log.Info("Review updated successfully", "review", review)
+	fmt.Println("Review updated successfully", "reviewId", reviewId)
 }
 
 func (rc *ReviewController) DeleteReview(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Deleting review in ReviewController")
+	fmt.Println("Deleting review in ReviewController")
 
 	reviewId := chi.URLParam(r, "id")
 	if reviewId == "" {
@@ -99,11 +105,11 @@ func (rc *ReviewController) DeleteReview(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Review deleted successfully", nil)
-	logger.Log.Info("Review deleted successfully")
+	fmt.Println("Review deleted successfully", "reviewId", reviewId)
 }
 
 func (rc *ReviewController) GetAllReviews(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Fetching all reviews in ReviewController")
+	fmt.Println("Fetching all reviews in ReviewController")
 
 	reviews, err := rc.ReviewService.GetAllReviews()
 	if err != nil {
@@ -112,11 +118,11 @@ func (rc *ReviewController) GetAllReviews(w http.ResponseWriter, r *http.Request
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Reviews fetched successfully", reviews)
-	logger.Log.Info("Reviews fetched successfully", "count", len(reviews))
+	fmt.Println("Reviews fetched successfully", "count", len(reviews))
 }
 
 func (rc *ReviewController) GetReviewsByUserId(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Fetching reviews by user ID in ReviewController")
+	fmt.Println("Fetching reviews by user ID in ReviewController")
 
 	userId := chi.URLParam(r, "id")
 	if userId == "" {
@@ -131,11 +137,11 @@ func (rc *ReviewController) GetReviewsByUserId(w http.ResponseWriter, r *http.Re
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Reviews fetched successfully", reviews)
-	logger.Log.Info("Reviews fetched successfully for user ID", "userId", userId, "count", len(reviews))
+	fmt.Println("Reviews fetched successfully for user ID", "userId", userId, "count", len(reviews))
 }
 
 func (rc *ReviewController) GetReviewsByHotelId(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Fetching reviews by hotel ID in ReviewController")
+	fmt.Println("Fetching reviews by hotel ID in ReviewController")
 
 	hotelId := chi.URLParam(r, "id")
 	if hotelId == "" {
@@ -150,11 +156,11 @@ func (rc *ReviewController) GetReviewsByHotelId(w http.ResponseWriter, r *http.R
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Reviews fetched successfully", reviews)
-	logger.Log.Info("Reviews fetched successfully for hotel ID", "hotelId", hotelId, "count", len(reviews))
+	fmt.Println("Reviews fetched successfully for hotel ID", "hotelId", hotelId, "count", len(reviews))
 }
 
 func (rc *ReviewController) GetReviewsByBookingId(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Fetching reviews by booking ID in ReviewController")
+	fmt.Println("Fetching reviews by booking ID in ReviewController")
 
 	bookingId := chi.URLParam(r, "id")
 	if bookingId == "" {
@@ -169,5 +175,5 @@ func (rc *ReviewController) GetReviewsByBookingId(w http.ResponseWriter, r *http
 	}
 
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Reviews fetched successfully", reviews)
-	logger.Log.Info("Reviews fetched successfully for booking ID", "bookingId", bookingId, "count", len(reviews))
+	fmt.Println("Reviews fetched successfully for booking ID", "bookingId", bookingId, "count", len(reviews))
 }

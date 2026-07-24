@@ -5,6 +5,7 @@ import Hotel from "../db/models/hotel";
 import HotelCategory from "../db/models/hotelCategory";
 import Category from "../db/models/category";
 import HotelImage from "../db/models/hotelImage";
+import RoomCategory from "../db/models/roomCategory";
 import { createHotelDto } from "../dto/hotel.dto";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 
@@ -81,31 +82,32 @@ export async function getAllHotels(query: any) {
     const offset = (page - 1) * limit;
 
     const where: any = { deletedAt: null };
+    const order: any[] = [];
 
     if (query.search) {
-        where.name = { [Op.like]: `%${query.search}%` };
+        where[Op.or] = [
+            { name: { [Op.like]: `%${query.search}%` } },
+            { location: { [Op.like]: `%${query.search}%` } },
+        ];
     }
 
     if (query.minRating) {
-        where.rating = where.rating || {};
-        where.rating[Op.gte] = parseFloat(query.minRating);
+        where.rating = { ...where.rating, [Op.gte]: parseFloat(query.minRating) };
     }
     if (query.maxRating) {
-        where.rating = where.rating || {};
-        where.rating[Op.lte] = parseFloat(query.maxRating);
+        where.rating = { ...where.rating, [Op.lte]: parseFloat(query.maxRating) };
     }
 
-
-    if (query.minPrice) {
-        where.price = where.price || {};
-        where.price[Op.gte] = parseFloat(query.minPrice);
+    if (query.minPrice || query.maxPrice) {
+        const clauses: string[] = [];
+        if (query.minPrice) clauses.push(`price >= ${parseFloat(query.minPrice)}`);
+        if (query.maxPrice) clauses.push(`price <= ${parseFloat(query.maxPrice)}`);
+        where[Op.and] = where[Op.and] || [];
+        where[Op.and].push(
+            literal(`EXISTS (SELECT 1 FROM room_categories WHERE hotel_id = Hotel.id AND deleted_at IS NULL AND ${clauses.join(' AND ')})`)
+        );
     }
-    if (query.maxPrice) {
-        where.price = where.price || {};
-        where.price[Op.lte] = parseFloat(query.maxPrice);
-    }
 
-    //  (bounding box + distance check)
     let distanceField: ReturnType<typeof literal> | null = null;
     if (query.latitude && query.longitude) {
         const lat = parseFloat(query.latitude);
@@ -126,10 +128,31 @@ export async function getAllHotels(query: any) {
                 ) / 1000
             `);
 
-            where[Op.and] = [
-                sequelizeWhere(distanceField, { [Op.lte]: r })
-            ];
+            where[Op.and] = where[Op.and] || [];
+            where[Op.and].push(sequelizeWhere(distanceField, { [Op.lte]: r }));
         }
+    }
+
+    const sortBy = query.sortBy || '-createdAt';
+    const sortMap: Record<string, [any, string]> = {
+        'createdAt': ['createdAt', 'ASC'],
+        '-createdAt': ['createdAt', 'DESC'],
+        'rating': ['rating', 'ASC'],
+        '-rating': ['rating', 'DESC'],
+        'price': [literal(`(SELECT COALESCE(MIN(price), 0) FROM room_categories WHERE hotel_id = Hotel.id AND deleted_at IS NULL)`), 'ASC'],
+        '-price': [literal(`(SELECT COALESCE(MIN(price), 0) FROM room_categories WHERE hotel_id = Hotel.id AND deleted_at IS NULL)`), 'DESC'],
+    };
+    order.push(sortMap[sortBy] || sortMap['-createdAt']!);
+
+    const hotelCategoryInclude: any = {
+        model: HotelCategory,
+        as: "hotelCategories",
+        include: [{ model: Category, as: "category", attributes: ["id", "name", "slug", "icon"] }],
+        attributes: [],
+    };
+    if (query.category) {
+        hotelCategoryInclude.required = true;
+        hotelCategoryInclude.include[0].where = { slug: query.category };
     }
 
     const { count, rows } = await Hotel.findAndCountAll({
@@ -137,23 +160,25 @@ export async function getAllHotels(query: any) {
         distinct: true,
         limit,
         offset,
+        order,
         include: [
-            {
-                model: HotelCategory,
-                as: "hotelCategories",
-                include: [{ model: Category, as: "category", attributes: ["id", "name", "slug", "icon"] }],
-                attributes: [],
-            },
+            hotelCategoryInclude,
             {
                 model: HotelImage,
                 as: "images",
                 attributes: ["id", "url", "altText", "displayOrder"],
-                separate: true, //removes the N+1 problem by fetching images in a separate query (instaed of a cartesian product of 1hotel - 3categories,3images => 9 rows)
+                separate: true,
+            },
+            {
+                model: RoomCategory,
+                as: "roomCategories",
+                attributes: ["id", "price", "roomType"],
+                separate: true,
             },
         ],
     });
 
-    logger.info("Hotels fetched", { count, page, limit, offset, search: query.search, category: query.category });
+    logger.info("Hotels fetched", { count, page, limit, offset, search: query.search, category: query.category, sortBy });
 
     const hotels = rows.map((hotel: any) => {
         const hotelJson = hotel.toJSON() as any;
@@ -161,6 +186,7 @@ export async function getAllHotels(query: any) {
             ...hotelJson,
             categories: hotelJson.hotelCategories?.map((hc: any) => hc.category) || [],
             images: hotelJson.images || [],
+            roomCategories: hotelJson.roomCategories || [],
         };
     });
 

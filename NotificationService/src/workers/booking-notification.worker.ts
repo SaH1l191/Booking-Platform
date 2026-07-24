@@ -2,10 +2,12 @@ import { getRabbitMQChannel } from '../queues/mail.queue';
 import logger from '../config/logger';
 import { renderMailTemplate } from '../templates/template.hanlder';
 import { sendEmail } from '../services/mail.service';
+import { getDB } from '../lib/db';
 
 const BOOKING_EVENTS_QUEUE = "booking-events";
 
 interface BookingEvent {
+    eventId: string;
     eventType: string;
     payload: {
         bookingId: number;
@@ -32,6 +34,16 @@ export const bookingNotificationWorker = async () => {
         try {
             const event: BookingEvent = JSON.parse(msg.content.toString());
 
+            if (event.eventId) {
+                const db = await getDB();
+                const [rows]: any = await db.execute("SELECT 1 FROM processed_events WHERE event_id = ?", [event.eventId]);
+                if (rows.length > 0) {
+                    logger.info("Event already processed, skipping", { eventId: event.eventId, eventType: event.eventType });
+                    channel.ack(msg);
+                    return;
+                }
+            }
+
             switch (event.eventType) {
                 case "BOOKING_CONFIRMED":
                     await handleBookingConfirmed(event);
@@ -45,6 +57,11 @@ export const bookingNotificationWorker = async () => {
                 default:
                     logger.info("Unhandled booking event", { eventType: event.eventType }); //need to modify the exchange , on confirm booking repo 
                     // it sends booking_created event which is not neceesarry to implmenet here to notificaiton service , as payment will confirm and emit event
+            }
+
+            if (event.eventId) {
+                const db = await getDB();
+                await db.execute("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", [event.eventId]);
             }
 
             channel.ack(msg);

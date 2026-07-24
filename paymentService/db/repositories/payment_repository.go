@@ -1,8 +1,10 @@
 package repositories
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"goPayment/models"
 	"goPayment/pkg/logger"
 )
@@ -117,6 +119,7 @@ func (r *PaymentRepository) UpdatePaymentStatus(paymentId int64, status string, 
 		return err
 	}
 
+	eventID := generateUUID()
 	payloadData, _ := json.Marshal(map[string]interface{}{
 		"paymentId": paymentId,
 		"bookingId": bookingId,
@@ -126,7 +129,7 @@ func (r *PaymentRepository) UpdatePaymentStatus(paymentId int64, status string, 
 		"currency":  currency,
 		"status":    status,
 	})
-	_, err = tx.Exec(`INSERT INTO outbox (event_type, payload) VALUES (?, ?)`, "PAYMENT_"+status, payloadData)
+	_, err = tx.Exec(`INSERT INTO outbox (event_id, event_type, payload) VALUES (?, ?, ?)`, eventID, "PAYMENT_"+status, payloadData)
 	if err != nil {
 		logger.Log.Error("Failed to insert outbox event", "error", err)
 		return err
@@ -162,6 +165,7 @@ func (r *PaymentRepository) UpdatePaymentFailure(paymentId int64, failureReason 
 		return err
 	}
 
+	eventID := generateUUID()
 	payloadData, _ := json.Marshal(map[string]interface{}{
 		"paymentId":     paymentId,
 		"bookingId":     bookingId,
@@ -172,7 +176,7 @@ func (r *PaymentRepository) UpdatePaymentFailure(paymentId int64, failureReason 
 		"status":        "FAILED",
 		"failureReason": failureReason,
 	})
-	_, err = tx.Exec(`INSERT INTO outbox (event_type, payload) VALUES (?, ?)`, "PAYMENT_FAILED", payloadData)
+	_, err = tx.Exec(`INSERT INTO outbox (event_id, event_type, payload) VALUES (?, ?, ?)`, eventID, "PAYMENT_FAILED", payloadData)
 	if err != nil {
 		logger.Log.Error("Failed to insert outbox event", "error", err)
 		return err
@@ -184,7 +188,7 @@ func (r *PaymentRepository) UpdatePaymentFailure(paymentId int64, failureReason 
 	logger.Log.Info("Payment marked as failed", "paymentId", paymentId)
 	return nil
 }
-
+//PAYMENT_REFUNDED status 
 func (r *PaymentRepository) UpdatePaymentRefund(paymentId int64, refundAmount int, status string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -208,6 +212,7 @@ func (r *PaymentRepository) UpdatePaymentRefund(paymentId int64, refundAmount in
 		return err
 	}
 
+	eventID := generateUUID()
 	payloadData, _ := json.Marshal(map[string]interface{}{
 		"paymentId":    paymentId,
 		"bookingId":    bookingId,
@@ -218,7 +223,7 @@ func (r *PaymentRepository) UpdatePaymentRefund(paymentId int64, refundAmount in
 		"refundAmount": refundAmount,
 		"status":       status,
 	})
-	_, err = tx.Exec(`INSERT INTO outbox (event_type, payload) VALUES (?, ?)`, "PAYMENT_"+status, payloadData)
+	_, err = tx.Exec(`INSERT INTO outbox (event_id, event_type, payload) VALUES (?, ?, ?)`, eventID, "PAYMENT_"+status, payloadData)
 	if err != nil {
 		logger.Log.Error("Failed to insert outbox event", "error", err)
 		return err
@@ -229,6 +234,14 @@ func (r *PaymentRepository) UpdatePaymentRefund(paymentId int64, refundAmount in
 	}
 	logger.Log.Info("Payment refund updated", "paymentId", paymentId, "refundAmount", refundAmount, "status", status)
 	return nil
+}
+
+func generateUUID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
 
 func (r *PaymentRepository) GetStalePayments() ([]*models.Payment, error) {

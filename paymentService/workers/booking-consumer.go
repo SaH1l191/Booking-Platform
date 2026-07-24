@@ -1,19 +1,33 @@
 package workers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"goPayment/config/rabbitmq"
 	"goPayment/dto"
 	"goPayment/pkg/logger"
 	"goPayment/services"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+func isEventProcessed(db *sql.DB, eventId string) (bool, error) {
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM processed_events WHERE event_id = ?)", eventId).Scan(&exists)
+	return exists, err
+}
+
+func markEventProcessed(db *sql.DB, eventId string) error {
+	_, err := db.Exec("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", eventId)
+	return err
+}
+
 const bookingExchange = "booking_events_exchange"
 
 type BookingEventEnvelope struct {
+	EventId   string          `json:"eventId"`
 	EventType string          `json:"eventType"`
 	Payload   json.RawMessage `json:"payload"`
 }
@@ -28,6 +42,7 @@ type BookingCreatedPayload struct {
 	BookingAmount int    `json:"bookingAmount"`
 	TotalGuests   int    `json:"totalGuests"`
 	UserEmail     string `json:"userEmail"`
+	CreatedAt     string `json:"createdAt"`
 }
 
 type BookingCancelledPayload struct {
@@ -42,10 +57,11 @@ type BookingCancelledPayload struct {
 
 type BookingConsumer struct {
 	paymentService services.PaymentService
+	db             *sql.DB
 }
 
-func NewBookingConsumer(paymentService services.PaymentService) *BookingConsumer {
-	return &BookingConsumer{paymentService: paymentService}
+func NewBookingConsumer(paymentService services.PaymentService, db *sql.DB) *BookingConsumer {
+	return &BookingConsumer{paymentService: paymentService, db: db}
 }
 
 func (c *BookingConsumer) Start() error {
@@ -89,6 +105,20 @@ func (c *BookingConsumer) handleMessage(msg amqp.Delivery) {
 		return
 	}
 
+	if envelope.EventId != "" {
+		exists, err := isEventProcessed(c.db, envelope.EventId)
+		if err != nil {
+			logger.Log.Error("Failed to check processed event", "error", err, "eventId", envelope.EventId)
+			msg.Nack(false, true)
+			return
+		}
+		if exists {
+			logger.Log.Info("Event already processed, skipping", "eventId", envelope.EventId, "eventType", envelope.EventType)
+			msg.Ack(false)
+			return
+		}
+	}
+
 	switch envelope.EventType {
 	case "BOOKING_CREATED":
 		c.handleBookingCreated(msg, envelope)
@@ -101,8 +131,6 @@ func (c *BookingConsumer) handleMessage(msg amqp.Delivery) {
 }
 
 func (c *BookingConsumer) handleBookingCreated(msg amqp.Delivery, envelope BookingEventEnvelope) {
-
-	//what if booking is expired by the time this event is consumed ? check booking status first ? 
 	var event BookingCreatedPayload
 	if err := json.Unmarshal(envelope.Payload, &event); err != nil {
 		logger.Log.Error("Failed to unmarshal booking-created payload", "error", err)
@@ -116,6 +144,17 @@ func (c *BookingConsumer) handleBookingCreated(msg amqp.Delivery, envelope Booki
 	if err == nil && existingPayment != nil {
 		logger.Log.Info("Payment already exists for booking, skipping duplicate order creation",
 			"bookingId", event.BookingId, "existingPaymentId", existingPayment.Id, "status", existingPayment.Status)
+		markEventProcessed(c.db, envelope.EventId)
+		msg.Ack(false)
+		return
+	}
+
+	//queue fails , booking expired so bookingcreated event should not create order ( although later handled )
+	createdAt, err := time.Parse(time.RFC3339, event.CreatedAt)
+	if err == nil && time.Now().After(createdAt.Add(15*time.Minute)) {
+		logger.Log.Info("Booking already expired, skipping order creation",
+			"bookingId", event.BookingId, "createdAt", event.CreatedAt)
+		markEventProcessed(c.db, envelope.EventId)
 		msg.Ack(false)
 		return
 	}
@@ -128,7 +167,7 @@ func (c *BookingConsumer) handleBookingCreated(msg amqp.Delivery, envelope Booki
 	result, err := c.paymentService.CreateOrder(event.UserId, event.UserEmail, createOrderDTO)
 	if err != nil {
 		logger.Log.Error("Failed to create order from booking event", "bookingId", event.BookingId, "error", err)
-		msg.Nack(false, true)
+		msg.Nack(false, false)
 		return
 	}
 
@@ -137,6 +176,7 @@ func (c *BookingConsumer) handleBookingCreated(msg amqp.Delivery, envelope Booki
 		"orderId", result["orderId"],
 	)
 
+	markEventProcessed(c.db, envelope.EventId)
 	msg.Ack(false) //remove msg permenently
 }
 
@@ -153,12 +193,14 @@ func (c *BookingConsumer) handleBookingCancelled(msg amqp.Delivery, envelope Boo
 	payment, err := c.paymentService.GetPaymentByBookingId(event.BookingId)
 	if err != nil {
 		logger.Log.Info("No payment found for cancelled booking, skipping refund", "bookingId", event.BookingId)
+		markEventProcessed(c.db, envelope.EventId)
 		msg.Ack(false)
 		return
 	}
 
 	if payment.Status != "CAPTURED" {
 		logger.Log.Info("Payment not in CAPTURED state, skipping refund", "bookingId", event.BookingId, "paymentStatus", payment.Status)
+		markEventProcessed(c.db, envelope.EventId)
 		msg.Ack(false)
 		return
 	}
@@ -167,13 +209,15 @@ func (c *BookingConsumer) handleBookingCancelled(msg amqp.Delivery, envelope Boo
 		PaymentId: payment.Id,
 	}
 
+	//updates status , inserts PAYMENT_REFUNDED in outbox (emits indirectly ) 
 	_, err = c.paymentService.RefundPayment(refundDTO)
 	if err != nil {
 		logger.Log.Error("Failed to process refund for cancelled booking", "bookingId", event.BookingId, "error", err)
-		msg.Nack(false, true)
+		msg.Nack(false, false)
 		return
 	}
 
 	logger.Log.Info("Refund initiated for cancelled booking", "bookingId", event.BookingId, "paymentId", payment.Id)
+	markEventProcessed(c.db, envelope.EventId)
 	msg.Ack(false)
 }

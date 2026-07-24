@@ -40,7 +40,7 @@ func NewPaymentService(paymentRepo *db.PaymentRepository) PaymentService {
 }
 
 func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload *dto.CreateOrderRequestDTO) (map[string]interface{}, error) {
-	logger.Log.Info("Creating Razorpay order", "bookingId", payload.BookingId, "amount", payload.Amount)
+	fmt.Println("Creating Razorpay order", "bookingId", payload.BookingId, "amount", payload.Amount)
 
 	orderData := map[string]interface{}{
 		"amount":   payload.Amount,
@@ -170,12 +170,12 @@ func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[s
 }
 
 func (s *PaymentServiceImpl) GetPaymentByBookingId(bookingId int64) (*models.Payment, error) {
-	logger.Log.Info("Fetching payment by booking ID", "bookingId", bookingId)
+	fmt.Println("Fetching payment by booking ID", "bookingId", bookingId)
 	return s.paymentRepo.GetPaymentByBookingId(bookingId)
 }
 
 func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) error {
-	logger.Log.Info("Processing webhook event")
+	fmt.Println("Processing webhook event")
 
 	webhookSecret := env.GetEnv("RAZORPAY_WEBHOOK_SECRET", "")
 	if webhookSecret != "" {
@@ -257,7 +257,7 @@ func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) err
 }
 
 func (s *PaymentServiceImpl) FetchPaymentsWithStaleStatus() ([]*models.Payment, error) {
-	logger.Log.Info("Fetching stale payments for reconciliation")
+	fmt.Println("Fetching stale payments for reconciliation")
 	return s.paymentRepo.GetStalePayments()
 }
 
