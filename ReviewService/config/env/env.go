@@ -15,10 +15,7 @@ func Load() error {
 	return nil
 }
 
-func GetEnv(key string, defaultValue string) string {
+func GetEnv(key string) string {
 	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
 	return value
 }

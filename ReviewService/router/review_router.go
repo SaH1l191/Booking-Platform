@@ -26,7 +26,7 @@ func (rr *ReviewRouter) Register(chiRouter chi.Router) {
 		})
 
 		r.Group(func(public chi.Router) {
-			public.Use(middlewares.OptionalAuthMiddleware)
+			public.Use(middlewares.JWTAuthMiddleware)
 
 			public.Get("/", rr.reviewController.GetAllReviews)
 			public.Get("/{id}", rr.reviewController.GetReviewById)
@@ -39,7 +39,7 @@ func (rr *ReviewRouter) Register(chiRouter chi.Router) {
 			auth.Use(middlewares.JWTAuthMiddleware)
 
 			auth.With(middlewares.RequirePermission("review:create")).With(middlewares.CreateReviewValidator).Post("/", rr.reviewController.CreateReview)
-			auth.With(middlewares.RequirePermission("review:create")).With(middlewares.UpdateReviewValidator).Put("/{id}", rr.reviewController.UpdateReview)
+			auth.With(middlewares.RequirePermission("review:update")).With(middlewares.UpdateReviewValidator).Put("/{id}", rr.reviewController.UpdateReview)
 			auth.With(middlewares.RequirePermission("review:delete")).Delete("/{id}", rr.reviewController.DeleteReview)
 		})
 	})

@@ -58,12 +58,18 @@ func (app *Application) Start() error {
 		logger.Log.Error("Failed to start booking consumer", "error", err)
 	}
 
+	chiHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		req.Body = http.MaxBytesReader(w, req.Body, 10<<20)
+		r.ServeHTTP(w, req)
+	})
+
 	app.server = &http.Server{
-		Addr:         ":" + env.GetEnv("PORT", "3004"),
-		Handler:      r,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		Addr:              ":" + env.GetEnv("PORT"),
+		Handler:           chiHandler,
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	logger.Log.Info("Review service started successfully", "addr", app.server.Addr)
@@ -86,6 +92,15 @@ func (app *Application) Stop(ctx context.Context) error {
 		if err := app.server.Shutdown(shutdownCtx); err != nil {
 			logger.Log.Error("Failed to shutdown HTTP server", "error", err)
 		}
+	}
+
+	if app.database != nil {
+		logger.Log.Info("Closing database connection")
+		if err := app.database.Close(); err != nil {
+			logger.Log.Error("Failed to close database connection", "error", err)
+			return err
+		}
+		logger.Log.Info("Database connection closed")
 	}
 
 	logger.Log.Info("Review service shutdown complete")

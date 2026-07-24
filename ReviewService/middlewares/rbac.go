@@ -12,6 +12,7 @@ var RolePermissions = map[string][]string{
 	"customer": {
 		"review:create",
 		"review:read",
+		"review:update",
 		"review:delete",
 	},
 }

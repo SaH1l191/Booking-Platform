@@ -9,6 +9,6 @@ RUN go mod download
 
 COPY . .
 
-EXPOSE 3003
+EXPOSE 3004
 
 CMD ["air", "-c", ".air.toml"]

@@ -21,9 +21,9 @@ func SetupRouter(reviewRouter *ReviewRouter) chi.Router {
 
 	r.Use(middlewares.RequestContext)
 	r.Use(middleware.Recoverer)
-	r.Use(metrics.MetricsMiddleware)
+	r.Use(metrics.MetricsMiddleware)//in memory storing metrics
 
-	r.Handle("/metrics", metrics.MetricsHandler())
+	r.Handle("/metrics", metrics.MetricsHandler()) //scrape get 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok","service":"ReviewService"}`))

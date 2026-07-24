@@ -33,7 +33,7 @@ func NewBookingConsumer(db *sql.DB) *BookingConsumer {
 }
 
 func (c *BookingConsumer) Start() error {
-	rabbitmqURL := env.GetEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672")
+	rabbitmqURL := env.GetEnv("RABBITMQ_URL")
 	conn, err := amqp.Dial(rabbitmqURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
@@ -82,6 +82,7 @@ func (c *BookingConsumer) handleMessage(msg amqp.Delivery) {
 		return
 	}
 
+	//atleast 1  dedup ops 
 	if envelope.EventId != "" {
 		var exists bool
 		err := c.db.QueryRow("SELECT EXISTS(SELECT 1 FROM processed_events WHERE event_id = ?)", envelope.EventId).Scan(&exists)
@@ -106,6 +107,7 @@ func (c *BookingConsumer) handleMessage(msg amqp.Delivery) {
 	}
 }
 
+//processed_events table guarentees ateast 1  and de-dup 
 func (c *BookingConsumer) handleStayCompleted(msg amqp.Delivery, envelope BookingEventEnvelope) {
 	var event BookingStayCompletedPayload
 	if err := json.Unmarshal(envelope.Payload, &event); err != nil {
@@ -116,15 +118,19 @@ func (c *BookingConsumer) handleStayCompleted(msg amqp.Delivery, envelope Bookin
 
 	logger.Log.Info("Received stay-completed event", "bookingId", event.BookingId, "userId", event.UserId)
 
+
+	//review eligibility check - row exists or not ? 
 	var exists bool
 	err := c.db.QueryRow("SELECT EXISTS(SELECT 1 FROM review_eligibility WHERE booking_id = ?)", event.BookingId).Scan(&exists)
-	if err != nil {
+	if err != nil { //some db error : retry later 
 		logger.Log.Error("Failed to check existing eligibility", "error", err, "bookingId", event.BookingId)
 		msg.Nack(false, true)
 		return
 	}
 
 	if exists {
+		// Already eligible, but need this eventId to de dup later in case queu failed and 
+		//it retreis again this event id 
 		logger.Log.Info("Already eligible, skipping", "bookingId", event.BookingId)
 		_, _ = c.db.Exec("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", envelope.EventId)
 		msg.Ack(false)

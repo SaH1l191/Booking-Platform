@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -70,6 +71,7 @@ func MetricsMiddleware(next http.Handler) http.Handler {
 
 		routePatterns := chi.RouteContext(r.Context()).RoutePatterns
 		route := strings.Join(routePatterns, "")
+		fmt.Printf("route: %s",route)
 
 		HTTPRequestsTotal.WithLabelValues(r.Method, route, statusCode).Inc()
 		HTTPRequestDuration.WithLabelValues(r.Method, route, statusCode).Observe(duration)
