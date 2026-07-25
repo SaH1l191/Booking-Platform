@@ -20,7 +20,6 @@
     "@prisma/client": "^6.19.3",
     "amqplib": "^2.0.1",
     "axios": "^1.7.0",
-    "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "helmet": "^7.1.0",
@@ -29,9 +28,7 @@
     "prisma": "^6.19.3",
     "prom-client": "^15.1.3",
     "redlock": "4.2.0",
-    "uuid": "^14.0.0",
     "winston": "^3.19.0",
-    "winston-loki": "^6.1.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {

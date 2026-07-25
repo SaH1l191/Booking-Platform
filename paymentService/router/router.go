@@ -18,6 +18,7 @@ func SetupRouter(paymentRouter Route) chi.Router {
 	// Initialize custom metrics
 	metrics.Init()
 
+	chiRouter.Use(middlewares.SecureHeaders)
 	chiRouter.Use(middlewares.RequestContext)
 	chiRouter.Use(metrics.MetricsMiddleware)
 

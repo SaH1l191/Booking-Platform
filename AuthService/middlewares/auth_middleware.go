@@ -37,7 +37,7 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method")
 			}
-			return []byte(env.GetEnv("JWT_ACCESS_SECRET", "secret")), nil
+			return []byte(env.GetEnv("JWT_ACCESS_SECRET")), nil
 		})
 		if err != nil || !token.Valid {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
@@ -87,71 +87,7 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func OptionalAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenString := ""
 
-		if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
-			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
-		}
-
-		if tokenString == "" {
-			if cookie, err := r.Cookie("access_token"); err == nil {
-				tokenString = cookie.Value
-			}
-		}
-
-		tokenString = strings.TrimSpace(tokenString)
-		if tokenString == "" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method")
-			}
-			return []byte(env.GetEnv("JWT_ACCESS_SECRET", "secret")), nil
-		})
-		if err != nil || !token.Valid {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		userIDStr := ""
-		username := ""
-		email := ""
-		var roles []string
-
-		if userIDRaw, ok := claims["userId"]; ok {
-			userIDStr = fmt.Sprintf("%.0f", userIDRaw)
-		}
-		if usernameRaw, ok := claims["username"].(string); ok {
-			username = usernameRaw
-		}
-		if emailRaw, ok := claims["email"].(string); ok {
-			email = emailRaw
-		}
-		if rolesRaw, ok := claims["roles"].([]interface{}); ok {
-			for _, r := range rolesRaw {
-				if roleStr, ok := r.(string); ok {
-					roles = append(roles, roleStr)
-				}
-			}
-		}
-		if roles == nil {
-			roles = []string{}
-		}
-
-		ctx := context.WithValue(r.Context(), "userID", userIDStr)
-		ctx = context.WithValue(ctx, "email", email)
-		ctx = context.WithValue(ctx, "username", username)
-		ctx = context.WithValue(ctx, "roles", roles)
-
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
 
 func RequirePermission(requiredPerm string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

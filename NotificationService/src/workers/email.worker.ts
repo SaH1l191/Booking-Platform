@@ -21,7 +21,7 @@ export const emailWorker = async () => {
             logger.info("Email sent via RabbitMQ consumer", { to: payload.to });
         } catch (error) {
             logger.error("Email processing failed", { error: (error as Error).message });
-            channel.nack(msg, false, true);//on encounter of fatal error -> discard the msg 
+            channel.nack(msg, false, true);//on encounter of fatal error -> discard the msg / requeue= true
         }
     });
     logger.info("RabbitMQ email consumer started");

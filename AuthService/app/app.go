@@ -85,14 +85,21 @@ func (a *App) Start(ctx context.Context) error {
 
 	chiRouter := router.SetupRouter(userRouter, roleRouter)
 
-	port := env.GetEnv("PORT", "3000")
+	port := env.GetEnv("PORT")
 	addr := ":" + port
 
+	
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20) // 10 MB limit
+		chiRouter.ServeHTTP(w, r)
+	})
+
 	a.server = &http.Server{
-		Addr:         addr,
-		Handler:      chiRouter,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:              addr,
+		Handler:           handler,
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      10 * time.Second,
 	}
 
 	logger.Log.Info("Auth service started successfully", "addr", addr)

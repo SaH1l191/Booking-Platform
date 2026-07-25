@@ -14,6 +14,7 @@ var RolePermissions = map[string][]string{
 		"room:delete",
 		"user:read",
 		"booking:read",
+		"booking:read-by-hotel",
 		"payment:read",
 		"payment:create",
 		"review:read",

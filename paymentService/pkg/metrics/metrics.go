@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	"github.com/go-chi/chi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

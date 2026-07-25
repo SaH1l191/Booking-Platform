@@ -28,7 +28,6 @@ func (ur *UserRouter) Register(chiRouter chi.Router) {
 				Post("/login", ur.userController.LoginUser)
 
 			auth.Post("/refresh", ur.userController.RefreshToken)
-			auth.Get("/refresh", ur.userController.RefreshToken)
 
 			auth.Post("/logout", ur.userController.LogoutUser)
 		})

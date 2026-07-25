@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"goAuth/models"
+	"time"
 )
 
 type RolePermissionRepository interface {
@@ -70,12 +71,13 @@ func (rp *RolePermissionRepositoryImpl) AddPermissionToRole(roleId int64, permis
 		return nil, err
 	}
 
+	now := time.Now()
 	return &models.RolePermission{
 		Id:           id,
 		RoleId:       roleId,
 		PermissionId: permissionId,
-		CreatedAt:    "NOW()",
-		UpdatedAt:    "NOW()",
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}, nil
 }
 

@@ -93,14 +93,20 @@ func (a *App) Start(ctx context.Context) error {
 	paymentRouter := router.NewPaymentRouter(a.PaymentController)
 	chiRouter := router.SetupRouter(paymentRouter)
 
-	port := env.GetEnv("PORT", "3005")
+	port := env.GetEnv("PORT")
 	addr := ":" + port
 
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+		chiRouter.ServeHTTP(w, r)
+	})
+
 	a.server = &http.Server{
-		Addr:         addr,
-		Handler:      chiRouter,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:              addr,
+		Handler:           handler,
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      10 * time.Second,
 	}
 
 	logger.Log.Info("Payment service started successfully", "addr", addr)

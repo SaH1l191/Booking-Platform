@@ -30,8 +30,8 @@ type PaymentServiceImpl struct {
 }
 
 func NewPaymentService(paymentRepo *db.PaymentRepository) PaymentService {
-	keyId := env.GetEnv("RAZORPAY_KEY_ID", "")
-	keySecret := env.GetEnv("RAZORPAY_KEY_SECRET", "")
+	keyId := env.GetEnv("RAZORPAY_KEY_ID")
+	keySecret := env.GetEnv("RAZORPAY_KEY_SECRET")
 	client := razorpay.NewClient(keyId, keySecret)
 	return &PaymentServiceImpl{
 		paymentRepo:    paymentRepo,
@@ -57,7 +57,11 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload
 		return nil, err
 	}
 
-	orderId, _ := order["id"].(string)
+	orderId, ok := order["id"].(string)
+	if !ok {
+		logger.Log.Error("Failed to parse Razorpay order ID", "order", order)
+		return nil, fmt.Errorf("invalid Razorpay response: missing order ID")
+	}
 
 	payment := &models.Payment{
 		BookingId:       payload.BookingId,
@@ -78,7 +82,7 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload
 		"orderId":  orderId,
 		"amount":   savedPayment.Amount,
 		"currency": savedPayment.Currency,
-		"keyId":    env.GetEnv("RAZORPAY_KEY_ID", ""),
+		"keyId":    env.GetEnv("RAZORPAY_KEY_ID"),
 	}
 
 	logger.Log.Info("Razorpay order created", "orderId", orderId, "paymentId", savedPayment.Id)
@@ -100,7 +104,7 @@ func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO)
 
 	// Verify HMAC signature
 	expectedSignature := ComputeHmacSha256(
-		fmt.Sprintf("%s|%s", payload.RazorpayOrderId, payload.RazorpayPaymentId),env.GetEnv("RAZORPAY_KEY_SECRET", ""),
+		fmt.Sprintf("%s|%s", payload.RazorpayOrderId, payload.RazorpayPaymentId),env.GetEnv("RAZORPAY_KEY_SECRET"),
 	)
 	if expectedSignature != payload.RazorpaySignature {
 		logger.Log.Warn("Payment signature mismatch", "orderId", payload.RazorpayOrderId)
@@ -140,25 +144,37 @@ func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[s
 		return nil, err
 	}
 
-	notes := map[string]interface{}{
-		"reason": "booking_cancelled",
+	claimed, err := s.paymentRepo.ClaimRefund(payment.Id)
+	if err != nil {
+		logger.Log.Error("Failed to claim refund", "paymentId", payment.Id, "error", err)
+		return nil, err
 	}
-	//idemopotency on payment id ( to prevent deuplicate refunds  OR can create a idempotency key based on bookingId and paymentId)
-	if payment.Status == "REFUNDED" || payment.RefundAmount > 0{
-		return nil, fmt.Errorf("Already Refunded ")
+	if !claimed {
+		return nil, fmt.Errorf("already refunded or not in refundable state")
 	}
 
 	logger.Log.Info("Refund payment details", "paymentId", payment.Id, "razorpayPaymentId", payment.RazorpayPaymentId, "amount", payment.Amount, "status", payment.Status)
 
-	//this external call to razorpay can fail
+	notes := map[string]interface{}{
+		"reason": "booking_cancelled",
+	}
+
 	refund, err := s.razorpayClient.Payment.Refund(payment.RazorpayPaymentId, payment.Amount, notes, nil)
 	if err != nil {
-		logger.Log.Error("Failed to create Razorpay refund", "error", err)
+		logger.Log.Error("Refund claimed but Razorpay call failed — payment left in REFUNDING for retry", "paymentId", payment.Id, "error", err)
 		return nil, err
 	}
 
-	refundId, _ := refund["id"].(string)
-	s.paymentRepo.UpdatePaymentRefund(payment.Id, payment.Amount, "REFUNDED")
+	if err := s.paymentRepo.FinalizeRefund(payment.Id, payment.Amount); err != nil {
+		logger.Log.Error("CRITICAL: Razorpay refunded but DB finalize failed — manual reconciliation needed", "paymentId", payment.Id, "error", err)
+		return nil, err
+	}
+
+	refundId, ok := refund["id"].(string)
+	if !ok {
+		logger.Log.Error("Failed to parse Razorpay refund ID", "refund", refund)
+		return nil, fmt.Errorf("invalid Razorpay response: missing refund ID")
+	}
 
 	result := map[string]interface{}{
 		"refundId": refundId,
@@ -174,10 +190,28 @@ func (s *PaymentServiceImpl) GetPaymentByBookingId(bookingId int64) (*models.Pay
 	return s.paymentRepo.GetPaymentByBookingId(bookingId)
 }
 
+
+
+func (s *PaymentServiceImpl) FetchPaymentsWithStaleStatus() ([]*models.Payment, error) {
+	fmt.Println("Fetching stale payments for reconciliation")
+	return s.paymentRepo.GetStalePayments()
+}
+
+func (s *PaymentServiceImpl) GetRazorpayKeyId() string {
+	return env.GetEnv("RAZORPAY_KEY_ID")
+}
+
+func ComputeHmacSha256(message string, secret string) string {
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(message))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+
 func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) error {
 	fmt.Println("Processing webhook event")
 
-	webhookSecret := env.GetEnv("RAZORPAY_WEBHOOK_SECRET", "")
+	webhookSecret := env.GetEnv("RAZORPAY_WEBHOOK_SECRET")
 	if webhookSecret != "" {
 		expectedSig := ComputeHmacSha256(string(rawBody), webhookSecret)
 		if expectedSig != signature {
@@ -254,19 +288,4 @@ func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) err
 
 	logger.Log.Info("Webhook event processed", "event", webhookPayload.Event)
 	return nil
-}
-
-func (s *PaymentServiceImpl) FetchPaymentsWithStaleStatus() ([]*models.Payment, error) {
-	fmt.Println("Fetching stale payments for reconciliation")
-	return s.paymentRepo.GetStalePayments()
-}
-
-func (s *PaymentServiceImpl) GetRazorpayKeyId() string {
-	return env.GetEnv("RAZORPAY_KEY_ID", "")
-}
-
-func ComputeHmacSha256(message string, secret string) string {
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte(message))
-	return hex.EncodeToString(h.Sum(nil))
 }

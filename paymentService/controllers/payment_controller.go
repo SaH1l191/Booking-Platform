@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"goPayment/dto"
 	"goPayment/services"
@@ -20,9 +22,20 @@ func NewPaymentController(paymentService services.PaymentService) *PaymentContro
 }
 
 func (pc *PaymentController) CreateOrder(w http.ResponseWriter, r *http.Request) {
-	payload := r.Context().Value("payload").(dto.CreateOrderRequestDTO)
-	userIDStr := r.Context().Value("userID").(string)
-	userEmail := r.Context().Value("email").(string)
+	payload, ok := r.Context().Value("payload").(dto.CreateOrderRequestDTO)
+	if !ok {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid request payload", fmt.Errorf("invalid payload type"))
+		return
+	}
+	userIDStr, ok := r.Context().Value("userID").(string)
+	if !ok || userIDStr == "" {
+		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid user context", fmt.Errorf("missing user ID"))
+		return
+	}
+	userEmail, ok := r.Context().Value("email").(string)
+	if !ok {
+		userEmail = ""
+	}
 
 	userId, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
@@ -48,7 +61,11 @@ func (pc *PaymentController) VerifyPayment(w http.ResponseWriter, r *http.Reques
 
 	payment, err := pc.PaymentService.VerifyPayment(&payload)
 	if err != nil {
-		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Payment verification failed", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			utils.WriteJsonErrorResponse(w, http.StatusNotFound, "Payment not found", err)
+		} else {
+			utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Payment verification failed", err)
+		}
 		return
 	}
 
@@ -65,7 +82,11 @@ func (pc *PaymentController) RefundPayment(w http.ResponseWriter, r *http.Reques
 
 	result, err := pc.PaymentService.RefundPayment(&payload)
 	if err != nil {
-		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Refund failed", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			utils.WriteJsonErrorResponse(w, http.StatusNotFound, "Payment not found", err)
+		} else {
+			utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Refund failed", err)
+		}
 		return
 	}
 
@@ -84,7 +105,11 @@ func (pc *PaymentController) GetPaymentByBookingId(w http.ResponseWriter, r *htt
 
 	payment, err := pc.PaymentService.GetPaymentByBookingId(bookingId)
 	if err != nil {
-		utils.WriteJsonErrorResponse(w, http.StatusNotFound, "Payment not found", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			utils.WriteJsonErrorResponse(w, http.StatusNotFound, "Payment not found", err)
+		} else {
+			utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to fetch payment", err)
+		}
 		return
 	}
 

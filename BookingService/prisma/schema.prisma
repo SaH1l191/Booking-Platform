@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider      = "mysql"
   url           = env("DATABASE_URL")
-  connection_limit = 10
 }
 
 model booking {
@@ -50,6 +49,11 @@ model outbox {
   createdAt DateTime @default(now())
 
   @@index([published, createdAt])
+}
+
+model processed_event {
+  eventId     String   @id
+  processedAt DateTime @default(now())
 }
 
 enum booking_status {

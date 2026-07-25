@@ -44,8 +44,16 @@ func (rc *ReviewController) GetReviewById(w http.ResponseWriter, r *http.Request
 }
 
 func (rc *ReviewController) CreateReview(w http.ResponseWriter, r *http.Request) {
-	payload := r.Context().Value("payload").(dto.CreateReviewRequestDTO)
-	jwtUserID := r.Context().Value("userID").(string)
+	payload, ok := r.Context().Value("payload").(dto.CreateReviewRequestDTO)
+	if !ok {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid request payload", fmt.Errorf("invalid payload type"))
+		return
+	}
+	jwtUserID, ok := r.Context().Value("userID").(string)
+	if !ok || jwtUserID == "" {
+		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid user context", fmt.Errorf("invalid user ID"))
+		return
+	}
 	parsed, _ := strconv.ParseInt(jwtUserID, 10, 64)
 	if payload.UserId != parsed {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "User ID does not match the authenticated user", fmt.Errorf("user ID mismatch"))
@@ -73,7 +81,11 @@ func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	payload := r.Context().Value("payload").(dto.UpdateReviewRequestDTO)
+	payload, ok := r.Context().Value("payload").(dto.UpdateReviewRequestDTO)
+	if !ok {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid request payload", fmt.Errorf("invalid payload type"))
+		return
+	}
 
 	fmt.Println("Payload received", "payload", payload)
 

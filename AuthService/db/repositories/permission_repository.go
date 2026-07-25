@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"goAuth/models"
+	"time"
 )
 
 type PermissionRepository interface {
@@ -90,14 +91,15 @@ func (p *PermissionRepositoryImpl) CreatePermission(name string, description str
 		return nil, err
 	}
 
+	now := time.Now()
 	return &models.Permission{
 		Id:          id,
 		Name:        name,
 		Description: description,
 		Resource:    resource,
 		Action:      action,
-		CreatedAt:   "NOW()",
-		UpdatedAt:   "NOW()",
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}, nil
 }
 
@@ -114,7 +116,7 @@ func (p *PermissionRepositoryImpl) UpdatePermission(id int64, name string, descr
 		Description: description,
 		Resource:    resource,
 		Action:      action,
-		UpdatedAt:   "NOW()",
+		UpdatedAt:   time.Now(),
 	}, nil
 }
 

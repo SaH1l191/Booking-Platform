@@ -12,11 +12,12 @@ import (
 func SetupDB() (*sql.DB, error) {
 	cfg := mysql.NewConfig()
 
-	cfg.User = env.GetEnv("DB_USER", "root")
-	cfg.Passwd = env.GetEnv("DB_PASSWORD", "root")
-	cfg.Net = env.GetEnv("DB_NET", "tcp")
-	cfg.Addr = env.GetEnv("DB_ADDR", "127.0.0.1:3306")
-	cfg.DBName = env.GetEnv("DB_NAME", "auth_db")
+	cfg.User = env.GetEnv("DB_USER")
+	cfg.Passwd = env.GetEnv("DB_PASSWORD")
+	cfg.Net = env.GetEnv("DB_NET")
+	cfg.Addr = env.GetEnv("DB_ADDR")
+	cfg.DBName = env.GetEnv("DB_NAME")
+	cfg.ParseTime = true
 
 	logger.Log.Info("Connecting to database", "host", cfg.Addr, "dbName", cfg.DBName)
 

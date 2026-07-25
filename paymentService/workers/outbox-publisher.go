@@ -98,9 +98,13 @@ func (w *OutboxPublisher) processPendingEvents() {
 			"eventType": event.EventType,
 			"payload":   json.RawMessage(event.Payload),
 		}
-		bodyBytes, _ := json.Marshal(body)
+		bodyBytes, err := json.Marshal(body)
+		if err != nil {
+			logger.Log.Error("Failed to marshal outbox event body", "error", err, "eventId", event.Id)
+			continue
+		}
 
-		err := ch.Publish(exchangeName, "", false, false, amqp.Publishing{
+		err = ch.Publish(exchangeName, "", false, false, amqp.Publishing{
 			ContentType: "application/json",
 			Body:        bodyBytes,
 		})

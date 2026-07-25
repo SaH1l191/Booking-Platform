@@ -2,7 +2,6 @@ package router
 
 import (
 	"net/http"
-
 	"github.com/go-chi/chi"
 	"goPayment/controllers"
 	"goPayment/middlewares"
@@ -32,7 +31,7 @@ func (pr *PaymentRouter) Register(chiRouter chi.Router) {
 			// Verify payment - customer only
 			protected.With(middlewares.RequirePermission("payment:create")).With(middlewares.VerifyPaymentRequestValidator).Post("/verify", pr.paymentController.VerifyPayment)
 			// Refund payment - admin only
-			protected.With(middlewares.RequirePermission("payment:create")).With(middlewares.RefundRequestValidator).Post("/refund", pr.paymentController.RefundPayment)
+			protected.With(middlewares.RequirePermission("payment:refund")).With(middlewares.RefundRequestValidator).Post("/refund", pr.paymentController.RefundPayment)
 			// Get payment by booking ID - any authenticated user
 			protected.With(middlewares.RequirePermission("payment:read")).Get("/booking/{bookingId}", pr.paymentController.GetPaymentByBookingId)
 		})

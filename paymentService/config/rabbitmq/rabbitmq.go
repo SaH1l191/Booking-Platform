@@ -12,7 +12,7 @@ var Conn *amqp.Connection
 var Channel *amqp.Channel
 
 func Connect() error {
-	url := env.GetEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672")
+	url := env.GetEnv("RABBITMQ_URL")
 
 	var err error
 	Conn, err = amqp.Dial(url)

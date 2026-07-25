@@ -11,15 +11,15 @@ import (
 func NewDatabasePool(ctx context.Context) (*sql.DB, error) {
 
 	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable", 
-		env.GetEnv("DB_USER", "root"),
-		env.GetEnv("DB_PASSWORD", "password"),
-		env.GetEnv("DB_HOST", "mysql"),
-		env.GetEnv("DB_PORT", "3306"),
-		env.GetEnv("DB_NAME", "auth_db"),
+		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		env.GetEnv("DB_USER"),
+		env.GetEnv("DB_PASSWORD"),
+		env.GetEnv("DB_HOST"),
+		env.GetEnv("DB_PORT"),
+		env.GetEnv("DB_NAME"),
 	)
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}

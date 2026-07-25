@@ -1,12 +1,12 @@
 package repositories
 
 import (
-	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"goPayment/models"
 	"goPayment/pkg/logger"
+	"github.com/google/uuid"
 )
 
 type PaymentRepository struct {
@@ -59,7 +59,7 @@ func (r *PaymentRepository) GetPaymentById(paymentId int64) (*models.Payment, er
 		&payment.Status, &payment.RefundAmount, &payment.FailureReason, &payment.CreatedAt, &payment.UpdatedAt)
 	if err != nil {
 		logger.Log.Error("Failed to fetch payment by ID", "error", err, "paymentId", paymentId)
-		return nil, err
+		return nil, fmt.Errorf("get payment by id %d: %w", paymentId, err)
 	}
 	return payment, nil
 }
@@ -75,7 +75,7 @@ func (r *PaymentRepository) GetPaymentByOrderId(orderId string) (*models.Payment
 		&payment.Status, &payment.RefundAmount, &payment.FailureReason, &payment.CreatedAt, &payment.UpdatedAt)
 	if err != nil {
 		logger.Log.Error("Failed to fetch payment by order ID", "error", err, "orderId", orderId)
-		return nil, err
+		return nil, fmt.Errorf("get payment by order id %s: %w", orderId, err)
 	}
 	return payment, nil
 }
@@ -91,7 +91,7 @@ func (r *PaymentRepository) GetPaymentByBookingId(bookingId int64) (*models.Paym
 		&payment.Status, &payment.RefundAmount, &payment.FailureReason, &payment.CreatedAt, &payment.UpdatedAt)
 	if err != nil {
 		logger.Log.Error("Failed to fetch payment by booking ID", "error", err, "bookingId", bookingId)
-		return nil, err
+		return nil, fmt.Errorf("get payment by booking id %d: %w", bookingId, err)
 	}
 	return payment, nil
 }
@@ -120,7 +120,7 @@ func (r *PaymentRepository) UpdatePaymentStatus(paymentId int64, status string, 
 	}
 
 	eventID := generateUUID()
-	payloadData, _ := json.Marshal(map[string]interface{}{
+	payloadData, marshalErr := json.Marshal(map[string]interface{}{
 		"paymentId": paymentId,
 		"bookingId": bookingId,
 		"userId":    userId,
@@ -129,6 +129,10 @@ func (r *PaymentRepository) UpdatePaymentStatus(paymentId int64, status string, 
 		"currency":  currency,
 		"status":    status,
 	})
+	if marshalErr != nil {
+		logger.Log.Error("Failed to marshal outbox payload", "error", marshalErr, "paymentId", paymentId)
+		return marshalErr
+	}
 	_, err = tx.Exec(`INSERT INTO outbox (event_id, event_type, payload) VALUES (?, ?, ?)`, eventID, "PAYMENT_"+status, payloadData)
 	if err != nil {
 		logger.Log.Error("Failed to insert outbox event", "error", err)
@@ -166,7 +170,7 @@ func (r *PaymentRepository) UpdatePaymentFailure(paymentId int64, failureReason 
 	}
 
 	eventID := generateUUID()
-	payloadData, _ := json.Marshal(map[string]interface{}{
+	payloadData, marshalErr := json.Marshal(map[string]interface{}{
 		"paymentId":     paymentId,
 		"bookingId":     bookingId,
 		"userId":        userId,
@@ -176,6 +180,10 @@ func (r *PaymentRepository) UpdatePaymentFailure(paymentId int64, failureReason 
 		"status":        "FAILED",
 		"failureReason": failureReason,
 	})
+	if marshalErr != nil {
+		logger.Log.Error("Failed to marshal outbox payload", "error", marshalErr, "paymentId", paymentId)
+		return marshalErr
+	}
 	_, err = tx.Exec(`INSERT INTO outbox (event_id, event_type, payload) VALUES (?, ?, ?)`, eventID, "PAYMENT_FAILED", payloadData)
 	if err != nil {
 		logger.Log.Error("Failed to insert outbox event", "error", err)
@@ -213,7 +221,7 @@ func (r *PaymentRepository) UpdatePaymentRefund(paymentId int64, refundAmount in
 	}
 
 	eventID := generateUUID()
-	payloadData, _ := json.Marshal(map[string]interface{}{
+	payloadData, marshalErr := json.Marshal(map[string]interface{}{
 		"paymentId":    paymentId,
 		"bookingId":    bookingId,
 		"userId":       userId,
@@ -223,6 +231,10 @@ func (r *PaymentRepository) UpdatePaymentRefund(paymentId int64, refundAmount in
 		"refundAmount": refundAmount,
 		"status":       status,
 	})
+	if marshalErr != nil {
+		logger.Log.Error("Failed to marshal outbox payload", "error", marshalErr, "paymentId", paymentId)
+		return marshalErr
+	}
 	_, err = tx.Exec(`INSERT INTO outbox (event_id, event_type, payload) VALUES (?, ?, ?)`, eventID, "PAYMENT_"+status, payloadData)
 	if err != nil {
 		logger.Log.Error("Failed to insert outbox event", "error", err)
@@ -236,18 +248,71 @@ func (r *PaymentRepository) UpdatePaymentRefund(paymentId int64, refundAmount in
 	return nil
 }
 
+func (r *PaymentRepository) ClaimRefund(paymentId int64) (bool, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	var currentStatus string
+	err = tx.QueryRow(`SELECT status FROM payments WHERE id = ? FOR UPDATE`, paymentId).Scan(&currentStatus)
+	if err != nil {
+		return false, err
+	}
+	if currentStatus != "CAPTURED" && currentStatus != "REFUNDING" {
+		return false, nil
+	}
+
+	_, err = tx.Exec(`UPDATE payments SET status = 'REFUNDING', updated_at = NOW() WHERE id = ?`, paymentId)
+	if err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
+}
+
+func (r *PaymentRepository) FinalizeRefund(paymentId int64, refundAmount int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`UPDATE payments SET status = 'REFUNDED', refund_amount = ?, updated_at = NOW() WHERE id = ? AND status = 'REFUNDING'`, refundAmount, paymentId)
+	if err != nil {
+		return err
+	}
+
+	var bookingId, userId int64
+	var userEmail, currency string
+	var amount int
+	err = tx.QueryRow(`SELECT booking_id, user_id, COALESCE(user_email,''), amount, currency FROM payments WHERE id = ?`, paymentId).
+		Scan(&bookingId, &userId, &userEmail, &amount, &currency)
+	if err != nil {
+		return err
+	}
+
+	payloadData, _ := json.Marshal(map[string]interface{}{
+		"paymentId": paymentId, "bookingId": bookingId, "userId": userId,
+		"userEmail": userEmail, "amount": amount, "currency": currency,
+		"refundAmount": refundAmount, "status": "REFUNDED",
+	})
+	_, err = tx.Exec(`INSERT INTO outbox (event_id, event_type, payload) VALUES (?, ?, ?)`,
+		generateUUID(), "PAYMENT_REFUNDED", payloadData)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func generateUUID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	b[6] = (b[6] & 0x0f) | 0x40
-	b[8] = (b[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+	return uuid.NewString()
 }
 
 func (r *PaymentRepository) GetStalePayments() ([]*models.Payment, error) {
 	query := `SELECT id, booking_id, user_id, razorpay_order_id, COALESCE(razorpay_payment_id,''), COALESCE(razorpay_signature,''),
 		amount, currency, status, refund_amount, COALESCE(failure_reason,''), created_at, updated_at
-		FROM payments WHERE status = 'CREATED' AND created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)`
+		FROM payments WHERE status = 'CREATED' AND created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR) LIMIT 100`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		logger.Log.Error("Failed to fetch stale payments", "error", err)

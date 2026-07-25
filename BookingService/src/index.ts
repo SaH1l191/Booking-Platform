@@ -10,11 +10,14 @@ import { metricsMiddleware } from "./middlewares/metrics.middleware";
 import { register } from "./metrics/metrics";
 import { startOutboxPublisher } from "./workers/outbox-publisher";
 import { startPaymentEventConsumer } from "./workers/payment-event-consumer";
+import { prisma } from "./lib/prisma";
+import { redisClient } from "./config/redis.config";
+import { closeRabbitMQ } from "./queues/event-queue";
 
 dotenv.config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(helmet());
 app.use(requestContextMiddleware);
 app.use(metricsMiddleware);
@@ -45,6 +48,27 @@ async function gracefulShutdown(signal: string) {
       logger.error("Error while closing server", { error: err.message });
       process.exit(1);
     }
+
+    try {
+      await prisma.$disconnect();
+      logger.info("Prisma disconnected");
+    } catch (error) {
+      logger.error("Error disconnecting Prisma", { error: (error as Error).message });
+    }
+
+    try {
+      await redisClient.quit();
+      logger.info("Redis disconnected");
+    } catch (error) {
+      logger.error("Error disconnecting Redis", { error: (error as Error).message });
+    }
+
+    try {
+      await closeRabbitMQ();
+    } catch (error) {
+      logger.error("Error closing RabbitMQ", { error: (error as Error).message });
+    }
+
     logger.info("Graceful shutdown completed");
     process.exit(0);
   });

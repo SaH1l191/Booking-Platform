@@ -47,23 +47,16 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			in := pr.In
 			out := pr.Out
 
-			fmt.Println("=== Proxy Request Start ===")
-			fmt.Printf("Incoming request: method=%s url=%s path=%s host=%s remoteAddr=%s\n", in.Method, in.URL.String(), in.URL.Path, in.Host, in.RemoteAddr)
-			fmt.Printf("Outgoing request initial state: method=%s url=%s path=%s\n", out.Method, out.URL.String(), out.URL.Path)
-
 			out.URL.Scheme = targetURL.Scheme
 			out.URL.Host = targetURL.Host
 
 			originalPath := in.URL.Path
-			fmt.Printf("Original request path: %s pathPrefix=%s\n", originalPath, pathPrefix)
 			stripPrefix := strings.TrimPrefix(originalPath, pathPrefix)
-			fmt.Printf("Stripped prefix from path: %s\n", stripPrefix)
 			finalPath := "/" + strings.TrimPrefix(stripPrefix, "/")
-			fmt.Printf("Final request path after rewrite: %s\n", finalPath)
 			out.URL.Path = finalPath
-
 			out.Host = targetURL.Host
 
+			// Propagate Authorization header (from header or cookie)
 			authHeader := in.Header.Get("Authorization")
 			if authHeader == "" {
 				if cookie, err := in.Cookie("access_token"); err == nil && cookie.Value != "" {
@@ -72,9 +65,9 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 			}
 			if authHeader != "" {
 				out.Header.Set("Authorization", authHeader)
-				fmt.Printf("Authorization header propagated: %s\n", authHeader)
 			}
 
+			// Request ID
 			requestID := in.Header.Get("X-Request-ID")
 			if requestID == "" {
 				if rv := in.Context().Value("request_id"); rv != nil {
@@ -85,12 +78,26 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 				requestID = generateRequestID()
 			}
 			out.Header.Set("X-Request-ID", requestID)
-
 			out.Header.Set("X-Original-Path", originalPath)
 
-			out.Header.Del("Cookie")
+			// spoofing prevenation
+			out.Header.Del("X-User-ID")
+			out.Header.Del("X-User-Email")
+			out.Header.Del("X-User-Role")
 
-			fmt.Printf("=== Proxy Request End === method=%s url=%s path=%s host=%s\n", out.Method, out.URL.String(), out.URL.Path, out.Host)
+			// 
+			if uid := in.Context().Value("userID"); uid != nil {
+				out.Header.Set("X-User-ID", fmt.Sprintf("%v", uid))
+			}
+			if email := in.Context().Value("email"); email != nil {
+				out.Header.Set("X-User-Email", fmt.Sprintf("%v", email))
+			}
+			if roles := in.Context().Value("roles"); roles != nil {
+				if roleList, ok := roles.([]string); ok && len(roleList) > 0 {
+					out.Header.Set("X-User-Role", strings.Join(roleList, ","))
+				}
+			}
+			out.Header.Del("Cookie")
 		},
 	}
 	return proxy

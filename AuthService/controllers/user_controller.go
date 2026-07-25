@@ -24,7 +24,11 @@ func NewUserController(userService services.UserService) *UserController {
 
 func (uc *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 
-	payload := r.Context().Value("payload").(dto.CreateUserRequestDTO)
+	payload, ok := r.Context().Value("payload").(dto.CreateUserRequestDTO)
+	if !ok {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid request payload", fmt.Errorf("invalid payload type"))
+		return
+	}
 	fmt.Println("Creating user", "username", payload.Username, "email", payload.Email)
 
 	user, err := uc.UserService.CreateUser(&payload)
@@ -61,7 +65,11 @@ func (uc *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
-	payload := r.Context().Value("payload").(dto.LoginUserRequestDTO)
+	payload, ok := r.Context().Value("payload").(dto.LoginUserRequestDTO)
+	if !ok {
+		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid request payload", fmt.Errorf("invalid payload type"))
+		return
+	}
 	logger.Log.Info("Login attempt", "email", payload.Email)
 
 	tokens, err := uc.UserService.LoginUser(&payload)
@@ -117,7 +125,10 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	claims := jwt.MapClaims{}
 	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(env.GetEnv("JWT_REFRESH_SECRET", "secret")), nil
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(env.GetEnv("JWT_REFRESH_SECRET")), nil
 	})
 	if err != nil {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid refresh token", err)
@@ -125,7 +136,8 @@ func (uc *UserController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("claims", claims)
 
-	if typ, ok := claims["type"].(string); ok && typ != "refresh" {
+	typ, ok := claims["type"].(string)
+	if !ok || typ != "refresh" {
 		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid token type", fmt.Errorf("expected refresh token"))
 		return
 	}

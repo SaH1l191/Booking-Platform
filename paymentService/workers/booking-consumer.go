@@ -33,16 +33,16 @@ type BookingEventEnvelope struct {
 }
 
 type BookingCreatedPayload struct {
-	BookingId     int64  `json:"bookingId"`
-	UserId        int64  `json:"userId"`
-	HotelId       int64  `json:"hotelId"`
-	RoomId        int64  `json:"roomId"`
-	CheckIn       string `json:"checkIn"`
-	CheckOut      string `json:"checkOut"`
-	BookingAmount int    `json:"bookingAmount"`
-	TotalGuests   int    `json:"totalGuests"`
-	UserEmail     string `json:"userEmail"`
-	CreatedAt     string `json:"createdAt"`
+	BookingId     int64     `json:"bookingId"`
+	UserId        int64     `json:"userId"`
+	HotelId       int64     `json:"hotelId"`
+	RoomId        int64     `json:"roomId"`
+	CheckIn       string    `json:"checkIn"`
+	CheckOut      string    `json:"checkOut"`
+	BookingAmount int       `json:"bookingAmount"`
+	TotalGuests   int       `json:"totalGuests"`
+	UserEmail     string    `json:"userEmail"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type BookingCancelledPayload struct {
@@ -150,8 +150,7 @@ func (c *BookingConsumer) handleBookingCreated(msg amqp.Delivery, envelope Booki
 	}
 
 	//queue fails , booking expired so bookingcreated event should not create order ( although later handled )
-	createdAt, err := time.Parse(time.RFC3339, event.CreatedAt)
-	if err == nil && time.Now().After(createdAt.Add(15*time.Minute)) {
+	if !event.CreatedAt.IsZero() && time.Now().After(event.CreatedAt.Add(15*time.Minute)) {
 		logger.Log.Info("Booking already expired, skipping order creation",
 			"bookingId", event.BookingId, "createdAt", event.CreatedAt)
 		markEventProcessed(c.db, envelope.EventId)
@@ -167,7 +166,7 @@ func (c *BookingConsumer) handleBookingCreated(msg amqp.Delivery, envelope Booki
 	result, err := c.paymentService.CreateOrder(event.UserId, event.UserEmail, createOrderDTO)
 	if err != nil {
 		logger.Log.Error("Failed to create order from booking event", "bookingId", event.BookingId, "error", err)
-		msg.Nack(false, false)
+		msg.Nack(false, true)
 		return
 	}
 
@@ -213,7 +212,7 @@ func (c *BookingConsumer) handleBookingCancelled(msg amqp.Delivery, envelope Boo
 	_, err = c.paymentService.RefundPayment(refundDTO)
 	if err != nil {
 		logger.Log.Error("Failed to process refund for cancelled booking", "bookingId", event.BookingId, "error", err)
-		msg.Nack(false, false)
+		msg.Nack(false, true)
 		return
 	}
 

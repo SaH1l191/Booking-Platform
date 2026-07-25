@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type Payment struct {
 	Id                int64
 	BookingId         int64
@@ -13,6 +15,6 @@ type Payment struct {
 	Status            string
 	RefundAmount      int
 	FailureReason     string
-	CreatedAt         string
-	UpdatedAt         string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
