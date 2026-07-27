@@ -19,16 +19,26 @@ export async function createBookingHandler(req: AuthRequest, res: Response) {
     sendSuccess(res, { bookingId: booking.bookingId, idempotencyKey: booking.idempotencyKey, expiresAt: booking.expiresAt, duplicated: booking.duplicated }, 'Booking created', 201);
 }
 
+function extractPagination(query: any): { page: number; limit: number } | undefined {
+    const page = query.page ? parseInt(query.page as string, 10) : undefined;
+    const limit = query.limit ? parseInt(query.limit as string, 10) : undefined;
+    if (page && limit) return { page, limit };
+    if (page) return { page, limit: 10 };
+    return undefined;
+}
+
 export async function getAllBookingsHandler(req: AuthRequest, res: Response) {
     console.log("Fetching all bookings for admin");
-    const bookings = await getAllBookingsService();
+    const pagination = extractPagination(req.query);
+    const bookings = await getAllBookingsService(pagination);
     sendSuccess(res, bookings, 'All bookings fetched', 200);
 }
 
 export async function getBookingsByUserHandler(req: AuthRequest, res: Response) {
     const userId = req.user.userId!;
     console.log("Fetching bookings for user", { userId });
-    const bookings = await getBookingsByUserService(userId);
+    const pagination = extractPagination(req.query);
+    const bookings = await getBookingsByUserService(userId, pagination);
     sendSuccess(res, bookings, 'User bookings fetched', 200);
 }
 
@@ -36,7 +46,8 @@ export async function getBookingsByHotelHandler(req: AuthRequest, res: Response)
     const hotelIdParam = req.params.hotelId as string;
     const hotelId = parseInt(hotelIdParam);
     console.log("Fetching bookings for hotel", { hotelId });
-    const bookings = await getBookingsByHotelService(hotelId);
+    const pagination = extractPagination(req.query);
+    const bookings = await getBookingsByHotelService(hotelId, pagination);
     sendSuccess(res, bookings, 'Hotel bookings fetched', 200);
 }
 

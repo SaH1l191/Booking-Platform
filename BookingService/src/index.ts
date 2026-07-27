@@ -9,10 +9,11 @@ import logger from "./config/logger";
 import { metricsMiddleware } from "./middlewares/metrics.middleware";
 import { register } from "./metrics/metrics";
 import { startOutboxPublisher } from "./workers/outbox-publisher";
-import { startPaymentEventConsumer } from "./workers/payment-event-consumer";
+import { startPaymentEventConsumer, stopPaymentEventConsumer } from "./workers/payment-event-consumer";
 import { prisma } from "./lib/prisma";
 import { redisClient } from "./config/redis.config";
 import { closeRabbitMQ } from "./queues/event-queue";
+import { startBookingExpiryWorker, stopBookingExpiryWorker } from "./workers/booking-expiry-worker";
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ const server = app.listen(serverConfig.port, async () => {
 
   startOutboxPublisher();
   startPaymentEventConsumer();
+  startBookingExpiryWorker();
   logger.info("All BookingService workers started");
 });
 
@@ -48,6 +50,9 @@ async function gracefulShutdown(signal: string) {
       logger.error("Error while closing server", { error: err.message });
       process.exit(1);
     }
+
+    stopBookingExpiryWorker();
+    stopPaymentEventConsumer();
 
     try {
       await prisma.$disconnect();

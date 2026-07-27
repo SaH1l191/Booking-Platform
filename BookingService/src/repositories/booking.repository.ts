@@ -1,6 +1,8 @@
 import { prisma } from "../lib/prisma";
 import { CreateBookingDTO } from "../dto/booking.dto";
 import logger from "../config/logger";
+import crypto from "crypto";
+import { Prisma } from "@prisma/client";
 
 export interface OutboxPayload {
     eventType: string;
@@ -89,7 +91,7 @@ export async function conflictBooking(tx: any, createBookingDTO: CreateBookingDT
     logger.info("Checking for conflicting bookings (FOR UPDATE)", { hotelId: createBookingDTO.hotelId, roomId: createBookingDTO.roomId });
     const now = new Date();
     const rows: any[] = await tx.$queryRaw`
-        SELECT id FROM booking
+        SELECT id, status, checkOut, expiresAt FROM booking
         WHERE hotelId = ${createBookingDTO.hotelId}
           AND roomId = ${createBookingDTO.roomId}
           AND checkIn < ${new Date(createBookingDTO.checkOut)}
@@ -123,26 +125,77 @@ export async function createBookingRecord(
     });
 }
 
-export async function getAllBookings() {
-    console.log("Fetching all bookings for admin");
+export interface PaginationParams {
+    page: number;
+    limit: number;
+}
+
+export interface PaginatedResult<T> {
+    data: T[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export async function getAllBookings(pagination?: PaginationParams): Promise<PaginatedResult<any> | any[]> {
+    console.log("Fetching all bookings for admin", { pagination });
+    if (pagination) {
+        const { page, limit } = pagination;
+        const [data, total] = await Promise.all([
+            prisma.booking.findMany({
+                skip: (page - 1) * limit,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.booking.count(),
+        ]);
+        return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
     return await prisma.booking.findMany({
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
     });
 }
 
-export async function getBookingsByUserId(userId: number) {
-    console.log("Fetching bookings for user in repository", { userId });
+export async function getBookingsByUserId(userId: number, pagination?: PaginationParams): Promise<PaginatedResult<any> | any[]> {
+    console.log("Fetching bookings for user in repository", { userId, pagination });
+    if (pagination) {
+        const { page, limit } = pagination;
+        const [data, total] = await Promise.all([
+            prisma.booking.findMany({
+                where: { userId },
+                skip: (page - 1) * limit,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.booking.count({ where: { userId } }),
+        ]);
+        return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
     return await prisma.booking.findMany({
         where: { userId },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
     });
 }
 
-export async function getBookingsByHotelId(hotelId: number) {
-    console.log("Fetching bookings for hotel in repository", { hotelId });
+export async function getBookingsByHotelId(hotelId: number, pagination?: PaginationParams): Promise<PaginatedResult<any> | any[]> {
+    console.log("Fetching bookings for hotel in repository", { hotelId, pagination });
+    if (pagination) {
+        const { page, limit } = pagination;
+        const [data, total] = await Promise.all([
+            prisma.booking.findMany({
+                where: { hotelId },
+                skip: (page - 1) * limit,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.booking.count({ where: { hotelId } }),
+        ]);
+        return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
     return await prisma.booking.findMany({
         where: { hotelId },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
     });
 }
 
@@ -160,14 +213,29 @@ export async function insertOutboxEvent(tx: any, eventType: string, payload: Rec
 export async function expireStaleBookings() {
     logger.info("Expiring stale PENDING bookings");
     const now = new Date();
-    const result = await prisma.$executeRaw`
+
+    const expiring = await prisma.booking.findMany({
+        where: {
+            status: "PENDING",
+            expiresAt: { lt: now },
+        },
+        select: {
+            id: true,
+        },
+    });
+
+    if (expiring.length === 0) return;
+
+    const ids = expiring.map((b) => b.id);
+    await prisma.$executeRaw`
         UPDATE booking
         SET status = 'EXPIRED', updatedAt = ${now}
-        WHERE status = 'PENDING' AND expiresAt < ${now}
+        WHERE id IN (${Prisma.join(ids)})
     `;
-    logger.info("Expired stale bookings", { count: result });
-    return result;
+
+    logger.info("Expired stale bookings", { count: expiring.length });
 }
+//removed redis expiry from exprired
 
 export async function getCompletedBookingsByUserId(userId: number) {
     console.log("Fetching completed bookings for user in repository", { userId });

@@ -2,6 +2,7 @@ export const RolePermissions: Record<string, string[]> = {
   admin: ["*"],
   hotel_manager: [
     "booking:read",
+    "booking:read-by-hotel",
     "booking:cancel",
   ],
   customer: [
