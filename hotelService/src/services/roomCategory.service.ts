@@ -17,9 +17,9 @@ export async function getRoomCategoryByIdService(id: number) {
   return await getRoomCategoryById(id);
 }
 
-export async function getAllRoomCategoriesService(hotelId?: number) {
-  console.log("Fetching all room categories in service", { hotelId });
-  return await getAllRoomCategories(hotelId);
+export async function getAllRoomCategoriesService(hotelId?: number, page?: number, limit?: number) {
+  console.log("Fetching all room categories in service", { hotelId, page, limit });
+  return await getAllRoomCategories(hotelId, page, limit);
 }
 
 export async function updateRoomCategoryService(id: number, data: Partial<createRoomCategoryDto>) {

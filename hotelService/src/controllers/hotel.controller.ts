@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { createHotelService, deleteHotelService, getAllHotelsService, getHotelByIdService, updateHotelService } from '../services/hotel.service';
+import { createHotelImage } from '../repositories/hotelImage.repository';
 
 export async function createHotelHandler(req: Request , res: Response) {
     console.log("Creating hotel", { body: req.body });
@@ -56,4 +57,27 @@ export async function deleteHotelHandler(req: Request , res: Response) {
         data : hotelReponse,
         success : true
     })
+}
+
+export async function uploadHotelImageHandler(req: Request, res: Response) {
+    const hotelId = Number(req.params.id);
+    const file = req.file as any;
+
+    if (!file) {
+        res.status(400).json({ success: false, message: "No image provided" });
+        return;
+    }
+
+    const image = await createHotelImage({
+        hotelId,
+        url: file.path,
+        altText: req.body.altText || "Hotel image",
+        displayOrder: req.body.displayOrder || 0,
+    });
+
+    res.status(201).json({
+        success: true,
+        message: "Image uploaded successfully",
+        data: image,
+    });
 }

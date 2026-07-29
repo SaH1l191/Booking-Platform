@@ -19,10 +19,20 @@ export async function getRoomById(id: number) {
   return room;
 }
 
-export async function getAllRooms(hotelId?: number) {
+export async function getAllRooms(hotelId?: number, page?: number, limit?: number) {
   const where: any = { deletedAt: null };
   if (hotelId) {
     where.hotelId = hotelId;
+  }
+  if (page && limit) {
+    const offset = (page - 1) * limit;
+    const { count, rows } = await Room.findAndCountAll({
+      where,
+      limit,
+      offset,
+    });
+    logger.info(`Found ${count} rooms (page ${page}, limit ${limit})`);
+    return { data: rows, total: count, page, limit, totalPages: Math.ceil(count / limit) };
   }
   const rooms = await Room.findAll({ where });
   logger.info(`Found ${rooms.length} rooms`);

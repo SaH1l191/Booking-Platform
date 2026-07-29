@@ -1,4 +1,4 @@
-import { Op, literal, where as sequelizeWhere } from "sequelize";
+import { Op, literal, where as sequelizeWhere, col } from "sequelize";
 import sequelize from "../db/models/sequelize";
 import logger from "../config/logger"
 import Hotel from "../db/models/hotel";
@@ -77,11 +77,12 @@ export async function getHotelById(hotelId: number) {
 }
 
 export async function getAllHotels(query: any) {
-    const page = Math.max(1, parseInt(query.page) || 1);
-    const limit = Math.max(1, Math.min(100, parseInt(query.limit) || 10));
+const page = Math.max(1, parseInt(query.page, 10) || 1);
+const limit = Math.max(1, Math.min(100, parseInt(query.limit, 10) || 10));
     const offset = (page - 1) * limit;
 
     const where: any = { deletedAt: null };
+    const andClauses: any[] = [];
     const order: any[] = [];
 
     if (query.search) {
@@ -99,13 +100,11 @@ export async function getAllHotels(query: any) {
     }
 
     if (query.minPrice || query.maxPrice) {
-        const clauses: string[] = [];
-        if (query.minPrice) clauses.push(`price >= ${parseFloat(query.minPrice)}`);
-        if (query.maxPrice) clauses.push(`price <= ${parseFloat(query.maxPrice)}`);
-        where[Op.and] = where[Op.and] || [];
-        where[Op.and].push(
-            literal(`EXISTS (SELECT 1 FROM room_categories WHERE hotel_id = Hotel.id AND deleted_at IS NULL AND ${clauses.join(' AND ')})`)
-        );
+        const clause = `EXISTS (SELECT 1 FROM room_categories WHERE hotel_id = Hotel.id AND deleted_at IS NULL`;
+        const conditions: string[] = [];
+        if (query.minPrice) conditions.push(`price >= ${sequelize.escape(parseFloat(query.minPrice))}`);
+        if (query.maxPrice) conditions.push(`price <= ${sequelize.escape(parseFloat(query.maxPrice))}`);
+        andClauses.push(literal(`${clause} AND ${conditions.join(' AND ')})`));
     }
 
     let distanceField: ReturnType<typeof literal> | null = null;
@@ -118,8 +117,10 @@ export async function getAllHotels(query: any) {
             const latDelta = r / 111;
             const lngDelta = r / (111 * Math.cos((lat * Math.PI) / 180));
 
-            where.latitude = { [Op.between]: [lat - latDelta, lat + latDelta] };
-            where.longitude = { [Op.between]: [lng - lngDelta, lng + lngDelta] };
+            andClauses.push(
+                literal(`${sequelize.escape(lat - latDelta)} <= CAST(latitude AS DECIMAL(10,8)) AND CAST(latitude AS DECIMAL(10,8)) <= ${sequelize.escape(lat + latDelta)}`),
+                literal(`${sequelize.escape(lng - lngDelta)} <= CAST(longitude AS DECIMAL(11,8)) AND CAST(longitude AS DECIMAL(11,8)) <= ${sequelize.escape(lng + lngDelta)}`)
+            );
 
             distanceField = literal(`
                 ST_Distance_Sphere(
@@ -128,9 +129,12 @@ export async function getAllHotels(query: any) {
                 ) / 1000
             `);
 
-            where[Op.and] = where[Op.and] || [];
-            where[Op.and].push(sequelizeWhere(distanceField, { [Op.lte]: r }));
+            andClauses.push(sequelizeWhere(distanceField, { [Op.lte]: r }));
         }
+    }
+
+    if (andClauses.length > 0) {
+        where[Op.and] = andClauses;
     }
 
     const sortBy = query.sortBy || '-createdAt';

@@ -28,7 +28,7 @@ export const validateSchemaQuery = (schema: ZodSchema) => {
         .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
         .join(", ");
       return next(new BadRequestError(messages));
-    }
+    }//express will not allow req.query to be reassigned, so we use Object.defineProperty JS method to set the value of req.query to the validated data
     Object.defineProperty(req, 'query', {
       value: result.data,
       enumerable: true,

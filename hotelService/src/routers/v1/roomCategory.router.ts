@@ -9,7 +9,7 @@ import {
 import { roomCategorySchema, updateRoomCategorySchema } from "../../validators/roomCategory.validator";
 import { validateSchemaBody, validateSchemaParams } from "../../validators";
 import { idParamSchema } from "../../validators/common.validator";
-import { authMiddleware, optionalAuth } from "../../middlewares/auth.middleware";
+import { authMiddleware } from "../../middlewares/auth.middleware";
 import { requirePermission } from "../../middlewares/rbac.middleware";
 
 const router = express.Router();
@@ -19,8 +19,8 @@ router.get("/error-test", (req, res) => {
 });
 
 router.post("/", authMiddleware, requirePermission("roomCategory:create"), validateSchemaBody(roomCategorySchema), createRoomCategoryHandler);
-router.get("/", optionalAuth, getAllRoomCategoriesHandler);
-router.get("/:id", optionalAuth, validateSchemaParams(idParamSchema), getRoomCategoryByIdHandler);
+router.get("/", authMiddleware, getAllRoomCategoriesHandler);
+router.get("/:id", authMiddleware, validateSchemaParams(idParamSchema), getRoomCategoryByIdHandler);
 router.put("/:id", authMiddleware, requirePermission("roomCategory:update"), validateSchemaParams(idParamSchema), validateSchemaBody(updateRoomCategorySchema), updateRoomCategoryHandler);
 router.delete("/:id", authMiddleware, requirePermission("roomCategory:delete"), validateSchemaParams(idParamSchema), deleteRoomCategoryHandler);
 

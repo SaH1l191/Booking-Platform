@@ -19,9 +19,19 @@ export async function getRoomCategoryById(id: number) {
   return roomCategory;
 }
 
-export async function getAllRoomCategories(hotelId?: number) {
+export async function getAllRoomCategories(hotelId?: number, page?: number, limit?: number) {
   const where: any = { deletedAt: null };
   if (hotelId) where.hotelId = hotelId;
+  if (page && limit) {
+    const offset = (page - 1) * limit;
+    const { count, rows } = await RoomCategory.findAndCountAll({
+      where,
+      limit,
+      offset,
+    });
+    logger.info(`Found ${count} room categories (page ${page}, limit ${limit})`);
+    return { data: rows, total: count, page, limit, totalPages: Math.ceil(count / limit) };
+  }
   const categories = await RoomCategory.findAll({ where });
   logger.info(`Found ${categories.length} room categories`);
   return categories;

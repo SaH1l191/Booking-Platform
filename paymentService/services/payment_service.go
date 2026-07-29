@@ -127,6 +127,10 @@ func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO)
 	return payment, nil
 }
 
+
+//changes ->captured OR refunding to pending -> does refund -> completed status(refunded)
+//siilart like a 2pahse commit to minimize inconsistencies,no partial refund,idempontent 
+//Failure recovery: If Razorpay succeeds but DB finalize fails, it's flagged for manual intervention rather than silently losing the state.
 func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[string]interface{}, error) {
 	logger.Log.Info("Processing refund", "paymentId", payload.PaymentId, "bookingId", payload.BookingId)
 
@@ -144,6 +148,7 @@ func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[s
 		return nil, err
 	}
 
+	//setting refunding status here
 	claimed, err := s.paymentRepo.ClaimRefund(payment.Id)
 	if err != nil {
 		logger.Log.Error("Failed to claim refund", "paymentId", payment.Id, "error", err)

@@ -25,7 +25,9 @@ export async function getRoomCategoryByIdHandler(req: Request, res: Response) {
 export async function getAllRoomCategoriesHandler(req: Request, res: Response) {
   console.log("Fetching all room categories", { query: req.query });
   const hotelId = req.query.hotelId ? Number(req.query.hotelId) : undefined;
-  const result = await getAllRoomCategoriesService(hotelId);
+  const page = req.query.page ? Number(req.query.page) : undefined;
+  const limit = req.query.limit ? Number(req.query.limit) : undefined;
+  const result = await getAllRoomCategoriesService(hotelId, page, limit);
   console.log("Room categories fetched successfully");
   res.status(200).json({ message: "RoomCategories fetched", data: result, success: true });
 }

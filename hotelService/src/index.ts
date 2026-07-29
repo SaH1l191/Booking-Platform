@@ -16,7 +16,7 @@ import { metricsMiddleware } from "./middlewares/metrics.middleware";
 const app = express();
 const PORT = serverConfig.PORT; 
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(helmet());
 app.use(requestContextMiddleware); 
 app.use(metricsMiddleware);

@@ -19,8 +19,10 @@ export async function getRoomByIdService(id: number) {
 
 export async function getAllRoomsService(query: any) {
   const hotelId = query.hotelId ? Number(query.hotelId) : undefined;
-  console.log("Fetching rooms in service", { hotelId: hotelId || 'all' });
-  return await getAllRooms(hotelId);
+  const page = query.page ? Number(query.page) : undefined;
+  const limit = query.limit ? Number(query.limit) : undefined;
+  console.log("Fetching rooms in service", { hotelId: hotelId || 'all', page, limit });
+  return await getAllRooms(hotelId, page, limit);
 }
 
 export async function updateRoomService(id: number, data: Partial<createRoomDto>) {
