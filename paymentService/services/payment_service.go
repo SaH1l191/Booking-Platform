@@ -10,9 +10,32 @@ import (
 	db "goPayment/db/repositories"
 	"goPayment/dto"
 	"goPayment/models"
-	"goPayment/pkg/logger"  
+	"goPayment/pkg/logger"
+	"time"
+
 	"github.com/razorpay/razorpay-go"
 )
+
+type RazorpayClient interface {
+	CreateOrder(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
+	Refund(paymentId string, amount int, data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
+}
+
+type razorpayClientAdapter struct {
+	client *razorpay.Client
+}
+
+func (a *razorpayClientAdapter) CreateOrder(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error) {
+	return a.client.Order.Create(data, extraHeaders)
+}
+
+func (a *razorpayClientAdapter) Refund(paymentId string, amount int, data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error) {
+	return a.client.Payment.Refund(paymentId, amount, data, extraHeaders)
+}
+
+func NewRazorpayClientAdapter(keyId, keySecret string) RazorpayClient {
+	return &razorpayClientAdapter{client: razorpay.NewClient(keyId, keySecret)}
+}
 
 type PaymentService interface {
 	CreateOrder(userId int64, userEmail string, payload *dto.CreateOrderRequestDTO) (map[string]interface{}, error)
@@ -26,13 +49,19 @@ type PaymentService interface {
 
 type PaymentServiceImpl struct {
 	paymentRepo    *db.PaymentRepository
-	razorpayClient *razorpay.Client
+	razorpayClient RazorpayClient
 }
 
 func NewPaymentService(paymentRepo *db.PaymentRepository) PaymentService {
 	keyId := env.GetEnv("RAZORPAY_KEY_ID")
 	keySecret := env.GetEnv("RAZORPAY_KEY_SECRET")
-	client := razorpay.NewClient(keyId, keySecret)
+	return &PaymentServiceImpl{
+		paymentRepo:    paymentRepo,
+		razorpayClient: NewRazorpayClientAdapter(keyId, keySecret),
+	}
+}
+
+func NewPaymentServiceWithClient(paymentRepo *db.PaymentRepository, client RazorpayClient) PaymentService {
 	return &PaymentServiceImpl{
 		paymentRepo:    paymentRepo,
 		razorpayClient: client,
@@ -51,7 +80,7 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload
 			"userId":    userId,
 		},
 	}
-	order, err := s.razorpayClient.Order.Create(orderData, nil)
+	order, err := s.razorpayClient.CreateOrder(orderData, nil)
 	if err != nil {
 		logger.Log.Error("Failed to create Razorpay order", "error", err)
 		return nil, err
@@ -155,7 +184,15 @@ func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[s
 		return nil, err
 	}
 	if !claimed {
-		return nil, fmt.Errorf("already refunded or not in refundable state")
+		// Retry path: if payment is stuck in REFUNDING past the stale threshold, re-claim it
+		claimed, err = s.paymentRepo.ReclaimStaleRefunding(payment.Id, 15*time.Minute)
+		if err != nil {
+			logger.Log.Error("Failed to reclaim stale refunding", "paymentId", payment.Id, "error", err)
+			return nil, err
+		}
+		if !claimed {
+			return nil, fmt.Errorf("already refunded or not in refundable state")
+		}
 	}
 
 	logger.Log.Info("Refund payment details", "paymentId", payment.Id, "razorpayPaymentId", payment.RazorpayPaymentId, "amount", payment.Amount, "status", payment.Status)
@@ -164,7 +201,7 @@ func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[s
 		"reason": "booking_cancelled",
 	}
 
-	refund, err := s.razorpayClient.Payment.Refund(payment.RazorpayPaymentId, payment.Amount, notes, nil)
+	refund, err := s.razorpayClient.Refund(payment.RazorpayPaymentId, payment.Amount, notes, nil)
 	if err != nil {
 		logger.Log.Error("Refund claimed but Razorpay call failed — payment left in REFUNDING for retry", "paymentId", payment.Id, "error", err)
 		return nil, err

@@ -19,8 +19,8 @@ router.get("/error-test", (req, res) => {
 });
 
 router.post("/", authMiddleware, requirePermission("roomCategory:create"), validateSchemaBody(roomCategorySchema), createRoomCategoryHandler);
-router.get("/", authMiddleware, getAllRoomCategoriesHandler);
-router.get("/:id", authMiddleware, validateSchemaParams(idParamSchema), getRoomCategoryByIdHandler);
+router.get("/", getAllRoomCategoriesHandler);
+router.get("/:id", validateSchemaParams(idParamSchema), getRoomCategoryByIdHandler);
 router.put("/:id", authMiddleware, requirePermission("roomCategory:update"), validateSchemaParams(idParamSchema), validateSchemaBody(updateRoomCategorySchema), updateRoomCategoryHandler);
 router.delete("/:id", authMiddleware, requirePermission("roomCategory:delete"), validateSchemaParams(idParamSchema), deleteRoomCategoryHandler);
 

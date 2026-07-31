@@ -1,15 +1,40 @@
 import { serverConfig } from "../config/index";
 import { redisClient, redlock, } from '../config/redis.config';
 import { CreateBookingDTO } from '../dto/booking.dto';
-import { prisma } from "../lib/prisma";
+import { prisma, Prisma } from "../lib/prisma";
 import { conflictBooking, createBookingRecord, createIdempotencyKey, getAllBookings, getBookingById, getBookingsByHotelId, getBookingsByUserId, getCompletedBookingsByUserId, getIdempotencyKey, insertOutboxEvent, PaginationParams } from "../repositories/booking.repository";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 import logger from "../config/logger";
 import { BOOKING_CREATED_EVENT, BOOKING_CANCELLED_EVENT, BOOKING_STAY_COMPLETED_EVENT } from "../producers/booking-producer";
 import crypto from "crypto";
-import { anyDateOccupied, placeHold, releaseDates, syncConflictToCache } from "../utils/availabilityCache";
+import { anyDateOccupied, placeHold, releaseDates, syncConflictToCache, getDatesInRange } from "../utils/availabilityCache";
+import { getRoomPricePerNight } from "../utils/roompriceHelper";
 
 const BOOKING_HOLD_MS = 15 * 60 * 1000; // 15 minutes
+
+const MAX_DEADLOCK_RETRIES = 3;
+
+function isDeadlockError(error: unknown): boolean {
+    const message = (error as Error)?.message || "";
+    const code = (error as any)?.code;
+    return code === "P2034" || code === "P2010" || message.includes("1213") || message.includes("deadlock");
+}
+
+async function retryOnDeadlock<T>(fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 1; attempt <= MAX_DEADLOCK_RETRIES; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (isDeadlockError(error) && attempt < MAX_DEADLOCK_RETRIES) {
+                logger.warn("Deadlock detected, retrying transaction", { attempt });
+                await new Promise((resolve) => setTimeout(resolve, attempt * 50));
+                continue;
+            }
+            throw error;
+        }
+    }
+    throw new Error("Unreachable");
+}
 
 
 export async function createBookingService({ createBookingDTO, userId, userEmail, idempotencyKey }: { createBookingDTO: CreateBookingDTO, userId: number, userEmail: string, idempotencyKey?: string }) {
@@ -36,6 +61,13 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
         lock = await redlock.acquire([bookingResource], ttl);
         logger.info("Acquired lock on booking resource", { bookingResource });
 
+        const nights = getDatesInRange(createBookingDTO.checkIn, createBookingDTO.checkOut).length;
+        if (nights < 1) {
+            throw new BadRequestError("Check-out date must be after check-in date");
+        }
+        const pricePerNight = await getRoomPricePerNight(createBookingDTO.hotelId, createBookingDTO.roomId, userId);
+        const bookingAmount = pricePerNight * nights;
+
         // Step 1: Check Redis cache for date conflicts (fast path)
         const occupied = await anyDateOccupied(redisClient, createBookingDTO.hotelId, createBookingDTO.roomId, createBookingDTO.checkIn, createBookingDTO.checkOut);
         if (occupied) {
@@ -43,88 +75,91 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
             throw new BadRequestError("Selected room is not available for the chosen dates");
         }
 
-        return await prisma.$transaction(
-            async (tx: any) => {
-                // Step 2: Check user :  already having  PENDING booking for same dates
-                const existingUserBooking = await tx.$queryRaw`
-                    SELECT id FROM booking
-                    WHERE userId = ${userId}
-                      AND hotelId = ${createBookingDTO.hotelId}
-                      AND roomId = ${createBookingDTO.roomId}
-                      AND checkIn < ${new Date(createBookingDTO.checkOut)}
-                      AND checkOut > ${new Date(createBookingDTO.checkIn)}
-                      AND status = 'PENDING'
-                      AND expiresAt > ${new Date()}
-                    LIMIT 1
-                `;
-                if (existingUserBooking.length > 0) {
-                    throw new BadRequestError("You already have a pending booking for these dates");
-                }
+        return await retryOnDeadlock(async () => {
+            return await prisma.$transaction(
+                async (tx: any) => {
+                    // Step 2: Check user :  already having  PENDING booking for same dates
+                    const existingUserBooking = await tx.$queryRaw`
+                        SELECT id FROM booking
+                        WHERE userId = ${userId}
+                          AND hotelId = ${createBookingDTO.hotelId}
+                          AND roomId = ${createBookingDTO.roomId}
+                          AND checkIn < ${new Date(createBookingDTO.checkOut)}
+                          AND checkOut > ${new Date(createBookingDTO.checkIn)}
+                          AND status = 'PENDING'
+                          AND expiresAt > ${new Date()}
+                        LIMIT 1
+                    `;
+                    if (existingUserBooking.length > 0) {
+                        throw new BadRequestError("You already have a pending booking for these dates");
+                    }
 
-                // Step 3: DB conflict check with FOR UPDATE
-                const conflictingBooking = await conflictBooking(tx, createBookingDTO)
-                if (conflictingBooking) {
-                    // Update Redis cache to reflect DB state
-                    await syncConflictToCache(
-                        redisClient,
-                        createBookingDTO.hotelId,
-                        createBookingDTO.roomId,
-                        createBookingDTO.checkIn,
-                        createBookingDTO.checkOut,
-                        conflictingBooking
-                    );
-                    throw new BadRequestError("Selected room is not available for the chosen dates");
-                }
+                    // Step 3: DB conflict check with FOR UPDATE
+                    const conflictingBooking = await conflictBooking(tx, createBookingDTO)
+                    if (conflictingBooking) {
+                        // Update Redis cache to reflect DB state
+                        await syncConflictToCache(
+                            redisClient,
+                            createBookingDTO.hotelId,
+                            createBookingDTO.roomId,
+                            createBookingDTO.checkIn,
+                            createBookingDTO.checkOut,
+                            conflictingBooking
+                        );
+                        throw new BadRequestError("Selected room is not available for the chosen dates");
+                    }
 
-                // Step 4: Create booking (15 min hold)
-                const booking = await createBookingRecord(tx, {
-                    userId: userId,
-                    userEmail: userEmail,
-                    hotelId: createBookingDTO.hotelId,
-                    roomId: createBookingDTO.roomId,
-                    totalGuests: createBookingDTO.totalGuests!,
-                    bookingAmount: createBookingDTO.bookingAmount!,
-                    checkIn: new Date(createBookingDTO.checkIn),
-                    checkOut: new Date(createBookingDTO.checkOut),
-                    expiresAt: new Date(Date.now() + BOOKING_HOLD_MS)
-                });
+                    // Step 4: Create booking (15 min hold)
+                    const booking = await createBookingRecord(tx, {
+                        userId: userId,
+                        userEmail: userEmail,
+                        hotelId: createBookingDTO.hotelId,
+                        roomId: createBookingDTO.roomId,
+                        totalGuests: createBookingDTO.totalGuests!,
+                        bookingAmount: bookingAmount,
+                        checkIn: new Date(createBookingDTO.checkIn),
+                        checkOut: new Date(createBookingDTO.checkOut),
+                        expiresAt: new Date(Date.now() + BOOKING_HOLD_MS)
+                    });
 
-                // Step 5: Store idempotency key
-                const key = idempotencyKey || crypto.randomUUID();
-                await createIdempotencyKey(tx, key, booking.id);
+                    // Step 5: Store idempotency key
+                    const key = idempotencyKey || crypto.randomUUID();
+                    await createIdempotencyKey(tx, key, booking.id);
 
-                // Step 5: Emit outbox event
-                await insertOutboxEvent(tx, BOOKING_CREATED_EVENT, {
-                    bookingId: booking.id,
-                    userId: booking.userId,
-                    hotelId: booking.hotelId,
-                    roomId: booking.roomId,
-                    checkIn: booking.checkIn.toISOString(),
-                    checkOut: booking.checkOut.toISOString(),
-                    bookingAmount: booking.bookingAmount,
-                    totalGuests: booking.totalGuests,
-                    userEmail: userEmail,
-                    createdAt: booking.createdAt.toISOString(),
-                });
+                    // Step 5: Emit outbox event
+                    await insertOutboxEvent(tx, BOOKING_CREATED_EVENT, {
+                        bookingId: booking.id,
+                        userId: booking.userId,
+                        hotelId: booking.hotelId,
+                        roomId: booking.roomId,
+                        checkIn: booking.checkIn.toISOString(),
+                        checkOut: booking.checkOut.toISOString(),
+                        bookingAmount: booking.bookingAmount,
+                        totalGuests: booking.totalGuests,
+                        userEmail: userEmail,
+                        createdAt: booking.createdAt.toISOString(),
+                    });
 
-                // Step 6: Update Redis cache with booked dates + TTL
-                await placeHold(redisClient, 
-                    createBookingDTO.hotelId, 
-                    createBookingDTO.roomId, booking.id, 
-                    createBookingDTO.checkIn, 
-                    createBookingDTO.checkOut, 
-                    booking.expiresAt);
+                    // Step 6: Update Redis cache with booked dates + TTL
+                    await placeHold(redisClient, 
+                        createBookingDTO.hotelId, 
+                        createBookingDTO.roomId, booking.id, 
+                        createBookingDTO.checkIn, 
+                        createBookingDTO.checkOut, 
+                        booking.expiresAt);
 
-                logger.info("Booking created with idempotency key", { bookingId: booking.id, idempotencyKey: key });
+                    logger.info("Booking created with idempotency key", { bookingId: booking.id, idempotencyKey: key });
 
-                return {
-                    bookingId: booking.id,
-                    idempotencyKey: key,
-                    expiresAt: booking.expiresAt,
-                    duplicated: false,
-                };
-            }
-        )
+                    return {
+                        bookingId: booking.id,
+                        idempotencyKey: key,
+                        expiresAt: booking.expiresAt,
+                        duplicated: false,
+                    };
+                },
+                { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted }
+            );
+        });
 
     } catch (error) {
         logger.error("Booking service failed", { error: (error as Error).message });
@@ -149,23 +184,33 @@ export async function getAllBookingsService(pagination?: PaginationParams) {
 
 export async function getBookingsByUserService(userId: number, pagination?: PaginationParams) {
     console.log("Fetching bookings for user in service", { userId, pagination });
-    // await expireStaleBookings();
 
     const completedBookings = await getCompletedBookingsByUserId(userId);
     if (completedBookings.length > 0) {
         for (const booking of completedBookings) {
-            await prisma.$transaction(async (tx: any) => {
-                await insertOutboxEvent(tx, BOOKING_STAY_COMPLETED_EVENT, {
-                    bookingId: booking.id,
-                    userId: booking.userId,
-                    hotelId: booking.hotelId,
-                    roomId: booking.roomId,
+            try {
+                await prisma.$transaction(async (tx: any) => {
+                    // Atomic claim: only proceeds if not already emitted.
+                    // updateMany returns count=0 if another request already claimed it.
+                    const claimed = await tx.booking.updateMany({
+                        where: { id: booking.id, stayCompletedEmittedAt: null },
+                        data: { stayCompletedEmittedAt: new Date() },
+                    });
+                    if (claimed.count === 0) return; // already emitted, skip
+
+                    await insertOutboxEvent(tx, BOOKING_STAY_COMPLETED_EVENT, {
+                        bookingId: booking.id,
+                        userId: booking.userId,
+                        hotelId: booking.hotelId,
+                        roomId: booking.roomId,
+                    });
                 });
-            });
+            } catch (err) {
+                logger.error("Failed to emit stay-completed event", { bookingId: booking.id, error: (err as Error).message });
+            }
         }
-        logger.info("Emitted BOOKING_STAY_COMPLETED events", { count: completedBookings.length, userId });
+        logger.info("Checked stay-completed events", { count: completedBookings.length, userId });
     }
-    console.log("Fetching bookings for user in service", { userId, pagination });
     return await getBookingsByUserId(userId, pagination);
 }
 
@@ -261,7 +306,7 @@ export async function checkAvailabilityService(data: {
     checkIn: string;
     checkOut: string;
 }) {
-    logger.info("Checking availability in service", { hotelId: data.hotelId, roomId: data.roomId, checkIn: data.checkIn, checkOut: data.checkOut }); const redisKey = `room_availability:hotel:${data.hotelId}:room:${data.roomId}`;
+    logger.info("Checking availability in service", { hotelId: data.hotelId, roomId: data.roomId, checkIn: data.checkIn, checkOut: data.checkOut });
 
     const occupied = await anyDateOccupied(redisClient, data.hotelId, data.roomId, data.checkIn, data.checkOut);
     if (occupied) {

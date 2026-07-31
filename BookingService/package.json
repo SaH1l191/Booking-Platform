@@ -13,7 +13,10 @@
     "prisma:seed": "prisma db seed",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force && prisma db seed",
-    "postinstall": "npm run prisma:generate"
+    "postinstall": "npm run prisma:generate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.config.ts"
   },
   "type": "commonjs",
   "dependencies": {
@@ -34,12 +37,16 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/nock": "^10.0.3",
     "@types/node": "^25.6.0",
     "@types/redlock": "4.0.8",
+    "mysql2": "^3.23.2",
+    "nock": "^14.0.17",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -101,7 +101,7 @@
         {
           "name": "Refresh Token",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/users/refresh",
@@ -165,6 +165,41 @@
               "path": [
                 "users",
                 ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
               ]
             }
           },
@@ -270,6 +305,144 @@
                 "1",
                 "assign",
                 "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"moderator\",\n  \"description\": \"Can moderate reviews and users\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Role Permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/1/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "1",
+                "permissions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Role Permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/role-permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "role-permissions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Permission to Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissionId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/1/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "1",
+                "permissions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Permission from Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissionId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/1/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "1",
+                "permissions"
               ]
             }
           },
@@ -459,6 +632,37 @@
           "response": []
         },
         {
+          "name": "Upload Hotel Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/path/to/image.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/hotels/1/images",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "hotels",
+                "1",
+                "images"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Error Test",
           "request": {
             "method": "GET",
@@ -628,14 +832,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/hotels/error-test",
+              "raw": "{{baseUrl}}/api/v1/rooms/error-test",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "hotels",
+                "rooms",
                 "error-test"
               ]
             }
@@ -992,6 +1196,26 @@
               "mode": "raw",
               "raw": "{\n  \"hotelId\": 1,\n  \"roomId\": 10,\n  \"totalGuests\": 2,\n  \"bookingAmount\": 300,\n  \"checkIn\": \"2026-07-15\",\n  \"checkOut\": \"2026-07-18\"\n    ,\"idempotencyKey\":\"65ee9d37-0a5b-4ac0-8106-c4c0ebd50a5a\"\n\n}"
             },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Bookings (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/bookings/",
               "host": [
@@ -1491,7 +1715,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/reviews/user?user_id=58",
+              "raw": "{{baseUrl}}/api/v1/reviews/user/58",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1499,13 +1723,8 @@
                 "api",
                 "v1",
                 "reviews",
-                "user"
-              ],
-              "query": [
-                {
-                  "key": "user_id",
-                  "value": "58"
-                }
+                "user",
+                "58"
               ]
             }
           },
@@ -1517,7 +1736,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/reviews/booking?booking_id=9",
+              "raw": "{{baseUrl}}/api/v1/reviews/booking/9",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1525,13 +1744,8 @@
                 "api",
                 "v1",
                 "reviews",
-                "booking"
-              ],
-              "query": [
-                {
-                  "key": "booking_id",
-                  "value": "9"
-                }
+                "booking",
+                "9"
               ]
             }
           },

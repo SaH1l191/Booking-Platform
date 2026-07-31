@@ -22,6 +22,7 @@ model booking {
   totalGuests    Int
   expiresAt      DateTime?
   idempotencykey idempotencykey?
+  stayCompletedEmittedAt DateTime?
 
   @@index([userId])
   @@index([hotelId])

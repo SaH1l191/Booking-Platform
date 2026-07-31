@@ -236,8 +236,8 @@ async function handlePaymentRefunded(event: PaymentEvent) {
 
         if (!booking) return;
 
-        if (booking.status === "CANCELLED") {
-            logger.info("Booking already cancelled", { bookingId });
+       if (booking.status === "CANCELLED" || booking.status === "EXPIRED") {
+            logger.info("Booking already in terminal state, skipping status overwrite", { bookingId, status: booking.status });
             return;
         }
 

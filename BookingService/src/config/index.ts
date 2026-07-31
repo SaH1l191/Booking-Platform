@@ -6,6 +6,7 @@ type ServerConfig = {
     REDIS_SERVER_URL: string;
     REDLOCK_TTL: number;
     REDIS_LOCK_TTL: number;
+    HOTEL_SERVICE_URL: string;
 }
 function loadEnv(){
     dotenv.config({quiet: true});
@@ -14,8 +15,9 @@ function loadEnv(){
 loadEnv();
 export const serverConfig: ServerConfig = {
     port: Number(process.env.PORT) || 3001 ,
-    REDIS_SERVER_URL: process.env.REDIS_SERVER_URL || "redis://localhost:6379",
+    REDIS_SERVER_URL: process.env.REDIS_SERVER_URL!,
     REDLOCK_TTL: Number(process.env.REDLOCK_TTL) || 900000,
+    HOTEL_SERVICE_URL: process.env.HOTEL_SERVICE_URL!,
     REDIS_LOCK_TTL: Number(process.env.REDIS_LOCK_TTL) || 900000,
     BOOKING_EXPIRY_MS: Number(process.env.BOOKING_EXPIRY_MS) || 900000 // 15 min hold
 }

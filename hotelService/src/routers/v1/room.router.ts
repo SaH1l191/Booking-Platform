@@ -19,10 +19,10 @@ roomRouter.get("/error-test", (req, res) => {
   res.status(500).json({ success: false, message: "Dummy 500 Internal Server Error" });
 });
 
-roomRouter.get("/hotel/:hotelId", authMiddleware, validateSchemaParams(hotelIdParamSchema), getRoomsByHotelHandler);
+roomRouter.get("/hotel/:hotelId", validateSchemaParams(hotelIdParamSchema), getRoomsByHotelHandler);
 roomRouter.post("/", authMiddleware, requirePermission("room:create"), validateSchemaBody(roomSchema), createRoomHandler);
-roomRouter.get("/", authMiddleware, getAllRoomsHandler);
-roomRouter.get("/:id", authMiddleware, validateSchemaParams(idParamSchema), getRoomByIdHandler);
+roomRouter.get("/", getAllRoomsHandler);
+roomRouter.get("/:id", validateSchemaParams(idParamSchema), getRoomByIdHandler);
 roomRouter.put("/:id", authMiddleware, requirePermission("room:update"), validateSchemaParams(idParamSchema), validateSchemaBody(updateRoomSchema), updateRoomHandler);
 roomRouter.delete("/:id", authMiddleware, requirePermission("room:delete"), validateSchemaParams(idParamSchema), deleteRoomHandler);
 

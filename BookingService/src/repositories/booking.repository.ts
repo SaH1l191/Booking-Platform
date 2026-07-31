@@ -92,6 +92,7 @@ export async function conflictBooking(tx: any, createBookingDTO: CreateBookingDT
     const now = new Date();
     const rows: any[] = await tx.$queryRaw`
         SELECT id, status, checkOut, expiresAt FROM booking
+        USE INDEX (booking_hotelId_roomId_checkIn_checkOut_idx)
         WHERE hotelId = ${createBookingDTO.hotelId}
           AND roomId = ${createBookingDTO.roomId}
           AND checkIn < ${new Date(createBookingDTO.checkOut)}
@@ -238,14 +239,9 @@ export async function expireStaleBookings() {
 //removed redis expiry from exprired
 
 export async function getCompletedBookingsByUserId(userId: number) {
-    console.log("Fetching completed bookings for user in repository", { userId });
     return await prisma.booking.findMany({
-        where : {userId, 
-            status: 'CONFIRMED',
-            checkOut : { lt: new Date() }
-        },
-        
-    })
+        where: { userId, status: 'CONFIRMED', checkOut: { lt: new Date() }, stayCompletedEmittedAt: null },
+    });
 }
 
 export async function getUserEmailByBookingId(bookingId: number) {

@@ -16,7 +16,7 @@ export async function createBookingHandler(req: AuthRequest, res: Response) {
     const booking = await createBookingService({ createBookingDTO: req.body, userId, userEmail, idempotencyKey });
     console.log("Booking created successfully", { bookingId: booking.bookingId });
 
-    sendSuccess(res, { bookingId: booking.bookingId, idempotencyKey: booking.idempotencyKey, expiresAt: booking.expiresAt, duplicated: booking.duplicated }, 'Booking created', 201);
+    sendSuccess(res, { bookingId: booking.bookingId, idempotencyKey: booking.idempotencyKey, expiresAt: booking.expiresAt, duplicated: booking.duplicated }, 'Booking created', booking.duplicated ? 200 : 201);
 }
 
 function extractPagination(query: any): { page: number; limit: number } | undefined {

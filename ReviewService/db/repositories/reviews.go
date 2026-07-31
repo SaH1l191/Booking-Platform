@@ -4,7 +4,10 @@ import (
 	"ReviewService/models"
 	"ReviewService/pkg/logger"
 	"database/sql"
+	"errors"
 	"fmt"
+
+	"github.com/go-sql-driver/mysql"
 )
 
 type ReviewRepository interface {
@@ -16,7 +19,7 @@ type ReviewRepository interface {
 	GetByUserId(userId int64) ([]*models.Review, error)
 	GetByHotelId(hotelId int64) ([]*models.Review, error)
 	GetByBookingId(bookingId int64) ([]*models.Review, error)
-	CheckEligibility(bookingId int64) (bool, error)
+	CheckEligibility(bookingId int64, userId int64) (bool, int64, error)
 	CheckExistingReview(bookingId int64) (bool, error)
 }
 
@@ -82,6 +85,10 @@ func (r *ReviewRepositoryImpl) Create(userId int64, bookingId int64, hotelId int
 	result, err := r.db.Exec(query, userId, bookingId, hotelId, comment, rating)
 
 	if err != nil {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 { // ER_DUP_ENTRY
+			return nil, fmt.Errorf("already reviewed this booking")
+		}
 		logger.Log.Error("Error creating review", "error", err, "userId", userId, "hotelId", hotelId)
 		return nil, err
 	}
@@ -231,18 +238,18 @@ func (r *ReviewRepositoryImpl) GetByBookingId(bookingId int64) ([]*models.Review
 	return reviews, nil
 }
 
-func (r *ReviewRepositoryImpl) CheckEligibility(bookingId int64) (bool, error) {
-	query := "SELECT eligible FROM review_eligibility WHERE booking_id = ?"
+func (r *ReviewRepositoryImpl) CheckEligibility(bookingId int64, userId int64) (bool, int64, error) {
+	query := "SELECT eligible, hotel_id FROM review_eligibility WHERE booking_id = ? AND user_id = ?"
 	var eligible bool
-	err := r.db.QueryRow(query, bookingId).Scan(&eligible)
+	var hotelId int64
+	err := r.db.QueryRow(query, bookingId, userId).Scan(&eligible, &hotelId)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return false, nil
+			return false, 0, nil
 		}
-		logger.Log.Error("Error checking eligibility", "error", err, "bookingId", bookingId)
-		return false, err
+		return false, 0, err
 	}
-	return eligible, nil
+	return eligible, hotelId, nil
 }
 
 func (r *ReviewRepositoryImpl) CheckExistingReview(bookingId int64) (bool, error) {

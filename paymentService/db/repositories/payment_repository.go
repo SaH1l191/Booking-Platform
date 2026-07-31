@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"goPayment/models"
 	"goPayment/pkg/logger"
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -260,7 +262,39 @@ func (r *PaymentRepository) ClaimRefund(paymentId int64) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if currentStatus != "CAPTURED" && currentStatus != "REFUNDING" {
+	if currentStatus != "CAPTURED" {
+		return false, nil
+	}
+
+	_, err = tx.Exec(`UPDATE payments SET status = 'REFUNDING', updated_at = NOW() WHERE id = ?`, paymentId)
+	if err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
+}
+
+func (r *PaymentRepository) ReclaimStaleRefunding(paymentId int64, staleThreshold time.Duration) (bool, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	var currentStatus string
+	err = tx.QueryRow(`SELECT status FROM payments WHERE id = ? FOR UPDATE`, paymentId).Scan(&currentStatus)
+	if err != nil {
+		return false, err
+	}
+	if currentStatus != "REFUNDING" {
+		return false, nil
+	}
+
+	var updatedAt time.Time
+	err = tx.QueryRow(`SELECT updated_at FROM payments WHERE id = ?`, paymentId).Scan(&updatedAt)
+	if err != nil {
+		return false, err
+	}
+	if time.Since(updatedAt) < staleThreshold {
 		return false, nil
 	}
 
@@ -278,9 +312,17 @@ func (r *PaymentRepository) FinalizeRefund(paymentId int64, refundAmount int) er
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec(`UPDATE payments SET status = 'REFUNDED', refund_amount = ?, updated_at = NOW() WHERE id = ? AND status = 'REFUNDING'`, refundAmount, paymentId)
+	result, err := tx.Exec(`UPDATE payments SET status = 'REFUNDED', refund_amount = ?, updated_at = NOW() WHERE id = ? AND status = 'REFUNDING'`, refundAmount, paymentId)
 	if err != nil {
 		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return tx.Commit()
 	}
 
 	var bookingId, userId int64
@@ -312,7 +354,10 @@ func generateUUID() string {
 func (r *PaymentRepository) GetStalePayments() ([]*models.Payment, error) {
 	query := `SELECT id, booking_id, user_id, razorpay_order_id, COALESCE(razorpay_payment_id,''), COALESCE(razorpay_signature,''),
 		amount, currency, status, refund_amount, COALESCE(failure_reason,''), created_at, updated_at
-		FROM payments WHERE status = 'CREATED' AND created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR) LIMIT 100`
+		FROM payments
+		WHERE (status = 'CREATED' AND created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR))
+		   OR (status = 'REFUNDING' AND updated_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE))
+		LIMIT 100`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		logger.Log.Error("Failed to fetch stale payments", "error", err)

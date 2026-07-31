@@ -73,26 +73,38 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 
 	chiRouter.Route("/api/v1/hotels", func(r chi.Router) {
 		//// r.Use(middlewares.RateLimitMiddleware(10))
-		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
+		proxy := utils.ProxyToService(hotelServiceURL, "/")
+		r.Method(http.MethodGet, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodPost, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodPut, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodDelete, "/*", proxy)
 	})
 
 	chiRouter.Route("/api/v1/rooms", func(r chi.Router) {
 		/// r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
+		proxy := utils.ProxyToService(hotelServiceURL, "/")
+		r.Method(http.MethodGet, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodPost, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodPut, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodDelete, "/*", proxy)
 	})
 
 	chiRouter.Route("/api/v1/roomCategories", func(r chi.Router) {
 		//r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
+		proxy := utils.ProxyToService(hotelServiceURL, "/")
+		r.Method(http.MethodGet, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodPost, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodPut, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodDelete, "/*", proxy)
 	})
 
 	chiRouter.Route("/api/v1/categories", func(r chi.Router) {
 		//	// r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService(hotelServiceURL, "/"))
+		proxy := utils.ProxyToService(hotelServiceURL, "/")
+		r.Method(http.MethodGet, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodPost, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodPut, "/*", proxy)
+		r.With(middlewares.JWTAuthMiddleware).Method(http.MethodDelete, "/*", proxy)
 	})
 
 	chiRouter.Route("/api/v1/bookings", func(r chi.Router) {
@@ -116,3 +128,4 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 
 	return chiRouter
 }
+ 

@@ -50,13 +50,13 @@ func (r *ReviewServiceImpl) GetReviewById(id string) (*models.Review, error) {
 func (r *ReviewServiceImpl) CreateReview(payload *dto.CreateReviewRequestDTO) (*models.Review, error) {
 	fmt.Println("Creating review", "userId", payload.UserId, "hotelId", payload.HotelId, "rating", payload.Rating)
 
-	
 	if payload.Rating < 1 || payload.Rating > 5 {
 		return nil, fmt.Errorf("rating must be between 1 and 5")
 	}
 
-	// Check if stay is completed (eligibility)
-	eligible, err := r.reviewRepository.CheckEligibility(payload.BookingId)
+	// Check if stay is completed (eligibility) — also get the real hotelId
+	// tied to this booking, so we don't trust whatever the client sent.
+	eligible, realHotelId, err := r.reviewRepository.CheckEligibility(payload.BookingId, payload.UserId)
 	if err != nil {
 		logger.Log.Error("Error checking eligibility", "error", err)
 		return nil, fmt.Errorf("failed to check eligibility")
@@ -65,7 +65,7 @@ func (r *ReviewServiceImpl) CreateReview(payload *dto.CreateReviewRequestDTO) (*
 		return nil, fmt.Errorf("not eligible to review this booking")
 	}
 
-	//   if already reviewed
+	// if already reviewed
 	existing, err := r.reviewRepository.CheckExistingReview(payload.BookingId)
 	if err != nil {
 		logger.Log.Error("Error checking existing review", "error", err)
@@ -75,8 +75,7 @@ func (r *ReviewServiceImpl) CreateReview(payload *dto.CreateReviewRequestDTO) (*
 		return nil, fmt.Errorf("already reviewed this booking")
 	}
 
-	//  
-	review, err := r.reviewRepository.Create(payload.UserId, payload.BookingId, payload.HotelId, payload.Comment, payload.Rating)
+	review, err := r.reviewRepository.Create(payload.UserId, payload.BookingId, realHotelId, payload.Comment, payload.Rating)
 	if err != nil {
 		logger.Log.Error("Error creating review", "error", err)
 		return nil, err
