@@ -25,14 +25,15 @@ export default function BookingsPage() {
 
   const { verifyPayment, getPaymentByBookingId, isLoading: paymentLoading } = usePaymentStore();
   const { user } = useAuthStore();
-  const { hotels, fetchHotels } = useHotelsStore();
+  const { hotels, fetchHotels, setLimit } = useHotelsStore();
 
   const [reviewTarget, setReviewTarget] = useState<{ bookingId: number; hotelId: number } | null>(null);
 
   useEffect(() => {
+    setLimit(100);
     fetchMyBookings();
     fetchHotels();
-  }, [fetchMyBookings, fetchHotels]);
+  }, [setLimit, fetchMyBookings, fetchHotels]);
 
   const hotelMap = useMemo(() => {
     const map: Record<number, (typeof hotels)[number]> = {};
@@ -67,7 +68,7 @@ export default function BookingsPage() {
         bookingId: booking.id,
       });
       toast.success("Payment successful! Booking confirmed.");
-      setTimeout(() => fetchMyBookings(), 2000);
+      fetchMyBookings();
     } catch (err) {
       if (err instanceof Error && err.message === "Payment cancelled") {
         toast.error("Payment was cancelled.");
@@ -109,6 +110,7 @@ export default function BookingsPage() {
                     key={booking.id}
                     booking={booking}
                     hotelName={hotelMap[booking.hotelId]?.name || `Hotel #${booking.hotelId}`}
+                    hotelImage={hotelMap[booking.hotelId]?.images?.[0]?.url}
                     onPayNow={handlePayNow}
                     onCancel={cancelBooking}
                     onLeaveReview={(bookingId, hotelId) => setReviewTarget({ bookingId, hotelId })}

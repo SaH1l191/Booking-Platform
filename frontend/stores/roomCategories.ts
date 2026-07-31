@@ -11,98 +11,71 @@ export interface CreateRoomCategoryPayload {
 
 export interface RoomCategoriesState {
   roomCategories: RoomCategory[];
-  selectedRoomCategory: RoomCategory | null;
+  hotelRoomCategories: RoomCategory[];
   isLoading: boolean;
   error: string | null;
 
   fetchRoomCategories: () => Promise<void>;
   fetchRoomCategoriesByHotel: (hotelId: number) => Promise<void>;
-  fetchRoomCategoryById: (id: number) => Promise<void>;
   createRoomCategory: (payload: CreateRoomCategoryPayload) => Promise<RoomCategory>;
-  updateRoomCategory: (id: number, payload: Partial<CreateRoomCategoryPayload>) => Promise<void>;
+  updateRoomCategory: (id: number, payload: Partial<CreateRoomCategoryPayload>) => Promise<RoomCategory>;
   deleteRoomCategory: (id: number) => Promise<void>;
-  clearSelectedRoomCategory: () => void;
   clearError: () => void;
 }
 
-export const useRoomCategoriesStore = create<RoomCategoriesState>()((set) => ({
+export const useRoomCategoriesStore = create<RoomCategoriesState>()((set, get) => ({
   roomCategories: [],
-  selectedRoomCategory: null,
+  hotelRoomCategories: [],
   isLoading: false,
   error: null,
 
   fetchRoomCategories: async () => {
-    set({ isLoading: true, error: null });
+    set({ error: null });
     try {
       const { data } = await api.get("/api/v1/roomCategories/");
-      set({ roomCategories: Array.isArray(data) ? data : [], isLoading: false });
+      set({ roomCategories: Array.isArray(data) ? data : [] });
     } catch (err) {
-      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to fetch room categories" });
+      set({ error: err instanceof Error ? err.message : "Failed to fetch room categories" });
     }
   },
 
   fetchRoomCategoriesByHotel: async (hotelId) => {
-    set({ isLoading: true, error: null });
+    set({ error: null });
     try {
       const { data } = await api.get("/api/v1/roomCategories/", { params: { hotelId } });
-      set({ roomCategories: Array.isArray(data) ? data : [], isLoading: false });
+      set({ hotelRoomCategories: Array.isArray(data) ? data : [] });
     } catch (err) {
-      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to fetch room categories" });
-    }
-  },
-
-  fetchRoomCategoryById: async (id) => {
-    set({ isLoading: true, error: null, selectedRoomCategory: null });
-    try {
-      const { data } = await api.get(`/api/v1/roomCategories/${id}`);
-      set({ selectedRoomCategory: data, isLoading: false });
-    } catch (err) {
-      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to fetch room category" });
+      set({ error: err instanceof Error ? err.message : "Failed to fetch room categories" });
     }
   },
 
   createRoomCategory: async (payload) => {
-    set({ isLoading: true, error: null });
-    try {
-      const { data } = await api.post("/api/v1/roomCategories/", payload);
-      set((state) => ({ roomCategories: [...state.roomCategories, data], isLoading: false }));
-      return data;
-    } catch (err) {
-      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to create room category" });
-      throw err;
-    }
+    const { data } = await api.post("/api/v1/roomCategories/", payload);
+    const cat = data as RoomCategory;
+    set((state) => ({
+      roomCategories: [...state.roomCategories, cat],
+      hotelRoomCategories: [...state.hotelRoomCategories, cat],
+    }));
+    return cat;
   },
 
   updateRoomCategory: async (id, payload) => {
-    set({ isLoading: true, error: null });
-    try {
-      const { data } = await api.put(`/api/v1/roomCategories/${id}`, payload);
-      set((state) => ({
-        roomCategories: state.roomCategories.map((rc) => (rc.id === id ? data : rc)),
-        selectedRoomCategory: state.selectedRoomCategory?.id === id ? data : state.selectedRoomCategory,
-        isLoading: false,
-      }));
-    } catch (err) {
-      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to update room category" });
-      throw err;
-    }
+    const { data } = await api.put(`/api/v1/roomCategories/${id}`, payload);
+    const updated = data as RoomCategory;
+    set((state) => ({
+      roomCategories: state.roomCategories.map((c) => (c.id === id ? updated : c)),
+      hotelRoomCategories: state.hotelRoomCategories.map((c) => (c.id === id ? updated : c)),
+    }));
+    return updated;
   },
 
   deleteRoomCategory: async (id) => {
-    set({ isLoading: true, error: null });
-    try {
-      await api.delete(`/api/v1/roomCategories/${id}`);
-      set((state) => ({
-        roomCategories: state.roomCategories.filter((rc) => rc.id !== id),
-        selectedRoomCategory: state.selectedRoomCategory?.id === id ? null : state.selectedRoomCategory,
-        isLoading: false,
-      }));
-    } catch (err) {
-      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to delete room category" });
-      throw err;
-    }
+    await api.delete(`/api/v1/roomCategories/${id}`);
+    set((state) => ({
+      roomCategories: state.roomCategories.filter((c) => c.id !== id),
+      hotelRoomCategories: state.hotelRoomCategories.filter((c) => c.id !== id),
+    }));
   },
 
-  clearSelectedRoomCategory: () => set({ selectedRoomCategory: null }),
   clearError: () => set({ error: null }),
 }));

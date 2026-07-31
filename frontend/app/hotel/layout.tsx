@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AuthGuard from "../../components/AuthGuard";
 
 const hotelLinks = [
   {
@@ -37,6 +38,7 @@ export default function HotelLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   return (
+    <AuthGuard requiredRoles={["hotel_manager"]}>
     <div className="min-h-screen bg-cream flex">
       {/* Sidebar */}
       <aside className="hidden lg:flex lg:flex-col w-64 bg-navy text-white fixed inset-y-0 left-0 z-50">
@@ -129,5 +131,6 @@ export default function HotelLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

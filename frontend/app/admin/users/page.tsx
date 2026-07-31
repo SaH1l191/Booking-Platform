@@ -17,7 +17,7 @@ export default function AdminUsersPage() {
   useEffect(() => {
     async function loadUsers() {
       try {
-        const { data } = await api.get("/users");
+        const { data } = await api.get("/users/");
         setUsers(Array.isArray(data) ? data : data.users || []);
       } catch {
         setUsers([]);
@@ -42,8 +42,7 @@ export default function AdminUsersPage() {
               <tr className="border-b border-border-light bg-cream-dark/50">
                 <th className="text-left px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">User</th>
                 <th className="text-left px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">Email</th>
-                <th className="text-left px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">Joined</th>
-                <th className="text-right px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">Actions</th>
+                <th className="text-left px-6 py-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">Joined</th> 
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light">
@@ -53,12 +52,11 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4"><div className="h-4 bg-border-light rounded w-32 animate-pulse" /></td>
                     <td className="px-6 py-4"><div className="h-4 bg-border-light rounded w-48 animate-pulse" /></td>
                     <td className="px-6 py-4"><div className="h-4 bg-border-light rounded w-24 animate-pulse" /></td>
-                    <td className="px-6 py-4"><div className="h-8 bg-border-light rounded w-16 ml-auto animate-pulse" /></td>
                   </tr>
                 ))
               ) : users.length > 0 ? (
-                users.map((user) => (
-                  <tr key={user.id} className="hover:bg-cream-dark/30 transition-colors">
+                users.map((user, i) => (
+                  <tr key={`${user.id}-${i}`} className="hover:bg-cream-dark/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-navy rounded-xl flex items-center justify-center">
@@ -74,16 +72,11 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4 text-muted">
                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="px-3 py-1.5 text-xs font-medium text-danger bg-danger-light rounded-lg hover:bg-danger/10 transition-colors">
-                        Suspend
-                      </button>
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center text-muted">
+                  <td colSpan={3} className="px-6 py-16 text-center text-muted">
                     No users found
                   </td>
                 </tr>

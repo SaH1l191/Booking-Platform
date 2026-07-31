@@ -7,7 +7,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   CONFIRMED: { label: "Confirmed", color: "bg-success-light text-success" },
   PENDING: { label: "Pending", color: "bg-warning-light text-warning" },
   CANCELLED: { label: "Cancelled", color: "bg-danger-light text-danger" },
-  EXPIRED: { label: "Expired", color: "bg-muted text-muted-foreground" },
+  EXPIRED: { label: "Expired", color: "bg-warning-light text-warning" },
 };
 
 function formatDate(dateStr: string) {
@@ -25,13 +25,14 @@ function isBookingExpired(checkOut: string) {
 interface BookingCardProps {
   booking: Booking;
   hotelName: string;
+  hotelImage?: string;
   onPayNow: (booking: { id: number; bookingAmount: number }) => void;
   onCancel: (id: number) => void;
   onLeaveReview: (bookingId: number, hotelId: number) => void;
   paymentLoading: boolean;
 }
 
-export default function BookingCard({ booking, hotelName, onPayNow, onCancel, onLeaveReview, paymentLoading }: BookingCardProps) {
+export default function BookingCard({ booking, hotelName, hotelImage, onPayNow, onCancel, onLeaveReview, paymentLoading }: BookingCardProps) {
   const config = statusConfig[booking.status];
   const nights = calculateNights(booking.checkIn, booking.checkOut);
   const stayExpired = isBookingExpired(booking.checkOut);
@@ -40,7 +41,7 @@ export default function BookingCard({ booking, hotelName, onPayNow, onCancel, on
     <div className="bg-white border border-border-light rounded-2xl overflow-hidden hover:shadow-luxury-lg transition-all">
       <div className="flex flex-col sm:flex-row">
         <div className="sm:w-48 h-40 sm:h-auto overflow-hidden">
-          <img src={fallbackImage} alt="Hotel" className="w-full h-full object-cover" />
+          <img src={hotelImage || fallbackImage} alt={hotelName} className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 p-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-4">

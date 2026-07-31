@@ -94,10 +94,17 @@ export interface CreateBookingPayload {
   hotelId: number;
   roomId: number;
   totalGuests: number;
-  bookingAmount: number;
   checkIn: string;
   checkOut: string;
   idempotencyKey?: string;
+}
+
+export interface HotelsResponse {
+  hotels: Hotel[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface Review {

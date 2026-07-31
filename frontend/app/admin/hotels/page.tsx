@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { toast } from "sonner";
 import { useHotelsStore } from "@/stores";
+import api from "@/lib/api";
 
 export default function AdminHotelsPage() {
-  const { hotels, isLoading, fetchHotels } = useHotelsStore();
+  const router = useRouter();
+  const { hotels, isLoading, fetchHotels, setLimit } = useHotelsStore();
 
   useEffect(() => {
+    setLimit(100);
     fetchHotels();
-  }, [fetchHotels]);
+  }, [setLimit, fetchHotels]);
 
   return (
     <div>
@@ -17,9 +23,9 @@ export default function AdminHotelsPage() {
           <h1 className="text-3xl font-serif font-semibold text-navy">Hotels</h1>
           <p className="text-muted mt-1">Manage all hotel listings on the platform.</p>
         </div>
-        <button className="px-5 py-2.5 bg-navy text-white rounded-xl text-sm font-semibold hover:bg-navy-light transition-colors shadow-luxury">
+        <Link href="/admin/hotels/add" className="px-5 py-2.5 bg-navy text-white rounded-xl text-sm font-semibold hover:bg-navy-light transition-colors shadow-luxury inline-block">
           + Add Hotel
-        </button>
+        </Link>
       </div>
 
       {isLoading ? (
@@ -95,7 +101,22 @@ export default function AdminHotelsPage() {
                         <a href={`/hotels/${hotel.id}`} className="px-3 py-1.5 text-xs font-medium text-navy bg-cream-dark rounded-lg hover:bg-border-light transition-colors">
                           View
                         </a>
-                        <button className="px-3 py-1.5 text-xs font-medium text-danger bg-danger-light rounded-lg hover:bg-danger/10 transition-colors">
+                        <Link href={`/admin/hotels/${hotel.id}/edit`} className="px-3 py-1.5 text-xs font-medium text-navy bg-cream-dark rounded-lg hover:bg-border-light transition-colors">
+                          Edit
+                        </Link>
+                        <button
+                          onClick={async () => {
+                            if (!confirm("Delete this hotel permanently?")) return;
+                            try {
+                              await api.delete(`/api/v1/hotels/${hotel.id}`);
+                              toast.success("Hotel deleted");
+                              fetchHotels();
+                            } catch {
+                              toast.error("Failed to delete hotel");
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs font-medium text-danger bg-danger-light rounded-lg hover:bg-danger/10 transition-colors"
+                        >
                           Delete
                         </button>
                       </div>

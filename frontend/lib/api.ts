@@ -1,5 +1,6 @@
 import axios from "axios";
 import { toast } from "sonner";
+import type { StoreApi } from "zustand";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -10,6 +11,16 @@ let failedQueue: Array<{
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
 }> = [];
+
+// Lazy import to avoid circular dependency — stores import api, api needs stores
+let authStore: StoreApi<any> | null = null;
+async function getAuthStore() {
+  if (!authStore) {
+    const mod = await import("@/stores");
+    authStore = mod.useAuthStore;
+  }
+  return authStore;
+}
 
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -26,34 +37,26 @@ function getAuthState() {
   try {
     const stored = localStorage.getItem("auth-storage");
     return stored ? JSON.parse(stored).state : null;
-  } catch (err) {
-    console.error("Failed to read auth state:", err);
+  } catch {
     return null;
   }
 }
 
-function setAuthTokens(accessToken: string, refreshToken: string) {
+async function setAuthTokens(accessToken: string, refreshToken: string) {
   try {
-    const { useAuthStore } = require("@/stores");
-    useAuthStore.setState({
-      tokens: { accessToken, refreshToken },
-    });
+    const store = await getAuthStore();
+    store.setState({ tokens: { accessToken, refreshToken } });
   } catch {
-    // Fallback: write directly to localStorage if store import fails
     const stored = JSON.parse(localStorage.getItem("auth-storage") || "{}");
     stored.state = { ...stored.state, tokens: { accessToken, refreshToken } };
     localStorage.setItem("auth-storage", JSON.stringify(stored));
   }
 }
 
-function clearAuth() {
+async function clearAuth() {
   try {
-    const { useAuthStore } = require("@/stores");
-    useAuthStore.setState({
-      user: null,
-      tokens: null,
-      isAuthenticated: false,
-    });
+    const store = await getAuthStore();
+    store.setState({ user: null, tokens: null, isAuthenticated: false });
   } catch {
     localStorage.removeItem("auth-storage");
   }
@@ -61,7 +64,6 @@ function clearAuth() {
 }
 
 api.interceptors.request.use((config) => {
-  // Skip auth header for refresh endpoint - it uses httpOnly cookies or refresh token
   if (config.url?.includes("/users/refresh")) {
     return config;
   }
@@ -76,17 +78,21 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     const body = response.data;
-    if (body && typeof body === "object" && "success" in body && "data" in body) {
-      response.data = body.data;
+    if (body && typeof body === "object" && "success" in body) {
+      response.data = "data" in body ? body.data : body;
     }
     return response;
   },
   async (error) => {
+    if (!error || !error.config) {
+      const msg = error?.message || "Network error. Check your connection.";
+      toast.error(msg);
+      return Promise.reject(new Error(msg));
+    }
     const originalRequest = error.config;
     const status = error.response?.status;
     const message = error.response?.data?.error || error.response?.data?.message || "";
 
-    // Only attempt refresh on 401, not on the refresh endpoint itself
     if (
       status === 401 &&
       !originalRequest._retry &&
@@ -108,16 +114,20 @@ api.interceptors.response.use(
 
       const auth = getAuthState();
       if (!auth?.tokens?.refreshToken) {
+        // No refresh token means there was never a session to begin with —
+        // this is an anonymous visitor hitting an endpoint that returned
+        // 401, not an expired session. Forcibly redirecting them to /login
+        // is wrong here: it was previously firing on the home page just
+        // from an anonymous category/hotel fetch. Let the request fail and
+        // let the calling store decide how to degrade (empty list, etc.)
+        // rather than hijacking navigation.
         isRefreshing = false;
         processQueue(new Error("No refresh token"), null);
-        toast.error("Session expired. Please login again.");
-        clearAuth();
-        return Promise.reject(new Error(message || "No refresh token"));
+        return Promise.reject(new Error(message || "Unauthorized"));
       }
 
       try {
-        // Use a raw axios instance to bypass our interceptors for the refresh call
-        const { data } = await axios.get(`${BASE_URL}/users/refresh`, {
+        const { data } = await axios.post(`${BASE_URL}/users/refresh`, null, {
           withCredentials: true,
           headers: {
             Authorization: `Bearer ${auth.tokens.refreshToken}`,
@@ -129,7 +139,7 @@ api.interceptors.response.use(
           throw new Error("Invalid refresh response: missing tokens");
         }
 
-        setAuthTokens(res.accessToken, res.refreshToken);
+        await setAuthTokens(res.accessToken, res.refreshToken);
         processQueue(null, res.accessToken);
 
         originalRequest.headers.Authorization = `Bearer ${res.accessToken}`;

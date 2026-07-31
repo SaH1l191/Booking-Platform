@@ -1,22 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useBookingsStore } from "@/stores";
+import { useBookingsStore, useHotelsStore } from "@/stores";
 import type { BookingStatus } from "@/stores/types";
 
 const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
   CONFIRMED: { label: "Confirmed", color: "bg-success-light text-success" },
   PENDING: { label: "Pending", color: "bg-warning-light text-warning" },
   CANCELLED: { label: "Cancelled", color: "bg-danger-light text-danger" },
+  EXPIRED: { label: "Expired", color: "bg-warning-light text-warning" },
 };
 
 export default function AdminBookingsPage() {
-  const { bookings, isLoading, fetchMyBookings, confirmBooking, cancelBooking } = useBookingsStore();
+  const { bookings, isLoading, fetchAllBookings, cancelBooking } = useBookingsStore();
+  const { hotels, fetchHotels } = useHotelsStore();
   const [filter, setFilter] = useState<"ALL" | BookingStatus>("ALL");
 
   useEffect(() => {
-    fetchMyBookings();
-  }, [fetchMyBookings]);
+    fetchAllBookings();
+    fetchHotels();
+  }, [fetchAllBookings, fetchHotels]);
 
   const filtered = bookings.filter((b) => filter === "ALL" || b.status === filter);
 
@@ -29,7 +32,7 @@ export default function AdminBookingsPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-        {(["ALL", "CONFIRMED", "PENDING", "CANCELLED"] as const).map((status) => (
+        {(["ALL", "CONFIRMED", "PENDING", "CANCELLED", "EXPIRED"] as const).map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -65,14 +68,22 @@ export default function AdminBookingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light">
-              {filtered.map((booking) => {
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="px-6 py-4"><div className="h-4 bg-border-light rounded animate-pulse" /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : filtered.map((booking) => {
                 const config = statusConfig[booking.status];
                 return (
                   <tr key={booking.id} className="hover:bg-cream-dark/30 transition-colors">
                     <td className="px-6 py-4">
                       <span className="font-medium text-navy">#{booking.id}</span>
                     </td>
-                    <td className="px-6 py-4 text-primary-soft">Hotel #{booking.hotelId}</td>
+                    <td className="px-6 py-4 text-primary-soft">{hotels.find((h) => h.id === booking.hotelId)?.name || `Hotel #${booking.hotelId}`}</td>
                     <td className="px-6 py-4">
                       <div className="text-primary-soft">
                         <p>{new Date(booking.checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
@@ -88,14 +99,6 @@ export default function AdminBookingsPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {booking.status === "PENDING" && (
-                          <button
-                            onClick={() => confirmBooking(String(booking.id))}
-                            className="px-3 py-1.5 text-xs font-medium text-success bg-success-light rounded-lg hover:bg-success/10 transition-colors"
-                          >
-                            Confirm
-                          </button>
-                        )}
                         {booking.status !== "CANCELLED" && (
                           <button
                             onClick={() => cancelBooking(booking.id)}

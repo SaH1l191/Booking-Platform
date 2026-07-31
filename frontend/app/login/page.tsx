@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading } = useAuthStore();
   const router = useRouter();
+  const [rememberMe, setRememberMe] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     defaultValues: {
@@ -28,7 +29,8 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password);
       toast.success("Welcome back!");
-      router.push("/");
+      const redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
+      router.push(redirect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");
     }
@@ -128,12 +130,12 @@ export default function LoginPage() {
 
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="w-4 h-4 rounded border-border text-navy focus:ring-gold" />
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="w-4 h-4 rounded border-border text-navy focus:ring-gold" />
               <span className="text-sm text-muted">Remember me</span>
             </label>
-            <button type="button" className="text-sm font-medium text-navy underline hover:text-muted transition-colors">
+            <Link href="/forgot-password" className="text-sm font-medium text-navy underline hover:text-muted transition-colors">
               Forgot password?
-            </button>
+            </Link>
           </div>
 
           <button
@@ -155,6 +157,7 @@ export default function LoginPage() {
 
           <button
             type="button"
+            onClick={() => toast.info("Google login coming soon")}
             className="w-full py-3.5 border border-border rounded-xl text-[15px] font-medium text-navy hover:bg-white transition-colors flex items-center justify-center gap-3 bg-white"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -168,6 +171,7 @@ export default function LoginPage() {
 
           <button
             type="button"
+            onClick={() => toast.info("Apple login coming soon")}
             className="w-full py-3.5 border border-border rounded-xl text-[15px] font-medium text-navy hover:bg-white transition-colors flex items-center justify-center gap-3 bg-white"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

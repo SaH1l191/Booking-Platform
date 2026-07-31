@@ -38,14 +38,14 @@ function StatCard({ label, value, change, icon, trend = "neutral" }: StatCardPro
 
 export default function HotelDashboard() {
   const { hotels, fetchHotels } = useHotelsStore();
-  const { bookings, fetchMyBookings } = useBookingsStore();
+  const { bookings, fetchAllBookings } = useBookingsStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     fetchHotels();
-    fetchMyBookings();
-  }, [fetchHotels, fetchMyBookings]);
+    fetchAllBookings();
+  }, [fetchHotels, fetchAllBookings]);
 
   const confirmedBookings = bookings.filter((b) => b.status === "CONFIRMED").length;
   const pendingBookings = bookings.filter((b) => b.status === "PENDING").length;

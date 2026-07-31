@@ -1,101 +1,255 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useHotelsStore } from "@/stores";
 
 const fallbackImage = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop";
 
+const SORT_OPTIONS = [
+  { value: "-createdAt", label: "Newest First" },
+  { value: "price", label: "Price: Low to High" },
+  { value: "-price", label: "Price: High to Low" },
+  { value: "-rating", label: "Rating: High to Low" },
+];
+
+const RATING_OPTIONS = [0, 3, 4, 5];
+
 function HotelsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const urlLocation = searchParams.get("location") || "";
   const urlCategory = searchParams.get("category") || "";
-  const urlCheckIn = searchParams.get("checkIn") || "";
-  const urlCheckOut = searchParams.get("checkOut") || "";
-  const urlGuests = searchParams.get("guests") || "";
+  const urlLatitude = searchParams.get("latitude") || "";
+  const urlLongitude = searchParams.get("longitude") || "";
+  const urlRadius = searchParams.get("radius") || "";
+  const urlMinPrice = searchParams.get("minPrice") || "";
+  const urlMaxPrice = searchParams.get("maxPrice") || "";
 
   const [categorySearch, setCategorySearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     hotels,
     categories,
-    searchQuery,
     selectedCategory,
+    sortBy,
+    minRating,
+    minPrice,
+    maxPrice,
+    latitude,
+    longitude,
+    radius,
+    page,
+    total,
+    totalPages,
     isLoading,
     error,
     fetchHotels,
     fetchCategories,
     setSearchQuery,
     setSelectedCategory,
+    setSortBy,
+    setMinRating,
+    setMinPrice,
+    setMaxPrice,
+    setCoordinates,
+    setPage,
     clearError,
   } = useHotelsStore();
 
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
-
-  useEffect(() => {
-    if (urlLocation && !searchQuery) {
-      setSearchQuery(urlLocation);
+    if (urlLatitude && urlLongitude) {
+      setCoordinates(parseFloat(urlLatitude), parseFloat(urlLongitude), parseFloat(urlRadius) || 10);
+    } else if (urlLocation) {
+      setSearchInput(urlLocation);
     }
-    if (urlCategory && !selectedCategory) {
+    if (urlCategory) {
       setSelectedCategory(urlCategory);
-      fetchHotels(urlCategory);
     }
-  }, [urlLocation, urlCategory, searchQuery, selectedCategory, setSearchQuery, setSelectedCategory, fetchHotels]);
+    if (urlMinPrice) setMinPrice(parseFloat(urlMinPrice));
+    if (urlMaxPrice) setMaxPrice(parseFloat(urlMaxPrice));
+  }, [urlLatitude, urlLongitude, urlRadius, urlLocation, urlCategory, urlMinPrice, urlMaxPrice, setCoordinates, setSelectedCategory, fetchCategories, setMinPrice, setMaxPrice]);
 
   useEffect(() => {
     fetchHotels();
   }, [fetchHotels]);
 
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(searchInput);
+      if (searchInput) {
+        setCoordinates(null, null);
+      }
+      setPage(1);
+      fetchHotels();
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchInput, setSearchQuery, setCoordinates, setPage, fetchHotels]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchInput) params.set("search", searchInput);
+    if (selectedCategory) params.set("category", selectedCategory);
+    if (sortBy && sortBy !== "-createdAt") params.set("sortBy", sortBy);
+    if (minRating > 0) params.set("minRating", String(minRating));
+    if (minPrice != null) params.set("minPrice", String(minPrice));
+    if (maxPrice != null) params.set("maxPrice", String(maxPrice));
+    if (latitude != null && longitude != null) {
+      params.set("latitude", String(latitude));
+      params.set("longitude", String(longitude));
+      params.set("radius", String(radius));
+    }
+    if (page > 1) params.set("page", String(page));
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [searchInput, selectedCategory, sortBy, minRating, minPrice, maxPrice, latitude, longitude, radius, page, pathname, router]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+  }, []);
+
   const handleCategoryClick = (slug: string) => {
     const newCategory = selectedCategory === slug ? "" : slug;
     setSelectedCategory(newCategory);
-    fetchHotels(newCategory);
+    setPage(1);
+    fetchHotels();
+  };
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    setPage(1);
+    fetchHotels();
+  };
+
+  const handleRatingClick = (rating: number) => {
+    const next = minRating === rating ? 0 : rating;
+    setMinRating(next);
+    setPage(1);
+    fetchHotels();
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setPage(newPage);
+    fetchHotels();
+  };
+
+  const clearAll = () => {
+    setSearchInput("");
+    setSearchQuery("");
+    setSelectedCategory("");
+    setCategorySearch("");
+    setMinRating(0);
+    setMinPrice(null);
+    setMaxPrice(null);
+    setSortBy("-createdAt");
+    setCoordinates(null, null);
+    setPage(1);
+    fetchHotels();
   };
 
   const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(categorySearch.toLowerCase())
   );
-
-  const filtered = hotels.filter((hotel) => {
-    const matchSearch =
-      hotel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hotel.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchSearch;
-  });
-
   const activeCategoryName = categories.find((c) => c.slug === selectedCategory)?.name || "";
 
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-cream">
-        {/* Search Header */}
+        {/* Search + Sort + Filter Bar */}
         <div className="sticky top-[72px] z-40 glass border-b border-border-light">
           <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-20">
-            <div className="flex items-center gap-4 h-16 md:h-20">
-              <div className="flex-1 max-w-2xl">
+            <div className="flex items-center gap-3 h-16 md:h-20">
+              <div className="flex-1 max-w-md">
                 <div className="relative">
                   <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
                     type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={searchInput}
+                    onChange={handleSearchChange}
                     placeholder="Search destinations, hotels"
                     className="w-full pl-12 pr-4 py-3 bg-cream border border-border-light rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent focus:bg-white transition-all placeholder:text-muted"
                   />
                 </div>
               </div>
+
+              <div className="h-6 w-px bg-border shrink-0" />
+
+              <select
+                value={sortBy}
+                onChange={(e) => handleSortChange(e.target.value)}
+                className="px-3 py-3 bg-cream border border-border-light rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold cursor-pointer"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+
+              <div className="h-6 w-px bg-border shrink-0" />
+
+              <div className="flex items-center gap-1">
+                {RATING_OPTIONS.map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => handleRatingClick(r)}
+                    className={`flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+                      minRating === r && r > 0
+                        ? "bg-gold text-navy shadow-sm"
+                        : "bg-cream text-muted border border-border-light hover:bg-cream-dark"
+                    }`}
+                  >
+                    {r === 0 ? "All" : `${r}+`}
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+
+              <div className="h-6 w-px bg-border shrink-0" />
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Min $"
+                  value={minPrice ?? ""}
+                  onChange={(e) => {
+                    setMinPrice(e.target.value ? parseFloat(e.target.value) : null);
+                    setPage(1);
+                    fetchHotels();
+                  }}
+                  className="w-20 px-2.5 py-2 bg-cream border border-border-light rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-gold placeholder:text-muted"
+                />
+                <span className="text-muted text-xs">-</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Max $"
+                  value={maxPrice ?? ""}
+                  onChange={(e) => {
+                    setMaxPrice(e.target.value ? parseFloat(e.target.value) : null);
+                    setPage(1);
+                    fetchHotels();
+                  }}
+                  className="w-20 px-2.5 py-2 bg-cream border border-border-light rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-gold placeholder:text-muted"
+                />
+              </div>
+
               {selectedCategory && (
                 <button
-                  onClick={() => { setSelectedCategory(""); fetchHotels(""); }}
-                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-xl text-sm font-medium hover:bg-navy-light transition-colors shadow-luxury"
+                  onClick={() => { setSelectedCategory(""); setPage(1); fetchHotels(); }}
+                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-xl text-sm font-medium hover:bg-navy-light transition-colors shadow-luxury shrink-0"
                 >
                   {activeCategoryName}
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,18 +306,9 @@ function HotelsContent() {
         <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-20 py-5">
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-sm text-muted">
-              {isLoading ? "Loading..." : `${filtered.length} stays${activeCategoryName ? ` in ${activeCategoryName}` : ""}`}
+              {isLoading ? "Loading..." : `${total} stay${total !== 1 ? "s" : ""}${activeCategoryName ? ` in ${activeCategoryName}` : ""}`}
             </p>
-            {urlCheckIn && urlCheckOut && (
-              <span className="text-xs px-2.5 py-1 bg-cream-dark rounded-lg text-primary-soft">
-                {new Date(urlCheckIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {new Date(urlCheckOut).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </span>
-            )}
-            {urlGuests && (
-              <span className="text-xs px-2.5 py-1 bg-cream-dark rounded-lg text-primary-soft">
-                {urlGuests} guest{Number(urlGuests) !== 1 ? "s" : ""}
-              </span>
-            )}
+
           </div>
         </div>
 
@@ -194,7 +339,7 @@ function HotelsContent() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filtered.map((hotel) => {
+              {hotels.map((hotel) => {
                 const lowestPrice = hotel.roomCategories?.length
                   ? Math.min(...hotel.roomCategories.map((rc) => rc.price))
                   : null;
@@ -255,7 +400,7 @@ function HotelsContent() {
             </div>
           )}
 
-          {!isLoading && filtered.length === 0 && (
+          {!isLoading && hotels.length === 0 && (
             <div className="text-center py-28">
               <div className="w-20 h-20 mx-auto bg-cream-dark rounded-2xl flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-muted-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,10 +410,62 @@ function HotelsContent() {
               <h3 className="text-2xl font-serif font-medium text-navy">No stays found</h3>
               <p className="mt-2 text-sm text-muted">Try adjusting your search or filters</p>
               <button
-                onClick={() => { setSearchQuery(""); setSelectedCategory(""); setCategorySearch(""); fetchHotels(""); }}
+                onClick={clearAll}
                 className="mt-6 px-6 py-3 bg-navy text-white rounded-xl font-medium hover:bg-navy-light transition-colors shadow-luxury"
               >
                 Clear all filters
+              </button>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-12">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-border-light bg-white hover:bg-cream-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              {(() => {
+                const pages: (number | "...")[] = [];
+                const maxVisible = 7;
+                if (totalPages <= maxVisible) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                  pages.push(1);
+                  let start = Math.max(2, page - 2);
+                  let end = Math.min(totalPages - 1, page + 2);
+                  if (start > 2) pages.push("...");
+                  for (let i = start; i <= end; i++) pages.push(i);
+                  if (end < totalPages - 1) pages.push("...");
+                  pages.push(totalPages);
+                }
+                return pages.map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`e-${idx}`} className="w-10 h-10 flex items-center justify-center text-muted text-sm">...</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p)}
+                      className={`w-10 h-10 rounded-xl text-sm font-medium transition-colors ${
+                        p === page
+                          ? "bg-navy text-white shadow-luxury"
+                          : "bg-white border border-border-light hover:bg-cream-dark"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                );
+              })()}
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-border-light bg-white hover:bg-cream-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next
               </button>
             </div>
           )}

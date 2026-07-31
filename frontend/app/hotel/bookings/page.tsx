@@ -1,21 +1,59 @@
 "use client";
 
 import { useEffect } from "react";
-import { useBookingsStore } from "@/stores";
+import { useBookingsStore, useHotelsStore, usePaymentStore, useAuthStore, openRazorpayCheckout } from "@/stores";
+import { toast } from "sonner";
 import type { BookingStatus } from "@/stores/types";
 
 const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
   CONFIRMED: { label: "Confirmed", color: "bg-success-light text-success" },
   PENDING: { label: "Pending", color: "bg-warning-light text-warning" },
   CANCELLED: { label: "Cancelled", color: "bg-danger-light text-danger" },
+  EXPIRED: { label: "Expired", color: "bg-warning-light text-warning" },
 };
 
 export default function HotelBookingsPage() {
-  const { bookings, isLoading, fetchMyBookings, confirmBooking, cancelBooking } = useBookingsStore();
+  const { bookings, isLoading, fetchAllBookings, cancelBooking } = useBookingsStore();
+  const { hotels, fetchHotels } = useHotelsStore();
+  const { verifyPayment, getPaymentByBookingId, isLoading: paymentLoading } = usePaymentStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
-    fetchMyBookings();
-  }, [fetchMyBookings]);
+    fetchAllBookings();
+    fetchHotels();
+  }, [fetchAllBookings, fetchHotels]);
+
+  const handlePayNow = async (booking: { id: number; bookingAmount: number }) => {
+    try {
+      const existingPayment = await getPaymentByBookingId(booking.id);
+      if (!existingPayment || !existingPayment.razorpayOrderId || existingPayment.status !== "CREATED") {
+        toast.error("No pending payment found for this booking. Please try again.");
+        return;
+      }
+      const paymentResponse = await openRazorpayCheckout({
+        orderId: existingPayment.razorpayOrderId,
+        amount: existingPayment.amount,
+        keyId: existingPayment.keyId,
+        bookingId: booking.id,
+        userName: user?.username,
+        userEmail: user?.email,
+      });
+      await verifyPayment({
+        razorpay_order_id: paymentResponse.razorpay_order_id,
+        razorpay_payment_id: paymentResponse.razorpay_payment_id,
+        razorpay_signature: paymentResponse.razorpay_signature,
+        bookingId: booking.id,
+      });
+      toast.success("Payment successful! Booking confirmed.");
+      fetchAllBookings();
+    } catch (err) {
+      if (err instanceof Error && err.message === "Payment cancelled") {
+        toast.error("Payment was cancelled.");
+      } else {
+        toast.error("Payment failed. Please try again.");
+      }
+    }
+  };
 
   return (
     <div>
@@ -55,7 +93,7 @@ export default function HotelBookingsPage() {
                       <td className="px-6 py-4">
                         <span className="font-medium text-navy">#{booking.id}</span>
                       </td>
-                      <td className="px-6 py-4 text-primary-soft">Hotel #{booking.hotelId}</td>
+                      <td className="px-6 py-4 text-primary-soft">{hotels.find((h) => h.id === booking.hotelId)?.name || `Hotel #${booking.hotelId}`}</td>
                       <td className="px-6 py-4">
                         <div className="text-primary-soft">
                           <p>{new Date(booking.checkIn).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
@@ -73,10 +111,11 @@ export default function HotelBookingsPage() {
                         <div className="flex items-center justify-end gap-2">
                           {booking.status === "PENDING" && (
                             <button
-                              onClick={() => confirmBooking(String(booking.id))}
-                              className="px-3 py-1.5 text-xs font-medium text-success bg-success-light rounded-lg hover:bg-success/10 transition-colors"
+                              onClick={() => handlePayNow(booking)}
+                              disabled={paymentLoading}
+                              className="px-3 py-1.5 text-xs font-medium text-success bg-success-light rounded-lg hover:bg-success/10 transition-colors disabled:opacity-50"
                             >
-                              Confirm
+                              {paymentLoading ? "Processing..." : "Pay Now"}
                             </button>
                           )}
                           {booking.status !== "CANCELLED" && (

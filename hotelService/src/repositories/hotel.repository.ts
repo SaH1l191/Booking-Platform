@@ -148,16 +148,18 @@ const limit = Math.max(1, Math.min(100, parseInt(query.limit, 10) || 10));
     };
     order.push(sortMap[sortBy] || sortMap['-createdAt']!);
 
+    if (query.category) {
+        andClauses.push(
+            literal(`EXISTS (SELECT 1 FROM hotel_categories hc INNER JOIN categories c ON hc.category_id = c.id WHERE hc.hotel_id = Hotel.id AND c.slug = ${sequelize.escape(query.category)})`)
+        );
+    }
+
     const hotelCategoryInclude: any = {
         model: HotelCategory,
         as: "hotelCategories",
         include: [{ model: Category, as: "category", attributes: ["id", "name", "slug", "icon"] }],
         attributes: [],
     };
-    if (query.category) {
-        hotelCategoryInclude.required = true;
-        hotelCategoryInclude.include[0].where = { slug: query.category };
-    }
 
     const { count, rows } = await Hotel.findAndCountAll({
         where,

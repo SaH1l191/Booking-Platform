@@ -55,9 +55,6 @@ export default function Navbar() {
             <Link href="/experiences" className="px-4 py-2 text-sm font-medium text-primary-soft hover:text-navy hover:bg-cream-dark rounded-lg transition-all">
               Experiences
             </Link>
-            <Link href="/hotel" className="px-4 py-2 text-sm font-medium text-primary-soft hover:text-navy hover:bg-cream-dark rounded-lg transition-all">
-              For Hotels
-            </Link>
           </nav>
 
           {/* Right Side */}
@@ -101,17 +98,19 @@ export default function Navbar() {
                           </svg>
                           My Bookings
                         </Link>
-                        <Link
-                          href="/admin"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-5 py-2.5 text-sm text-primary-soft hover:bg-cream-dark transition-colors"
-                        >
-                          <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          Admin Panel
-                        </Link>
+                        {user?.roles?.includes("admin") && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-5 py-2.5 text-sm text-primary-soft hover:bg-cream-dark transition-colors"
+                          >
+                            <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Admin Panel
+                          </Link>
+                        )}
                       </div>
                       <div className="border-t border-border-light pt-1">
                         <button
@@ -182,18 +181,17 @@ export default function Navbar() {
             <Link href="/bookings" className="block px-4 py-3 text-sm font-medium text-navy hover:bg-cream-dark rounded-lg transition-colors">
               My Bookings
             </Link>
-            <Link href="/hotel" className="block px-4 py-3 text-sm font-medium text-navy hover:bg-cream-dark rounded-lg transition-colors">
-              For Hotels
-            </Link>
             <div className="border-t border-border-light mt-2 pt-2">
               {isAuthenticated ? (
                 <>
                   <div className="px-4 py-2 text-xs font-medium text-muted uppercase tracking-wider">
                     Signed in as {user?.username || user?.email}
                   </div>
-                  <Link href="/admin" className="block px-4 py-3 text-sm font-medium text-navy hover:bg-cream-dark rounded-lg transition-colors">
-                    Admin Panel
-                  </Link>
+                  {user?.roles?.includes("admin") && (
+                    <Link href="/admin" className="block px-4 py-3 text-sm font-medium text-navy hover:bg-cream-dark rounded-lg transition-colors">
+                      Admin Panel
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-3 text-sm font-medium text-danger hover:bg-danger-light rounded-lg transition-colors"

@@ -19,8 +19,8 @@ categoryRouter.get("/error-test", (req, res) => {
 });
 
 categoryRouter.post("/", authMiddleware, requirePermission("category:create"), validateSchemaBody(categorySchema), createCategoryHandler);
-categoryRouter.get("/", authMiddleware, getAllCategoriesHandler);
-categoryRouter.get("/:id", authMiddleware, validateSchemaParams(idParamSchema), getCategoryByIdHandler);
+categoryRouter.get("/", getAllCategoriesHandler);
+categoryRouter.get("/:id", validateSchemaParams(idParamSchema), getCategoryByIdHandler);
 categoryRouter.put("/:id", authMiddleware, requirePermission("category:update"), validateSchemaParams(idParamSchema), validateSchemaBody(updateCategorySchema), updateCategoryHandler);
 categoryRouter.delete("/:id", authMiddleware, requirePermission("category:delete"), validateSchemaParams(idParamSchema), deleteCategoryHandler);
 

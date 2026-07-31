@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SearchPanel from "./components/SearchPanel";
@@ -10,7 +10,7 @@ import { useHotelsStore } from "@/stores";
 const fallbackImage = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop";
 
 export default function Home() {
-  const { hotels, categories, isLoading, fetchHotels, fetchCategories, selectedCategory, setSelectedCategory } = useHotelsStore();
+  const { hotels, categories, isLoading, fetchHotels, fetchCategories, selectedCategory, setSelectedCategory, setPage } = useHotelsStore();
 
   useEffect(() => {
     fetchCategories();
@@ -20,7 +20,8 @@ export default function Home() {
   const handleCategoryClick = (slug: string) => {
     const newCategory = selectedCategory === slug ? "" : slug;
     setSelectedCategory(newCategory);
-    fetchHotels(newCategory);
+    setPage(1);
+    fetchHotels();
   };
 
   return (
@@ -28,8 +29,8 @@ export default function Home() {
       <Navbar />
       <main className="min-h-screen bg-cream">
         {/* Hero Section */}
-        <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-navy/[0.03] to-transparent" />
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-navy/[0.03] to-transparent pointer-events-none" />
           <div className="relative max-w-7xl mx-auto px-6 md:px-10 lg:px-20 pt-12 pb-10">
             <div className="text-center mb-10">
               <h1 className="text-4xl md:text-5xl lg:text-[56px] font-serif font-medium text-navy leading-[1.1] tracking-tight">

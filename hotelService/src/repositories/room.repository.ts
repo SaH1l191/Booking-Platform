@@ -1,4 +1,5 @@
 import Room from "../db/models/rooms";
+import RoomCategory from "../db/models/roomCategory";
 import { createRoomDto } from "../dto/room.dto";
 import {   NotFoundError } from "../utils/errors/app.error";
 import logger from "../config/logger";
@@ -10,7 +11,9 @@ export async function createRoom(data: createRoomDto) {
 }
 
 export async function getRoomById(id: number) {
-  const room = await Room.findByPk(id);
+  const room = await Room.findByPk(id, {
+    include: [{ model: RoomCategory, as: "roomCategory", attributes: ["id", "price", "roomType"] }],
+  });
   if (!room) {
     logger.warn("Room not found", { roomId: id });
     throw new NotFoundError("Room not found");

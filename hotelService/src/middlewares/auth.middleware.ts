@@ -13,7 +13,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     req.user = {
-        userId: req.headers["x-user-id"],
+        userId: Number(req.headers["x-user-id"]),
         email: req.headers["x-user-email"],
         roles: (req.headers["x-user-role"] as string || "").split(",").filter(Boolean),
     };

@@ -3,6 +3,7 @@ import HotelCategory from "./hotelCategory";
 import Category from "./category";
 import HotelImage from "./hotelImage";
 import RoomCategory from "./roomCategory";
+import Room from "./rooms";
 
 Hotel.hasMany(HotelCategory, { foreignKey: "hotelId", as: "hotelCategories" });
 HotelCategory.belongsTo(Hotel, { foreignKey: "hotelId", as: "hotel" });
@@ -17,3 +18,5 @@ HotelImage.belongsTo(Hotel, { foreignKey: "hotelId", as: "hotel" });
 Hotel.hasMany(RoomCategory, { foreignKey: "hotelId", as: "roomCategories" });
 RoomCategory.belongsTo(Hotel, { foreignKey: "hotelId", as: "hotel" });
 
+RoomCategory.hasMany(Room, { foreignKey: "roomCategoryId", as: "rooms" });
+Room.belongsTo(RoomCategory, { foreignKey: "roomCategoryId", as: "roomCategory" });

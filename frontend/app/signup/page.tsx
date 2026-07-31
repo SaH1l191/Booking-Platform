@@ -11,6 +11,7 @@ interface SignupForm {
   username: string;
   email: string;
   password: string;
+  confirmPassword: string;
 }
 
 export default function SignupPage() {
@@ -18,15 +19,26 @@ export default function SignupPage() {
   const { signup, isLoading } = useAuthStore();
   const router = useRouter();
 
+  const passwordRules = {
+    required: "Password is required",
+    minLength: { value: 8, message: "Password must be at least 8 characters" },
+    pattern: {
+      value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      message: "Password must include uppercase, lowercase, and a number",
+    },
+  };
+
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<SignupForm>({
     defaultValues: {
       username: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
@@ -125,15 +137,9 @@ export default function SignupPage() {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                {...register("password", {
-                  required: "Password is required",
-                  minLength: {
-                    value: 6,
-                    message: "Password must be at least 6 characters",
-                  },
-                })}
-                placeholder="6+ characters"
-                className="w-full px-4 py-3.5 border border-border rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all placeholder:text-muted-light bg-white pr-12"
+                {...register("password", passwordRules)}
+                placeholder="8+ characters, uppercase, lowercase, number"
+                  className="w-full px-4 py-3.5 border border-border rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all placeholder:text-muted-light bg-white pr-12"
               />
               <button
                 type="button"
@@ -154,6 +160,24 @@ export default function SignupPage() {
             </div>
             {errors.password && (
               <p className="mt-1.5 text-xs text-danger">{errors.password.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1.5">
+              Confirm password
+            </label>
+            <input
+              type="password"
+              {...register("confirmPassword", {
+                required: "Please confirm your password",
+                validate: (val) => val === watch("password") || "Passwords do not match",
+              })}
+              placeholder="Repeat your password"
+              className="w-full px-4 py-3.5 border border-border rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all bg-white"
+            />
+            {errors.confirmPassword && (
+              <p className="mt-1.5 text-xs text-danger">{errors.confirmPassword.message}</p>
             )}
           </div>
 

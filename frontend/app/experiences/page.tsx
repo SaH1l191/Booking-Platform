@@ -27,23 +27,30 @@ const roomIcons: Record<RoomType, string> = {
 
 export default function ExperiencesPage() {
   const [selectedType, setSelectedType] = useState<RoomType | "ALL">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
   const { roomCategories, isLoading, error, fetchRoomCategories, clearError } = useRoomCategoriesStore();
-  const { hotels, fetchHotels } = useHotelsStore();
+  const { hotels, fetchHotels, setLimit } = useHotelsStore();
 
   useEffect(() => {
+    setLimit(100);
     fetchRoomCategories();
     fetchHotels();
-  }, [fetchRoomCategories, fetchHotels]);
-
-  const filtered = roomCategories.filter((rc) =>
-    selectedType === "ALL" || rc.roomType === selectedType
-  );
+  }, [setLimit, fetchRoomCategories, fetchHotels]);
 
   const getHotelName = (hotelId: number) =>
     hotels.find((h) => h.id === hotelId)?.name || "Unknown Hotel";
 
   const getHotelLocation = (hotelId: number) =>
     hotels.find((h) => h.id === hotelId)?.location || "";
+
+  const filtered = roomCategories.filter((rc) => {
+    const matchesType = selectedType === "ALL" || rc.roomType === selectedType;
+    const hotelName = getHotelName(rc.hotelId).toLowerCase();
+    const typeName = rc.roomType.toLowerCase();
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !query || hotelName.includes(query) || typeName.includes(query);
+    return matchesType && matchesSearch;
+  });
 
   return (
     <>
@@ -60,7 +67,9 @@ export default function ExperiencesPage() {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search room types"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search rooms by hotel name or type"
                     className="w-full pl-12 pr-4 py-3 bg-cream border border-border-light rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent focus:bg-white transition-all placeholder:text-muted"
                   />
                 </div>
@@ -142,7 +151,7 @@ export default function ExperiencesPage() {
                       </span>
                     </div>
                     <div className="absolute top-3 right-3 bg-navy text-white px-3 py-1.5 rounded-xl">
-                      <span className="text-xs font-semibold">{rc.roomCount} available</span>
+                      <span className="text-xs font-semibold">{rc.roomCount} total</span>
                     </div>
                   </div>
 

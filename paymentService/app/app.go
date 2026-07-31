@@ -89,6 +89,10 @@ func (a *App) Start(ctx context.Context) error {
 	a.outboxPublisher = workers.NewOutboxPublisher(db)
 	a.outboxPublisher.Start()
 
+	reconciliationWorker := workers.NewReconciliationWorker(a.PaymentService)
+	reconciliationWorker.Start()
+
+
 	// Router
 	paymentRouter := router.NewPaymentRouter(a.PaymentController)
 	chiRouter := router.SetupRouter(paymentRouter)

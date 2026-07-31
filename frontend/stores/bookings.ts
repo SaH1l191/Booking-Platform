@@ -15,7 +15,7 @@ export interface BookingsState {
   setFilterStatus: (status: BookingStatus | "ALL") => void;
 }
 
-export const useBookingsStore = create<BookingsState>()((set) => ({
+export const useBookingsStore = create<BookingsState>()((set, get) => ({
   bookings: [],
   filterStatus: "ALL",
   isLoading: false,
@@ -25,7 +25,7 @@ export const useBookingsStore = create<BookingsState>()((set) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await api.get("/api/v1/bookings/me");
-      set({ bookings: data, isLoading: false });
+      set({ bookings: Array.isArray(data) ? data : [], isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to fetch bookings" });
     }
@@ -34,8 +34,8 @@ export const useBookingsStore = create<BookingsState>()((set) => ({
   fetchAllBookings: async () => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.get("/api/v1/bookings/all");
-      set({ bookings: data, isLoading: false });
+      const { data } = await api.get("/api/v1/bookings");
+      set({ bookings: Array.isArray(data) ? data : [], isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to fetch all bookings" });
     }
@@ -45,14 +45,20 @@ export const useBookingsStore = create<BookingsState>()((set) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await api.post("/api/v1/bookings/", payload);
+      const bookingId = data.bookingId || data.id;
+      const userId = data.userId || 0;
       const newBooking: Booking = {
-        id: data.bookingId,
-        userId: 0,
+        id: bookingId,
+        userId,
         hotelId: payload.hotelId,
         roomId: payload.roomId,
         checkIn: payload.checkIn,
         checkOut: payload.checkOut,
-        bookingAmount: payload.bookingAmount,
+        // Server computes the real price from the room's category — this is
+        // never the client's own estimate. `data.bookingAmount` is always
+        // present in a real response; the payload doesn't carry this field
+        // anymore at all (see CreateBookingPayload).
+        bookingAmount: data.bookingAmount,
         status: "PENDING",
         totalGuests: payload.totalGuests,
         createdAt: new Date().toISOString(),
@@ -67,15 +73,14 @@ export const useBookingsStore = create<BookingsState>()((set) => ({
   },
 
   cancelBooking: async (id) => {
-    set({ isLoading: true, error: null });
+    const prev = get().bookings;
+    set((state) => ({
+      bookings: state.bookings.map((b) => b.id === id ? { ...b, status: "CANCELLED" as const } : b),
+    }));
     try {
       await api.patch(`/api/v1/bookings/cancel/${id}`);
-      set((state) => ({
-        bookings: state.bookings.map((b) => b.id === id ? { ...b, status: "CANCELLED" as const } : b),
-        isLoading: false,
-      }));
     } catch (err) {
-      set({ isLoading: false, error: err instanceof Error ? err.message : "Failed to cancel booking" });
+      set({ bookings: prev, error: err instanceof Error ? err.message : "Failed to cancel booking" });
       throw err;
     }
   },
