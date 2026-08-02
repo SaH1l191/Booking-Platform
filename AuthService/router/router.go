@@ -122,10 +122,19 @@ func SetupRouter(UserRouter Route, RoleRouter Route) chi.Router {
 	chiRouter.Route("/api/v1/payments", func(r chi.Router) {
 
 		///// r.Use(middlewares.RateLimitMiddleware(20))
-		r.Use(middlewares.JWTAuthMiddleware)
-		r.Handle("/*", utils.ProxyToService(paymentServiceURL, "/api/v1"))
+
+		proxy := utils.ProxyToService(paymentServiceURL, "/api/v1")
+
+		// Webhook (no JWT)
+		r.Method(http.MethodPost, "/webhook", proxy)
+
+		// Protected
+		r.Group(func(protected chi.Router) {
+			protected.Use(middlewares.JWTAuthMiddleware)
+			protected.Handle("/*", proxy)
+		})
+
 	})
 
 	return chiRouter
 }
- 
