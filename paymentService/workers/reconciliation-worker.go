@@ -26,8 +26,14 @@ func (w *ReconciliationWorker) Start() {
 				continue
 			}
 			for _, p := range stale {
-				logger.Log.Error("Payment needs manual reconciliation",
-					"paymentId", p.Id, "status", p.Status, "razorpayPaymentId", p.RazorpayPaymentId)
+				if p.Status != "CREATED" {
+					logger.Log.Error("Payment needs manual reconcilation", "paymentId", p.Id, "status", p.Status)
+					continue
+				}
+				if err := w.paymentService.ReconcileWithRazorpay(p); err != nil {
+					logger.Log.Error("Auto-reconciliation failed, needs manual review",
+						"paymentId", p.Id, "razorpayOrderId", p.RazorpayOrderId, "error", err)
+				}
 			}
 		}
 	}()

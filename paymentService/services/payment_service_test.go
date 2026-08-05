@@ -2,6 +2,7 @@ package services
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"goPayment/db/repositories"
 	"goPayment/dto"
@@ -187,9 +188,10 @@ func countOutboxByType(t *testing.T, eventType string) int {
 // --- Mock Razorpay Client ---
 
 type mockRazorpayClient struct {
-	createOrderFunc func(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
-	refundFunc      func(paymentId string, amount int, data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
-	refundCallCount int32
+	createOrderFunc       func(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
+	refundFunc            func(paymentId string, amount int, data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
+	fetchOrderPaymentsFunc func(orderId string) (map[string]interface{}, error)
+	refundCallCount       int32
 }
 
 func (m *mockRazorpayClient) CreateOrder(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error) {
@@ -211,6 +213,13 @@ func (m *mockRazorpayClient) Refund(paymentId string, amount int, data map[strin
 		"id":     "refund_mock_123",
 		"amount": amount,
 	}, nil
+}
+
+func (m *mockRazorpayClient) FetchOrderPayments(orderId string) (map[string]interface{}, error) {
+	if m.fetchOrderPaymentsFunc != nil {
+		return m.fetchOrderPaymentsFunc(orderId)
+	}
+	return map[string]interface{}{"items": []interface{}{}}, nil
 }
 
 func (m *mockRazorpayClient) getRefundCallCount() int32 {
@@ -570,3 +579,331 @@ func TestFetchPaymentsWithStaleStatus(t *testing.T) {
 		t.Fatalf("expected 2 stale payments, got %d", len(payments))
 	}
 }
+
+
+const (
+	testKeySecret     = "test_key_secret_for_verify"
+	testWebhookSecret = "test_webhook_secret_for_hooks"
+)
+ 
+func setPaymentSecrets(t *testing.T) {
+	t.Helper()
+	os.Setenv("RAZORPAY_KEY_SECRET", testKeySecret)
+	os.Setenv("RAZORPAY_WEBHOOK_SECRET", testWebhookSecret)
+}
+ 
+func buildWebhookPayload(t *testing.T, event, orderId, paymentId string) []byte {
+	t.Helper()
+	payload := dto.WebhookPayload{
+		Event: event,
+		Payload: dto.WebhookPayloadData{
+			Payment: dto.WebhookPayment{
+				Entity: dto.WebhookPaymentEntity{
+					Id:      paymentId,
+					OrderId: orderId,
+					Amount:  5000,
+					Status:  "captured",
+				},
+			},
+		},
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("failed to marshal webhook payload: %v", err)
+	}
+	return raw
+}
+ 
+// --- VerifyPayment ---
+ 
+func TestVerifyPayment_Success(t *testing.T) {
+	truncateAll()
+	setPaymentSecrets(t)
+	mock := &mockRazorpayClient{}
+	svc := newTestService(mock)
+ 
+	paymentId := insertTestPayment(t, 9101, 10, "CREATED", "order_v1", "", 5000)
+ 
+	sig := ComputeHmacSha256(fmt.Sprintf("%s|%s", "order_v1", "pay_v1"), testKeySecret)
+	payload := &dto.VerifyPaymentRequestDTO{
+		RazorpayOrderId:   "order_v1",
+		RazorpayPaymentId: "pay_v1",
+		RazorpaySignature: sig,
+	}
+ 
+	result, err := svc.VerifyPayment(payload)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Status != "CAPTURED" {
+		t.Errorf("returned status = %q, want CAPTURED", result.Status)
+	}
+	if got := getPaymentStatus(t, paymentId); got != "CAPTURED" {
+		t.Errorf("db status = %q, want CAPTURED", got)
+	}
+	if got := countOutboxByType(t, "PAYMENT_CAPTURED"); got != 1 {
+		t.Errorf("outbox PAYMENT_CAPTURED count = %d, want 1", got)
+	}
+}
+ 
+func TestVerifyPayment_SignatureMismatch_MarksFailure(t *testing.T) {
+	truncateAll()
+	setPaymentSecrets(t)
+	mock := &mockRazorpayClient{}
+	svc := newTestService(mock)
+ 
+	insertTestPayment(t, 9102, 10, "CREATED", "order_v2", "", 5000)
+ 
+	payload := &dto.VerifyPaymentRequestDTO{
+		RazorpayOrderId:   "order_v2",
+		RazorpayPaymentId: "pay_v2",
+		RazorpaySignature: "not_the_real_signature",
+	}
+ 
+	_, err := svc.VerifyPayment(payload)
+	if err == nil {
+		t.Fatal("expected error for signature mismatch, got nil")
+	}
+ 
+	var status string
+	testDB.QueryRow("SELECT status FROM payments WHERE razorpay_order_id = 'order_v2'").Scan(&status)
+	if status != "FAILED" {
+		t.Errorf("status = %q, want FAILED", status)
+	}
+	if got := countOutboxByType(t, "PAYMENT_CAPTURED"); got != 0 {
+		t.Errorf("outbox PAYMENT_CAPTURED count = %d, want 0 (must not capture on bad signature)", got)
+	}
+}
+ 
+func TestVerifyPayment_AlreadyCaptured_SkipsDuplicateUpdate(t *testing.T) {
+	truncateAll()
+	setPaymentSecrets(t)
+	mock := &mockRazorpayClient{}
+	svc := newTestService(mock)
+ 
+	// Simulate: webhook already captured this payment before the FE's verify call arrived.
+	insertTestPayment(t, 9103, 10, "CAPTURED", "order_v3", "pay_v3", 5000)
+ 
+	payload := &dto.VerifyPaymentRequestDTO{
+		RazorpayOrderId:   "order_v3",
+		RazorpayPaymentId: "pay_v3",
+		RazorpaySignature: "irrelevant_because_guard_short_circuits_first",
+	}
+ 
+	result, err := svc.VerifyPayment(payload)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Status != "CAPTURED" {
+		t.Errorf("status = %q, want CAPTURED", result.Status)
+	}
+	// The whole point: no second outbox event from the FE's redundant verify call.
+	if got := countOutboxByType(t, "PAYMENT_CAPTURED"); got != 0 {
+		t.Errorf("outbox PAYMENT_CAPTURED count = %d, want 0 (webhook already published it, this call must not)", got)
+	}
+}
+ 
+// --- HandleWebhook ---
+ 
+func TestHandleWebhook_PaymentCaptured_UpdatesStatus(t *testing.T) {
+	truncateAll()
+	setPaymentSecrets(t)
+	mock := &mockRazorpayClient{}
+	svc := newTestService(mock)
+ 
+	insertTestPayment(t, 9201, 10, "CREATED", "order_w1", "", 5000)
+ 
+	body := buildWebhookPayload(t, "payment.captured", "order_w1", "pay_w1")
+	sig := ComputeHmacSha256(string(body), testWebhookSecret)
+ 
+	if err := svc.HandleWebhook(body, sig); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := getPaymentStatus(t, mustPaymentId(t, "order_w1")); got != "CAPTURED" {
+		t.Errorf("status = %q, want CAPTURED", got)
+	}
+	if got := countOutboxByType(t, "PAYMENT_CAPTURED"); got != 1 {
+		t.Errorf("outbox PAYMENT_CAPTURED count = %d, want 1", got)
+	}
+}
+ 
+func TestHandleWebhook_InvalidSignature_ReturnsError(t *testing.T) {
+	truncateAll()
+	setPaymentSecrets(t)
+	mock := &mockRazorpayClient{}
+	svc := newTestService(mock)
+ 
+	insertTestPayment(t, 9202, 10, "CREATED", "order_w2", "", 5000)
+ 
+	body := buildWebhookPayload(t, "payment.captured", "order_w2", "pay_w2")
+ 
+	err := svc.HandleWebhook(body, "forged_signature_from_an_attacker")
+	if err == nil {
+		t.Fatal("expected error for invalid webhook signature, got nil")
+	}
+	if got := getPaymentStatus(t, mustPaymentId(t, "order_w2")); got != "CREATED" {
+		t.Errorf("status = %q, want CREATED (must not update on bad signature)", got)
+	}
+}
+ 
+func TestHandleWebhook_DuplicateCapturedEvent_Idempotent(t *testing.T) {
+	truncateAll()
+	setPaymentSecrets(t)
+	mock := &mockRazorpayClient{}
+	svc := newTestService(mock)
+ 
+	insertTestPayment(t, 9203, 10, "CAPTURED", "order_w3", "pay_w3", 5000)
+ 
+	// Razorpay's at-least-once delivery means this event can legitimately arrive twice.
+	body := buildWebhookPayload(t, "payment.captured", "order_w3", "pay_w3")
+	sig := ComputeHmacSha256(string(body), testWebhookSecret)
+ 
+	if err := svc.HandleWebhook(body, sig); err != nil {
+		t.Fatalf("unexpected error on duplicate webhook: %v", err)
+	}
+	if got := countOutboxByType(t, "PAYMENT_CAPTURED"); got != 0 {
+		t.Errorf("outbox PAYMENT_CAPTURED count = %d, want 0 (payment was already CAPTURED before this call)", got)
+	}
+}
+ 
+func TestHandleWebhook_PaymentFailed_UpdatesStatus(t *testing.T) {
+	truncateAll()
+	setPaymentSecrets(t)
+	mock := &mockRazorpayClient{}
+	svc := newTestService(mock)
+ 
+	insertTestPayment(t, 9204, 10, "CREATED", "order_w4", "", 5000)
+ 
+	body := buildWebhookPayload(t, "payment.failed", "order_w4", "pay_w4")
+	sig := ComputeHmacSha256(string(body), testWebhookSecret)
+ 
+	if err := svc.HandleWebhook(body, sig); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := getPaymentStatus(t, mustPaymentId(t, "order_w4")); got != "FAILED" {
+		t.Errorf("status = %q, want FAILED", got)
+	}
+}
+ 
+func TestHandleWebhook_UnknownOrder_ReturnsErrorForRazorpayRetry(t *testing.T) {
+	truncateAll()
+	setPaymentSecrets(t)
+	mock := &mockRazorpayClient{}
+	svc := newTestService(mock)
+ 
+	// No matching payment row exists for this order at all.
+	body := buildWebhookPayload(t, "payment.captured", "order_does_not_exist", "pay_x")
+	sig := ComputeHmacSha256(string(body), testWebhookSecret)
+ 
+	err := svc.HandleWebhook(body, sig)
+	if err == nil {
+		t.Fatal("expected error so Razorpay retries delivery, got nil")
+	}
+}
+ 
+// --- ReconcileWithRazorpay ---
+ 
+func TestReconcile_FindsCapturedRemotely_UpdatesStatus(t *testing.T) {
+	truncateAll()
+	mock := &mockRazorpayClient{
+		fetchOrderPaymentsFunc: func(orderId string) (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"items": []interface{}{
+					map[string]interface{}{"id": "pay_r1", "status": "captured"},
+				},
+			}, nil
+		},
+	}
+	svc := newTestService(mock)
+ 
+	paymentId := insertTestPayment(t, 9301, 10, "CREATED", "order_r1", "", 5000)
+	payment, _ := svc.GetPaymentByBookingId(9301)
+ 
+	if err := svc.(*PaymentServiceImpl).ReconcileWithRazorpay(payment); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := getPaymentStatus(t, paymentId); got != "CAPTURED" {
+		t.Errorf("status = %q, want CAPTURED", got)
+	}
+}
+ 
+func TestReconcile_FindsFailedRemotely_MarksFailed(t *testing.T) {
+	truncateAll()
+	mock := &mockRazorpayClient{
+		fetchOrderPaymentsFunc: func(orderId string) (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"items": []interface{}{
+					map[string]interface{}{"id": "pay_r2", "status": "failed"},
+				},
+			}, nil
+		},
+	}
+	svc := newTestService(mock)
+ 
+	paymentId := insertTestPayment(t, 9302, 10, "CREATED", "order_r2", "", 5000)
+	payment, _ := svc.GetPaymentByBookingId(9302)
+ 
+	if err := svc.(*PaymentServiceImpl).ReconcileWithRazorpay(payment); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := getPaymentStatus(t, paymentId); got != "FAILED" {
+		t.Errorf("status = %q, want FAILED", got)
+	}
+}
+ 
+func TestReconcile_NoPaymentAttempts_MarksAbandoned(t *testing.T) {
+	truncateAll()
+	mock := &mockRazorpayClient{
+		fetchOrderPaymentsFunc: func(orderId string) (map[string]interface{}, error) {
+			return map[string]interface{}{"items": []interface{}{}}, nil
+		},
+	}
+	svc := newTestService(mock)
+ 
+	paymentId := insertTestPayment(t, 9303, 10, "CREATED", "order_r3", "", 5000)
+	payment, _ := svc.GetPaymentByBookingId(9303)
+ 
+	if err := svc.(*PaymentServiceImpl).ReconcileWithRazorpay(payment); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := getPaymentStatus(t, paymentId); got != "FAILED" {
+		t.Errorf("status = %q, want FAILED (abandoned order, no attempts found)", got)
+	}
+}
+ 
+func TestReconcile_StillPendingRemotely_LeavesUnchanged(t *testing.T) {
+	truncateAll()
+	mock := &mockRazorpayClient{
+		fetchOrderPaymentsFunc: func(orderId string) (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"items": []interface{}{
+					map[string]interface{}{"id": "pay_r4", "status": "created"},
+				},
+			}, nil
+		},
+	}
+	svc := newTestService(mock)
+ 
+	paymentId := insertTestPayment(t, 9304, 10, "CREATED", "order_r4", "", 5000)
+	payment, _ := svc.GetPaymentByBookingId(9304)
+ 
+	if err := svc.(*PaymentServiceImpl).ReconcileWithRazorpay(payment); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Not resolved yet on Razorpay's side — must be left alone for the next tick, not guessed at.
+	if got := getPaymentStatus(t, paymentId); got != "CREATED" {
+		t.Errorf("status = %q, want CREATED (still unresolved, must not guess)", got)
+	}
+}
+ 
+// --- helper ---
+ 
+func mustPaymentId(t *testing.T, orderId string) int64 {
+	t.Helper()
+	var id int64
+	if err := testDB.QueryRow("SELECT id FROM payments WHERE razorpay_order_id = ?", orderId).Scan(&id); err != nil {
+		t.Fatalf("failed to look up payment id for order %s: %v", orderId, err)
+	}
+	return id
+}
+ 

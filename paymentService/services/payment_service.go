@@ -19,6 +19,7 @@ import (
 type RazorpayClient interface {
 	CreateOrder(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
 	Refund(paymentId string, amount int, data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
+	FetchOrderPayments(orderId string) (map[string]interface{}, error)
 }
 
 type razorpayClientAdapter struct {
@@ -33,6 +34,10 @@ func (a *razorpayClientAdapter) Refund(paymentId string, amount int, data map[st
 	return a.client.Payment.Refund(paymentId, amount, data, extraHeaders)
 }
 
+func (a *razorpayClientAdapter) FetchOrderPayments(orderId string) (map[string]interface{}, error) {
+	return a.client.Order.Payments(orderId, nil, nil)
+}
+
 func NewRazorpayClientAdapter(keyId, keySecret string) RazorpayClient {
 	return &razorpayClientAdapter{client: razorpay.NewClient(keyId, keySecret)}
 }
@@ -45,6 +50,7 @@ type PaymentService interface {
 	HandleWebhook(payload []byte, signature string) error
 	FetchPaymentsWithStaleStatus() ([]*models.Payment, error)
 	GetRazorpayKeyId() string
+	ReconcileWithRazorpay(payment *models.Payment) error
 }
 
 type PaymentServiceImpl struct {
@@ -73,7 +79,7 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload
 
 	orderData := map[string]interface{}{
 		"amount":   payload.Amount,
-		"currency": "INR", 
+		"currency": "INR",
 		"receipt":  fmt.Sprintf("booking_%d", payload.BookingId),
 		"notes": map[string]interface{}{
 			"bookingId": payload.BookingId,
@@ -119,8 +125,7 @@ func (s *PaymentServiceImpl) CreateOrder(userId int64, userEmail string, payload
 	return result, nil
 }
 
-
-//Fix: VerifyPayment should check booking.expiresAt before confirming
+// Fix: VerifyPayment should check booking.expiresAt before confirming
 func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO) (*models.Payment, error) {
 	logger.Log.Info("Verifying payment signature", "orderId", payload.RazorpayOrderId, "paymentId", payload.RazorpayPaymentId)
 
@@ -131,11 +136,16 @@ func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO)
 		return nil, err
 	}
 
+	if payment.Status == "CAPTURED" {
+		logger.Log.Info("Payment already captured (likely via webhook), skipping duplicate verify", "orderId", payload.RazorpayOrderId)
+		return payment, nil
+	}
+
 	// Verify HMAC signature
 	expectedSignature := ComputeHmacSha256(
-		fmt.Sprintf("%s|%s", payload.RazorpayOrderId, payload.RazorpayPaymentId),env.GetEnv("RAZORPAY_KEY_SECRET"),
+		fmt.Sprintf("%s|%s", payload.RazorpayOrderId, payload.RazorpayPaymentId), env.GetEnv("RAZORPAY_KEY_SECRET"),
 	)
-	if expectedSignature != payload.RazorpaySignature {
+	if !hmac.Equal([]byte(expectedSignature), []byte(payload.RazorpaySignature)) {
 		logger.Log.Warn("Payment signature mismatch", "orderId", payload.RazorpayOrderId)
 		s.paymentRepo.UpdatePaymentFailure(payment.Id, "Signature verification failed")
 		return nil, fmt.Errorf("invalid payment signature")
@@ -156,10 +166,9 @@ func (s *PaymentServiceImpl) VerifyPayment(payload *dto.VerifyPaymentRequestDTO)
 	return payment, nil
 }
 
-
-//changes ->captured OR refunding to pending -> does refund -> completed status(refunded)
-//siilart like a 2pahse commit to minimize inconsistencies,no partial refund,idempontent 
-//Failure recovery: If Razorpay succeeds but DB finalize fails, it's flagged for manual intervention rather than silently losing the state.
+// changes ->captured OR refunding to pending -> does refund -> completed status(refunded)
+// siilart like a 2pahse commit to minimize inconsistencies,no partial refund,idempontent
+// Failure recovery: If Razorpay succeeds but DB finalize fails, it's flagged for manual intervention rather than silently losing the state.
 func (s *PaymentServiceImpl) RefundPayment(payload *dto.RefundRequestDTO) (map[string]interface{}, error) {
 	logger.Log.Info("Processing refund", "paymentId", payload.PaymentId, "bookingId", payload.BookingId)
 
@@ -232,8 +241,6 @@ func (s *PaymentServiceImpl) GetPaymentByBookingId(bookingId int64) (*models.Pay
 	return s.paymentRepo.GetPaymentByBookingId(bookingId)
 }
 
-
-
 func (s *PaymentServiceImpl) FetchPaymentsWithStaleStatus() ([]*models.Payment, error) {
 	fmt.Println("Fetching stale payments for reconciliation")
 	return s.paymentRepo.GetStalePayments()
@@ -249,14 +256,13 @@ func ComputeHmacSha256(message string, secret string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-
 func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) error {
 	fmt.Println("Processing webhook event")
 
 	webhookSecret := env.GetEnv("RAZORPAY_WEBHOOK_SECRET")
 	if webhookSecret != "" {
 		expectedSig := ComputeHmacSha256(string(rawBody), webhookSecret)
-		if expectedSig != signature {
+		if !hmac.Equal([]byte(expectedSig), []byte(signature)) {
 			logger.Log.Warn("Invalid webhook signature")
 			return fmt.Errorf("invalid webhook signature")
 		}
@@ -277,7 +283,7 @@ func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) err
 		payment, err := s.paymentRepo.GetPaymentByOrderId(orderId)
 		if err != nil {
 			logger.Log.Warn("Payment not found for webhook order", "orderId", orderId)
-			return nil
+			return fmt.Errorf("payment not found for order %s", orderId)
 		}
 
 		if payment.Status == "CAPTURED" {
@@ -303,7 +309,7 @@ func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) err
 		payment, err := s.paymentRepo.GetPaymentByOrderId(orderId)
 		if err != nil {
 			logger.Log.Warn("Payment not found for webhook order", "orderId", orderId)
-			return nil
+			return fmt.Errorf("payment not found for order %s", orderId)
 		}
 
 		if payment.Status == "FAILED" {
@@ -330,4 +336,44 @@ func (s *PaymentServiceImpl) HandleWebhook(rawBody []byte, signature string) err
 
 	logger.Log.Info("Webhook event processed", "event", webhookPayload.Event)
 	return nil
+}
+
+
+
+func (s *PaymentServiceImpl) ReconcileWithRazorpay(payment *models.Payment) error {
+	logger.Log.Info("Reconciling stale payment with Razorpay", "paymentId", payment.Id, "orderId", payment.RazorpayOrderId)
+
+	result, err := s.razorpayClient.FetchOrderPayments(payment.RazorpayOrderId)
+	if err != nil {
+		return fmt.Errorf("failed to fetch order payments from Razorpay: %w", err)
+	}
+
+	items, ok := result["items"].([]interface{})
+	if !ok || len(items) == 0 {
+		// Customer never completed checkout at all — genuinely abandoned.
+		logger.Log.Info("No Razorpay payment attempts found for stale order, marking abandoned", "orderId", payment.RazorpayOrderId)
+		return s.paymentRepo.UpdatePaymentFailure(payment.Id, "No payment attempt found — order abandoned")
+	}
+
+	// Razorpay returns attempts most-recent-last; check the latest one.
+	latest, ok := items[len(items)-1].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected payment item shape from Razorpay")
+	}
+
+	status, _ := latest["status"].(string)
+	paymentId, _ := latest["id"].(string)
+
+	switch status {
+	case "captured", "authorized":
+		logger.Log.Info("Reconciliation found captured payment Razorpay-side, updating DB", "paymentId", payment.Id, "razorpayPaymentId", paymentId)
+		return s.paymentRepo.UpdatePaymentStatus(payment.Id, "CAPTURED", paymentId, "")
+	case "failed":
+		logger.Log.Info("Reconciliation found failed payment Razorpay-side", "paymentId", payment.Id)
+		return s.paymentRepo.UpdatePaymentFailure(payment.Id, "Failed per Razorpay reconciliation")
+	default:
+		// created/attempted but not resolved yet — leave for next tick
+		logger.Log.Info("Payment still unresolved on Razorpay's side, will recheck next cycle", "orderId", payment.RazorpayOrderId, "razorpayStatus", status)
+		return nil
+	}
 }

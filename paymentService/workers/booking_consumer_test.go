@@ -159,9 +159,10 @@ func existsProcessedEvent(t *testing.T, eventID string) bool {
 // --- Mock Razorpay Client ---
 
 type mockRazorpayClient struct {
-	createOrderFunc func(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
-	refundFunc      func(paymentId string, amount int, data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
-	refundCallCount int32
+	createOrderFunc        func(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
+	refundFunc             func(paymentId string, amount int, data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error)
+	fetchOrderPaymentsFunc func(orderId string) (map[string]interface{}, error)
+	refundCallCount        int32
 }
 
 func (m *mockRazorpayClient) CreateOrder(data map[string]interface{}, extraHeaders map[string]string) (map[string]interface{}, error) {
@@ -183,6 +184,13 @@ func (m *mockRazorpayClient) Refund(paymentId string, amount int, data map[strin
 		"id":     "refund_mock_123",
 		"amount": amount,
 	}, nil
+}
+
+func (m *mockRazorpayClient) FetchOrderPayments(orderId string) (map[string]interface{}, error) {
+	if m.fetchOrderPaymentsFunc != nil {
+		return m.fetchOrderPaymentsFunc(orderId)
+	}
+	return map[string]interface{}{"items": []interface{}{}}, nil
 }
 
 func (m *mockRazorpayClient) getRefundCallCount() int32 {
