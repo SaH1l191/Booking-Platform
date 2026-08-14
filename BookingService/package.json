@@ -6,7 +6,7 @@
   "scripts": {
     "db:init": "node scripts/init-db.js",
     "predev": "npm run db:init && prisma generate",
-    "dev": "npm run db:init && prisma migrate dev && ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "npm run db:init && prisma migrate dev --name dev && ts-node-dev --respawn --transpile-only src/index.ts",
     "prestart": "npm run db:init && prisma migrate deploy",
     "start": "node dist/index.js",
     "build": "tsc",
