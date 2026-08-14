@@ -19,21 +19,21 @@ services:
 #   #     timeout: 5s
 #   #     retries: 5
 
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: booking-redis
-  #   restart: unless-stopped
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #   networks:
-  #     - booking-network
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "ping"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  redis:
+    image: redis:7-alpine
+    container_name: booking-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - booking-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 #   auth-service:
 #     build:
@@ -265,7 +265,7 @@ services:
 # volumes:
 #   redis_data:
 
-# #docker compose down -v && docker compose up --build
+# docker compose down -v && docker compose up --build
 
   prometheus:
     image: prom/prometheus:latest
@@ -317,30 +317,31 @@ services:
     networks:
       - booking-network
 
-  # rabbitmq:
-  #   image: rabbitmq:3-management
-  #   container_name: booking-rabbitmq
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5672:5672"
-  #     - "15672:15672"
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: guest
-  #     RABBITMQ_DEFAULT_PASS: guest
-  #   volumes:
-  #     - rabbitmq_data:/var/lib/rabbitmq
-  #   networks:
-  #     - booking-network
-  #   healthcheck:
-  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: booking-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - booking-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
+  redis_data:
   prometheus_data:
   grafana_data:
-  # rabbitmq_data:
+  rabbitmq_data:
 
 networks:
   booking-network:

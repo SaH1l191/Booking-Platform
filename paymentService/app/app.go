@@ -14,6 +14,11 @@ import (
 	"goPayment/services"
 	"goPayment/workers"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -58,6 +63,14 @@ func (a *App) Start(ctx context.Context) error {
 	}
 	a.database = db
 	logger.Log.Info("Database connection established")
+
+	// Run database migrations before starting services
+	logger.Log.Info("Running database migrations")
+	if err := runMigrations(db); err != nil {
+		logger.Log.Error("Failed to run database migrations", "error", err)
+		return fmt.Errorf("failed to run database migrations: %w", err)
+	}
+	logger.Log.Info("Database migrations completed")
 
 	logger.Log.Info("Connecting to RabbitMQ")
 	if err := rabbitmqconfig.Connect(); err != nil {
@@ -146,5 +159,51 @@ func (a *App) Stop(ctx context.Context) error {
 
 	rabbitmqconfig.Close()
 	logger.Log.Info("Payment service shutdown complete")
+	return nil
+}
+
+func runMigrations(db *sql.DB) error {
+	_, currentFile, _, _ := runtime.Caller(0)
+	migrationsDir := filepath.Join(filepath.Dir(currentFile), "..", "db", "migrations")
+
+	dbUser := env.GetEnv("DB_USER")
+	dbPass := env.GetEnv("DB_PASSWORD")
+	dbAddr := env.GetEnv("DB_ADDR")
+	dbName := env.GetEnv("DB_NAME")
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", dbUser, dbPass, dbAddr, dbName)
+
+	cmd := exec.Command("goose", "-dir", migrationsDir, "mysql", dsn, "up")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Log.Warn("goose command failed, falling back to direct SQL execution", "error", err, "output", string(output))
+		return runMigrationsDirect(db, migrationsDir)
+	}
+	logger.Log.Info("Goose migrations completed", "output", strings.TrimSpace(string(output)))
+	return nil
+}
+
+func runMigrationsDirect(db *sql.DB, migrationsDir string) error {
+	glob := filepath.Join(migrationsDir, "*.sql")
+	files, err := filepath.Glob(glob)
+	if err != nil {
+		return fmt.Errorf("failed to list migration files: %w", err)
+	}
+
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return fmt.Errorf("failed to read migration file %s: %w", file, err)
+		}
+		sqlContent := strings.TrimSpace(string(content))
+		if sqlContent == "" {
+			continue
+		}
+		if _, err := db.Exec(sqlContent); err != nil {
+			logger.Log.Warn("Migration query warning (may already be applied)", "file", filepath.Base(file), "error", err)
+		} else {
+			logger.Log.Info("Migration applied", "file", filepath.Base(file))
+		}
+	}
 	return nil
 }
