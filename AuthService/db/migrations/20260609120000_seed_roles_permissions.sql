@@ -2,9 +2,8 @@
 -- Seed default roles
 INSERT  IGNORE INTO roles (name, description) VALUES
     ('admin', 'Full system access'),
-    ('hotel_owner', 'Can manage hotels and rooms'),
-    ('staff', 'Can manage bookings and reviews'),
-    ('guest', 'Default role for authenticated users');
+    ('hotel_manager', 'Manages hotels, rooms and bookings'),
+    ('customer', 'Regular customer who makes bookings');
 
 -- Seed permissions (resource:action format)
 INSERT  IGNORE INTO permissions (name, resource, action) VALUES
@@ -37,28 +36,28 @@ SELECT r.id, p.id
 FROM roles r, permissions p
 WHERE r.name = 'admin';
 
-
 INSERT  IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'hotel_owner'
+WHERE r.name = 'hotel_manager'
 AND p.resource IN ('hotel', 'room');
 
 
 INSERT  IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'staff'
-AND (p.resource = 'booking' OR p.resource = 'review');
+WHERE r.name = 'hotel_manager'
+AND p.resource IN ('booking', 'review');
 
--- Assign basic read permissions to guest
+
+-- Assign basic read permissions to customer
 INSERT  IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'guest'
+WHERE r.name = 'customer'
 AND p.action = 'read';
 
 -- +goose Down
-DELETE FROM IGNORE INTO role_permissions;
-DELETE FROM IGNORE INTO permissions;
-DELETE FROM IGNORE INTO roles;
+DELETE FROM role_permissions;
+DELETE FROM permissions;
+DELETE FROM roles;

@@ -140,14 +140,6 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
                         createdAt: booking.createdAt.toISOString(),
                     });
 
-                    // Step 6: Update Redis cache with booked dates + TTL
-                    await placeHold(redisClient, 
-                        createBookingDTO.hotelId, 
-                        createBookingDTO.roomId, booking.id, 
-                        createBookingDTO.checkIn, 
-                        createBookingDTO.checkOut, 
-                        booking.expiresAt);
-
                     logger.info("Booking created with idempotency key", { bookingId: booking.id, idempotencyKey: key });
 
                     return {
@@ -155,10 +147,29 @@ export async function createBookingService({ createBookingDTO, userId, userEmail
                         idempotencyKey: key,
                         expiresAt: booking.expiresAt,
                         duplicated: false,
+                        roomId: createBookingDTO.roomId,
+                        hotelId: createBookingDTO.hotelId,
+                        checkIn: createBookingDTO.checkIn,
+                        checkOut: createBookingDTO.checkOut,
                     };
                 },
                 { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted }
             );
+        }).then(async (result) => {
+            // Step 6: Update Redis cache AFTER DB transaction commits
+            if (!result.duplicated) {
+                try {
+                    await placeHold(redisClient,
+                        result.hotelId,
+                        result.roomId, result.bookingId,
+                        result.checkIn,
+                        result.checkOut,
+                        result.expiresAt);
+                } catch (redisErr) {
+                    logger.error("Failed to place hold in Redis after booking committed", { error: (redisErr as Error).message });
+                }
+            }
+            return result;
         });
 
     } catch (error) {
@@ -317,8 +328,8 @@ export async function checkAvailabilityService(data: {
     const conflict = await conflictBooking(prisma, {
         hotelId: data.hotelId,
         roomId: data.roomId,
-        checkIn: new Date(data.checkIn),
-        checkOut: new Date(data.checkOut),
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
     });
 
     if (conflict) {

@@ -65,8 +65,8 @@ describe("Creation — createBookingService", () => {
 
   it("computes bookingAmount as pricePerNight × nights", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
-    const checkIn = new Date("2026-09-01");
-    const checkOut = new Date("2026-09-06");
+    const checkIn = "2026-09-01";
+    const checkOut = "2026-09-06";
 
     const result = await createBookingService({
       createBookingDTO: makeBookingDTO({ checkIn, checkOut }),
@@ -84,8 +84,8 @@ describe("Creation — createBookingService", () => {
     await expect(
       createBookingService({
         createBookingDTO: makeBookingDTO({
-          checkIn: new Date("2026-09-10"),
-          checkOut: new Date("2026-09-10"),
+          checkIn: "2026-09-10",
+          checkOut: "2026-09-10",
         }),
         userId: 1,
         userEmail: "test@example.com",
@@ -95,8 +95,8 @@ describe("Creation — createBookingService", () => {
     await expect(
       createBookingService({
         createBookingDTO: makeBookingDTO({
-          checkIn: new Date("2026-09-15"),
-          checkOut: new Date("2026-09-10"),
+          checkIn: "2026-09-15",
+          checkOut: "2026-09-10",
         }),
         userId: 1,
         userEmail: "test@example.com",
@@ -129,7 +129,7 @@ describe("Creation — createBookingService", () => {
   it("creates separate bookings for two different idempotencyKeys on same dates", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
     const first = await createBookingService({
-      createBookingDTO: makeBookingDTO({ checkIn: new Date("2026-09-20"), checkOut: new Date("2026-09-24") }),
+      createBookingDTO: makeBookingDTO({ checkIn: "2026-09-20", checkOut: "2026-09-24" }),
       userId: 1,
       userEmail: "test@example.com",
       idempotencyKey: "key-A",
@@ -137,7 +137,7 @@ describe("Creation — createBookingService", () => {
 
     mockRoomPrice(1, 10, ROOM_PRICE);
     const second = await createBookingService({
-      createBookingDTO: makeBookingDTO({ checkIn: new Date("2026-09-24"), checkOut: new Date("2026-09-28") }),
+      createBookingDTO: makeBookingDTO({ checkIn: "2026-09-24", checkOut: "2026-09-28" }),
       userId: 1,
       userEmail: "test@example.com",
       idempotencyKey: "key-B",
@@ -157,7 +157,7 @@ describe("Creation — createBookingService", () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
 
     const result = await createBookingService({
-      createBookingDTO: makeBookingDTO({ checkIn: new Date("2026-10-01"), checkOut: new Date("2026-10-04") }),
+      createBookingDTO: makeBookingDTO({ checkIn: "2026-10-01", checkOut: "2026-10-04" }),
       userId: 1,
       userEmail: "test@example.com",
       idempotencyKey: "outbox-key-001",
@@ -178,8 +178,8 @@ describe("Creation — createBookingService", () => {
 
   it("places Redis hold keys with TTL equal to expiresAt, not checkout", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
-    const checkIn = new Date("2026-10-05");
-    const checkOut = new Date("2026-10-09");
+    const checkIn = "2026-10-05";
+    const checkOut = "2026-10-09";
 
     const result = await createBookingService({
       createBookingDTO: makeBookingDTO({ checkIn, checkOut }),
@@ -208,8 +208,8 @@ describe("Conflict — double booking / availability", () => {
     await expect(
       createBookingService({
         createBookingDTO: makeBookingDTO({
-          checkIn: new Date("2026-11-01"),
-          checkOut: new Date("2026-11-03"),
+          checkIn: "2026-11-01",
+          checkOut: "2026-11-03",
         }),
         userId: 2,
         userEmail: "user2@example.com",
@@ -227,8 +227,8 @@ describe("Conflict — double booking / availability", () => {
     await expect(
       createBookingService({
         createBookingDTO: makeBookingDTO({
-          checkIn: new Date("2026-11-12"),
-          checkOut: new Date("2026-11-15"),
+          checkIn: "2026-11-12",
+          checkOut: "2026-11-15",
         }),
         userId: 2,
         userEmail: "user2@example.com",
@@ -248,8 +248,8 @@ describe("Conflict — double booking / availability", () => {
     await expect(
       createBookingService({
         createBookingDTO: makeBookingDTO({
-          checkIn: new Date("2026-11-22"),
-          checkOut: new Date("2026-11-25"),
+          checkIn: "2026-11-22",
+          checkOut: "2026-11-25",
         }),
         userId: 2,
         userEmail: "user2@example.com",
@@ -267,8 +267,8 @@ describe("Conflict — double booking / availability", () => {
 
     const result = await createBookingService({
       createBookingDTO: makeBookingDTO({
-        checkIn: new Date("2026-12-02"),
-        checkOut: new Date("2026-12-04"),
+        checkIn: "2026-12-02",
+        checkOut: "2026-12-04",
       }),
       userId: 2,
       userEmail: "user2@example.com",
@@ -283,8 +283,8 @@ describe("Conflict — double booking / availability", () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
 
     const dto = makeBookingDTO({
-      checkIn: new Date("2027-01-10"),
-      checkOut: new Date("2027-01-14"),
+      checkIn: "2027-01-10",
+      checkOut: "2027-01-14",
     });
 
     const results = await Promise.allSettled([
@@ -311,8 +311,8 @@ describe("Conflict — double booking / availability", () => {
     await expect(
       createBookingService({
         createBookingDTO: makeBookingDTO({
-          checkIn: new Date("2027-02-02"),
-          checkOut: new Date("2027-02-04"),
+          checkIn: "2027-02-02",
+          checkOut: "2027-02-04",
         }),
         userId: 5,
         userEmail: "same@example.com",
@@ -330,8 +330,8 @@ describe("Conflict — double booking / availability", () => {
     await expect(
       createBookingService({
         createBookingDTO: makeBookingDTO({
-          checkIn: new Date("2027-03-02"),
-          checkOut: new Date("2027-03-04"),
+          checkIn: "2027-03-02",
+          checkOut: "2027-03-04",
         }),
         userId: 2,
         userEmail: "user2@example.com",
@@ -351,8 +351,8 @@ describe("Conflict — double booking / availability", () => {
     await expect(
       createBookingService({
         createBookingDTO: makeBookingDTO({
-          checkIn: new Date("2027-04-01"),
-          checkOut: new Date("2027-04-01"),
+          checkIn: "2027-04-01",
+          checkOut: "2027-04-01",
         }),
         userId: 1,
         userEmail: "test@example.com",
@@ -410,8 +410,8 @@ describe("Expiry", () => {
 
   it("room becomes bookable again after Redis hold key expires", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
-    const checkIn = new Date("2027-06-01");
-    const checkOut = new Date("2027-06-04");
+    const checkIn = "2027-06-01";
+    const checkOut = "2027-06-04";
 
     const first = await createBookingService({
       createBookingDTO: makeBookingDTO({ checkIn, checkOut }),
@@ -440,7 +440,7 @@ describe("Cancellation — cancelBookingService", () => {
   it("successfully cancels a PENDING booking and inserts outbox event", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
     const created = await createBookingService({
-      createBookingDTO: makeBookingDTO({ checkIn: new Date("2027-07-01"), checkOut: new Date("2027-07-04") }),
+      createBookingDTO: makeBookingDTO({ checkIn: "2027-07-01", checkOut: "2027-07-04" }),
       userId: 1,
       userEmail: "cancel@example.com",
     });
@@ -460,8 +460,8 @@ describe("Cancellation — cancelBookingService", () => {
 
   it("releases Redis hold/booked keys on cancel", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
-    const checkIn = new Date("2027-07-10");
-    const checkOut = new Date("2027-07-14");
+    const checkIn = "2027-07-10";
+    const checkOut = "2027-07-14";
     const created = await createBookingService({
       createBookingDTO: makeBookingDTO({ checkIn, checkOut }),
       userId: 1,
@@ -480,7 +480,7 @@ describe("Cancellation — cancelBookingService", () => {
   it("rejects cancellation by a user who doesn't own the booking", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
     const created = await createBookingService({
-      createBookingDTO: makeBookingDTO({ checkIn: new Date("2027-07-20"), checkOut: new Date("2027-07-24") }),
+      createBookingDTO: makeBookingDTO({ checkIn: "2027-07-20", checkOut: "2027-07-24" }),
       userId: 1,
       userEmail: "owner@example.com",
     });
@@ -493,7 +493,7 @@ describe("Cancellation — cancelBookingService", () => {
   it("rejects cancelling an already-CANCELLED booking", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
     const created = await createBookingService({
-      createBookingDTO: makeBookingDTO({ checkIn: new Date("2027-08-01"), checkOut: new Date("2027-08-04") }),
+      createBookingDTO: makeBookingDTO({ checkIn: "2027-08-01", checkOut: "2027-08-04" }),
       userId: 1,
       userEmail: "test@example.com",
     });
@@ -508,7 +508,7 @@ describe("Cancellation — cancelBookingService", () => {
   it("rejects cancelling an EXPIRED booking", async () => {
     mockRoomPrice(1, 10, ROOM_PRICE);
     const created = await createBookingService({
-      createBookingDTO: makeBookingDTO({ checkIn: new Date("2027-08-10"), checkOut: new Date("2027-08-14") }),
+      createBookingDTO: makeBookingDTO({ checkIn: "2027-08-10", checkOut: "2027-08-14" }),
       userId: 1,
       userEmail: "test@example.com",
     });

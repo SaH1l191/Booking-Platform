@@ -12,8 +12,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/http" 
-	"time" 
+	"net/http"
+	"time"
 )
 
 type Application struct {
@@ -37,12 +37,26 @@ func (app *Application) Start() error {
 	}
 
 	logger.Log.Info("Connecting to database")
-	db, err := db.SetupDB()
+	database, err := db.SetupDB()
 	if err != nil {
 		return fmt.Errorf("error connecting to database: %w", err)
 	}
-	app.database = db
+	app.database = database
 	logger.Log.Info("Database connection established")
+
+	logger.Log.Info("Running database migrations")
+	if err := db.RunMigrations(app.database); err != nil {
+		logger.Log.Error("Failed to run database migrations", "error", err)
+		return fmt.Errorf("failed to run database migrations: %w", err)
+	}
+	logger.Log.Info("Database migrations completed")
+
+	logger.Log.Info("Running database seeds")
+	if err := db.RunSeeds(app.database); err != nil {
+		logger.Log.Error("Failed to run database seeds", "error", err)
+		return fmt.Errorf("failed to run database seeds: %w", err)
+	}
+	logger.Log.Info("Database seeds completed")
 
 	repo := rr.NewReviewRepository(app.database)
 	reviewService := services.NewReviewService(repo)

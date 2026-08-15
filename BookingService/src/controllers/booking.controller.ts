@@ -1,9 +1,10 @@
 import { cancelBookingService, checkAvailabilityService, createBookingService, getAllBookingsService, getBookingByIdService, getBookingsByHotelService, getBookingsByUserService } from '../services/booking.service';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import logger from '../config/logger';
 import { sendSuccess } from '../utils/response';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { CheckAvailabilityDTO } from '../dto/booking.dto';
+import { subscribeBooking } from '../utils/sse-hub';
 
 
 export async function createBookingHandler(req: AuthRequest, res: Response) {
@@ -76,4 +77,28 @@ export async function checkAvailabilityHandler(req: AuthRequest, res: Response) 
     const availability = await checkAvailabilityService(data);
     console.log("Availability checked successfully", { available: availability });
     sendSuccess(res, availability, 'Availability checked', 200);
+}
+
+export function streamBookingsHandler(req: AuthRequest, res: Response) {
+    const userId = req.user.userId!;
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const flush = () => { if (typeof (res as any).flush === "function") (res as any).flush(); };
+
+    res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
+    flush();
+
+    const unsubscribe = subscribeBooking(userId, (event) => {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+        flush();
+    });
+
+    req.on("close", () => {
+        unsubscribe();
+    });
 }

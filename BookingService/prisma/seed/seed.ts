@@ -1,15 +1,22 @@
 import { PrismaClient, booking_status } from '@prisma/client'
+import mysql from 'mysql2/promise'
 
 const prisma = new PrismaClient()
 
 async function lookupHotelIds(): Promise<Record<string, number>> {
-  const rows: { id: number; name: string }[] =
-    await prisma.$queryRawUnsafe('SELECT id, name FROM hotels WHERE deleted_at IS NULL');
-  const map: Record<string, number> = {};
-  for (const row of rows) {
-    map[row.name] = row.id;
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'root',
+    database: 'airbnb_development',
+  })
+  const [rows] = await conn.query('SELECT id, name FROM hotels WHERE deleted_at IS NULL')
+  await conn.end()
+  const map: Record<string, number> = {}
+  for (const row of rows as { id: number; name: string }[]) {
+    map[row.name] = row.id
   }
-  return map;
+  return map
 }
 
 async function main() {
@@ -17,18 +24,18 @@ async function main() {
 
   const hotels = await lookupHotelIds();
   const grandHotel = hotels['Grand Hotel'];
-  const beachResort = hotels['Beach Resort'];
+  const beachResort = hotels['Seaside Resort'];
   const mountainLodge = hotels['Mountain Lodge'];
 
   if (!grandHotel || !beachResort || !mountainLodge) {
     console.error(
-      'HotelService must be seeded first — expected "Grand Hotel", "Beach Resort", "Mountain Lodge".',
+      'HotelService must be seeded first — expected "Grand Hotel", "Seaside Resort", "Mountain Lodge".',
       { found: Object.keys(hotels) }
     );
     process.exit(1);
   }
 
-  console.log(`Resolved hotel IDs: Grand Hotel=${grandHotel}, Beach Resort=${beachResort}, Mountain Lodge=${mountainLodge}`);
+  console.log(`Resolved hotel IDs: Grand Hotel=${grandHotel}, Seaside Resort=${beachResort}, Mountain Lodge=${mountainLodge}`);
 
   // ── Users (matching AuthService seed: IDs 1-27) ────────────────────────
   const users = [

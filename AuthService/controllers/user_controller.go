@@ -37,7 +37,24 @@ func (uc *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJsonSuccessResponse(w, http.StatusCreated, "User created successfully", user)
+	tokens, err := uc.UserService.LoginUser(&dto.LoginUserRequestDTO{Email: payload.Email, Password: payload.Password})
+	if err != nil {
+		utils.WriteJsonSuccessResponse(w, http.StatusCreated, "User created successfully", user)
+		return
+	}
+
+	utils.SetAuthCookies(r, w, tokens.AccessToken, tokens.RefreshToken)
+
+	roles, _ := uc.UserService.GetUserRoles(user.Id)
+	if roles == nil {
+		roles = []string{}
+	}
+
+	utils.WriteJsonSuccessResponse(w, http.StatusCreated, "User created successfully", map[string]interface{}{
+		"user":          map[string]interface{}{"id": user.Id, "username": user.Username, "email": user.Email, "roles": roles, "createdAt": user.CreatedAt, "updatedAt": user.UpdatedAt},
+		"accessToken":   tokens.AccessToken,
+		"refreshToken":  tokens.RefreshToken,
+	})
 }
 
 func (uc *UserController) GetUserByID(w http.ResponseWriter, r *http.Request) {
@@ -79,9 +96,24 @@ func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Log.Info("Login successful", "email", payload.Email)
 
+	user, _ := uc.UserService.GetUserByEmail(strings.TrimSpace(strings.ToLower(payload.Email)))
+
 	utils.SetAuthCookies(r, w, tokens.AccessToken, tokens.RefreshToken)
 
-	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User logged in successfully", tokens)
+	userData := map[string]interface{}{}
+	if user != nil {
+		roles, _ := uc.UserService.GetUserRoles(user.Id)
+		if roles == nil {
+			roles = []string{}
+		}
+		userData = map[string]interface{}{"id": user.Id, "username": user.Username, "email": user.Email, "roles": roles, "createdAt": user.CreatedAt, "updatedAt": user.UpdatedAt}
+	}
+
+	utils.WriteJsonSuccessResponse(w, http.StatusOK, "User logged in successfully", map[string]interface{}{
+		"user":          userData,
+		"accessToken":   tokens.AccessToken,
+		"refreshToken":  tokens.RefreshToken,
+	})
 }
 
 func (uc *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {

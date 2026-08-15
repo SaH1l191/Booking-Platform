@@ -27,3 +27,24 @@ export async function ensureProcessedEventsTable() {
     )`);
     logger.info("processed_events table ensured");
 }
+
+export async function ensureEmailOutboxTable() {
+    const db = await getDB();
+    await db.execute(`CREATE TABLE IF NOT EXISTS email_outbox (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        event_id VARCHAR(36) NOT NULL,
+        to_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(500) NOT NULL,
+        template_id VARCHAR(100) NOT NULL,
+        template_params JSON NOT NULL,
+        status ENUM('PENDING', 'SENT', 'FAILED') DEFAULT 'PENDING',
+        attempts INT DEFAULT 0,
+        max_attempts INT DEFAULT 5,
+        last_error TEXT,
+        next_retry_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY idx_outbox_event_id (event_id)
+    )`);
+    logger.info("email_outbox table ensured");
+}

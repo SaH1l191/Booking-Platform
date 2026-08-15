@@ -1,11 +1,11 @@
 import { getRabbitMQChannel } from "../queues/event-queue";
 import { prisma } from "../lib/prisma";
 import logger from "../config/logger";
-import { BOOKING_CANCELLED_EVENT } from "../producers/booking-producer";
-import axios from "axios";
+import { BOOKING_CANCELLED_EVENT, REFUND_REQUESTED_EVENT } from "../producers/booking-producer";
 import crypto from "crypto";
 import { confirmHold, releaseDates } from "../utils/availabilityCache";
 import { redisClient } from "../config/redis.config";
+import { emitBookingEvent } from "../utils/sse-hub";
 
 interface PaymentEvent {
     eventId: string;
@@ -107,43 +107,31 @@ async function handlePaymentCaptured(event: PaymentEvent) {
             return;
         }
 
-        //here two conditons : cancelled OR  payment_captured->razoaypay processing -> user immedaitely cancels booking -> razerpay caputres and payment success -> intiiate refund
         if (booking.status === "CANCELLED") {
             logger.warn("Booking is cancelled but payment was captured, skipping confirmation", { bookingId });
             if (event.payload.status === "CAPTURED") {
-                try {
-                    const paymentServiceUrl = process.env.PAYMENT_SERVICE_URL || "http://payment-service:3005";
-                    await axios.post(`${paymentServiceUrl}/payments/refund`, {
-                        bookingId: bookingId,
-                        reason: "LATE_CAPTURE_AFTER_CANCEL"
-                    });
-                    logger.info("Late refund initiated successfully", { bookingId });
-                }
-                catch (error) {
-                    logger.error("Failed to initiate late refund", { bookingId, error: (error as Error).message });
-                }
+                await tx.outbox.create({
+                    data: {
+                        eventId: crypto.randomUUID(),
+                        eventType: REFUND_REQUESTED_EVENT,
+                        payload: { bookingId, reason: "LATE_CAPTURE_AFTER_CANCEL" },
+                    },
+                });
+                logger.info("Refund request emitted to outbox", { bookingId });
             }
             return;
         }
 
-        //preventing race condition by checking if the booking has expired Vs the payment capture time
         if (booking.expiresAt < new Date()) {
             logger.warn("Booking has expired but payment was captured, initiating refund", { bookingId });
-
-            try {
-                const paymentServiceUrl = process.env.PAYMENT_SERVICE_URL || "http://payment-service:3005";
-                await axios.post(`${paymentServiceUrl}/payments/refund`, {
-                    bookingId: bookingId,
-                    reason: "BOOKING_EXPIRED"
-                });
-                logger.info("Refund initiated successfully", { bookingId });
-            } catch (refundError) {
-                logger.error("Failed to initiate refund", {
-                    bookingId,
-                    error: (refundError as Error).message
-                });
-            }
-
+            await tx.outbox.create({
+                data: {
+                    eventId: crypto.randomUUID(),
+                    eventType: REFUND_REQUESTED_EVENT,
+                    payload: { bookingId, reason: "BOOKING_EXPIRED" },
+                },
+            });
+            logger.info("Refund request emitted to outbox", { bookingId });
             return;
         }
 
@@ -161,6 +149,8 @@ async function handlePaymentCaptured(event: PaymentEvent) {
         }
 
         logger.info("Booking confirmed via payment event", { bookingId });
+
+        emitBookingEvent(booking.userId, { type: "booking.confirmed", bookingId, status: "CONFIRMED" });
 
         try {
             await confirmHold(redisClient, booking.hotelId, booking.roomId, booking.id, booking.checkIn, booking.checkOut);
@@ -221,6 +211,8 @@ async function handlePaymentFailed(event: PaymentEvent) {
         });
 
         logger.info("Booking cancelled due to payment failure", { bookingId });
+
+        emitBookingEvent(booking.userId, { type: "booking.cancelled", bookingId, status: "CANCELLED" });
     });
 }
 
@@ -272,6 +264,8 @@ async function handlePaymentRefunded(event: PaymentEvent) {
         });
 
         logger.info("Booking cancelled due to refund", { bookingId });
+
+        emitBookingEvent(booking.userId, { type: "booking.cancelled", bookingId, status: "CANCELLED" });
     });
 }
 

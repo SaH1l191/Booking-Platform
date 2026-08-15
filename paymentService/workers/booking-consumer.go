@@ -55,6 +55,11 @@ type BookingCancelledPayload struct {
 	Reason    string `json:"reason"`
 }
 
+type RefundRequestedPayload struct {
+	BookingId int64  `json:"bookingId"`
+	Reason    string `json:"reason"`
+}
+
 type BookingConsumer struct {
 	paymentService services.PaymentService
 	db             *sql.DB
@@ -124,6 +129,8 @@ func (c *BookingConsumer) handleMessage(msg amqp.Delivery) {
 		c.handleBookingCreated(msg, envelope)
 	case "BOOKING_CANCELLED":
 		c.handleBookingCancelled(msg, envelope)
+	case "REFUND_REQUESTED":
+		c.handleRefundRequested(msg, envelope)
 	default:
 		logger.Log.Info("Ignoring unhandled booking event", "eventType", envelope.EventType)
 		msg.Ack(false)
@@ -217,6 +224,47 @@ func (c *BookingConsumer) handleBookingCancelled(msg amqp.Delivery, envelope Boo
 	}
 
 	logger.Log.Info("Refund initiated for cancelled booking", "bookingId", event.BookingId, "paymentId", payment.Id)
+	markEventProcessed(c.db, envelope.EventId)
+	msg.Ack(false)
+}
+
+func (c *BookingConsumer) handleRefundRequested(msg amqp.Delivery, envelope BookingEventEnvelope) {
+	var event RefundRequestedPayload
+	if err := json.Unmarshal(envelope.Payload, &event); err != nil {
+		logger.Log.Error("Failed to unmarshal refund-requested payload", "error", err)
+		msg.Nack(false, false)
+		return
+	}
+
+	logger.Log.Info("Received refund-requested event", "bookingId", event.BookingId, "reason", event.Reason)
+
+	payment, err := c.paymentService.GetPaymentByBookingId(event.BookingId)
+	if err != nil {
+		logger.Log.Info("No payment found for refund request, skipping", "bookingId", event.BookingId)
+		markEventProcessed(c.db, envelope.EventId)
+		msg.Ack(false)
+		return
+	}
+
+	if payment.Status != "CAPTURED" {
+		logger.Log.Info("Payment not in CAPTURED state, skipping refund", "bookingId", event.BookingId, "paymentStatus", payment.Status)
+		markEventProcessed(c.db, envelope.EventId)
+		msg.Ack(false)
+		return
+	}
+
+	refundDTO := &dto.RefundRequestDTO{
+		PaymentId: payment.Id,
+	}
+
+	_, err = c.paymentService.RefundPayment(refundDTO)
+	if err != nil {
+		logger.Log.Error("Failed to process refund for refund-requested event", "bookingId", event.BookingId, "error", err)
+		msg.Nack(false, true)
+		return
+	}
+
+	logger.Log.Info("Refund initiated for refund-requested event", "bookingId", event.BookingId, "paymentId", payment.Id)
 	markEventProcessed(c.db, envelope.EventId)
 	msg.Ack(false)
 }

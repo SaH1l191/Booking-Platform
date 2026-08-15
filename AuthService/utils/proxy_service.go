@@ -30,6 +30,7 @@ func ProxyToService(targetBaseURL string, pathPrefix string) http.Handler {
 	logger.Log.Info("Setting up proxy to service", "targetURL", targetURL.String(), "pathPrefix", pathPrefix)
 
 	proxy := &httputil.ReverseProxy{
+		FlushInterval: 100 * time.Millisecond,
 		Transport: &http.Transport{
 			ResponseHeaderTimeout: 30 * time.Second,
 			DialContext: (&net.Dialer{

@@ -1,6 +1,7 @@
 import express from "express";
 import helmet from "helmet";
 import dotenv from "dotenv";
+import mysql from "mysql2/promise";
 import { appErrorHandler, genericErrorHandler } from "./middlewares/error.middleware";
 import { requestContextMiddleware } from "./middlewares/request-context.middleware";
 import v1Router from "./routers/v1/routes";
@@ -16,6 +17,41 @@ import { closeRabbitMQ } from "./queues/event-queue";
 import { startBookingExpiryWorker, stopBookingExpiryWorker } from "./workers/booking-expiry-worker";
 
 dotenv.config();
+
+async function ensureDatabase() {
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST || "localhost",
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "root",
+  });
+  await conn.query(
+    `CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME || "airbnb_development1"}\``
+  );
+  await conn.end();
+  logger.info("Database ensured");
+}
+
+async function runMigrations() {
+  const { execSync } = require("child_process");
+  try {
+    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+    execSync("npx prisma generate", { stdio: "inherit" });
+    logger.info("Prisma migrations completed");
+  } catch (error) {
+    logger.error("Failed to run Prisma migrations", { error: (error as Error).message });
+    throw error;
+  }
+}
+
+async function runSeeds() {
+  const { execSync } = require("child_process");
+  try {
+    execSync("npx prisma db seed", { stdio: "inherit" });
+    logger.info("Prisma seeds completed");
+  } catch (error) {
+    logger.warn("Seed warning (may already be seeded)", { error: (error as Error).message });
+  }
+}
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -35,7 +71,18 @@ app.use(appErrorHandler);
 app.use(genericErrorHandler);
 
 const server = app.listen(serverConfig.port, async () => {
-  logger.info("Booking Service started successfully", { port: serverConfig.port });
+  logger.info("Booking Service starting...", { port: serverConfig.port });
+
+  try {
+    await ensureDatabase();
+    await runMigrations();
+    await runSeeds();
+    await prisma.$connect();
+    logger.info("Database connected and migrations applied");
+  } catch (error) {
+    logger.error("Failed to initialize database", { error: (error as Error).message });
+    process.exit(1);
+  }
 
   startOutboxPublisher();
   startPaymentEventConsumer();

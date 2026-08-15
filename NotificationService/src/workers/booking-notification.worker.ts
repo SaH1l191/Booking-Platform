@@ -1,7 +1,5 @@
 import { getRabbitMQChannel } from '../queues/mail.queue';
 import logger from '../config/logger';
-import { renderMailTemplate } from '../templates/template.hanlder';
-import { sendEmail } from '../services/mail.service';
 import { getDB } from '../lib/db';
 
 const BOOKING_EVENTS_QUEUE = "booking-events";
@@ -17,7 +15,58 @@ interface BookingEvent {
         userEmail: string;
         status: string;
         reason?: string;
+        checkIn?: string;
+        checkOut?: string;
     };
+}
+
+function resolveTemplate(event: BookingEvent): { templateId: string; subject: string; params: Record<string, any> } | null {
+    const { userEmail, bookingId, hotelId, roomId, checkIn, checkOut, reason } = event.payload as any;
+
+    if (!userEmail) {
+        logger.warn("No userEmail, skipping", { eventType: event.eventType, bookingId });
+        return null;
+    }
+
+    switch (event.eventType) {
+        case "BOOKING_CONFIRMED":
+            return {
+                templateId: "confirm-booking",
+                subject: "Booking Confirmed - Haven Booking",
+                params: {
+                    userEmail,
+                    userName: userEmail.split("@")[0],
+                    bookingId,
+                    hotelName: `Hotel ${hotelId}`,
+                    roomName: `Room ${roomId}`,
+                    checkIn: checkIn || "N/A",
+                    checkOut: checkOut || "N/A",
+                },
+            };
+        case "BOOKING_CANCELLED":
+            return {
+                templateId: "booking-cancelled",
+                subject: "Booking Cancelled - Haven Booking",
+                params: {
+                    userEmail,
+                    userName: userEmail.split("@")[0],
+                    bookingId,
+                    reason: reason || "",
+                },
+            };
+        case "BOOKING_EXPIRED":
+            return {
+                templateId: "booking-expired",
+                subject: "Booking Expired - Haven Booking",
+                params: {
+                    userEmail,
+                    userName: userEmail.split("@")[0],
+                    bookingId,
+                },
+            };
+        default:
+            return null;
+    }
 }
 
 export const bookingNotificationWorker = async () => {
@@ -33,35 +82,42 @@ export const bookingNotificationWorker = async () => {
 
         try {
             const event: BookingEvent = JSON.parse(msg.content.toString());
+            const db = await getDB();
 
+            // Dedup: already received?
             if (event.eventId) {
-                const db = await getDB();
                 const [rows]: any = await db.execute("SELECT 1 FROM processed_events WHERE event_id = ?", [event.eventId]);
                 if (rows.length > 0) {
-                    logger.info("Event already processed, skipping", { eventId: event.eventId, eventType: event.eventType });
                     channel.ack(msg);
                     return;
                 }
             }
 
-            switch (event.eventType) {
-                case "BOOKING_CONFIRMED":
-                    await handleBookingConfirmed(event);
-                    break;
-                case "BOOKING_CANCELLED":
-                    await handleBookingCancelled(event);
-                    break;
-                case "BOOKING_EXPIRED":
-                    await handleBookingExpired(event);
-                    break;
-                default:
-                    logger.info("Unhandled booking event", { eventType: event.eventType }); //need to modify the exchange , on confirm booking repo 
-                    // it sends booking_created event which is not neceesarry to implmenet here to notificaiton service , as payment will confirm and emit event
+            // Resolve template
+            const resolved = resolveTemplate(event);
+            if (!resolved) {
+                if (event.eventId) {
+                    await db.execute("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", [event.eventId]);
+                }
+                channel.ack(msg);
+                return;
             }
 
-            if (event.eventId) {
-                const db = await getDB();
-                await db.execute("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", [event.eventId]);
+            // DB transaction: mark received + enqueue email
+            const conn = await db.getConnection();
+            try {
+                await conn.beginTransaction();
+                await conn.execute("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", [event.eventId]);
+                await conn.execute(
+                    "INSERT IGNORE INTO email_outbox (event_id, to_email, subject, template_id, template_params) VALUES (?, ?, ?, ?, ?)",
+                    [event.eventId, resolved.params.userEmail, resolved.subject, resolved.templateId, JSON.stringify(resolved.params)]
+                );
+                await conn.commit();
+            } catch (txErr) {
+                await conn.rollback();
+                throw txErr;
+            } finally {
+                conn.release();
             }
 
             channel.ack(msg);
@@ -73,104 +129,3 @@ export const bookingNotificationWorker = async () => {
 
     logger.info("Booking notification worker started");
 };
-
-async function handleBookingConfirmed(event: BookingEvent) {
-    const { userEmail, bookingId, hotelId, roomId, checkIn, checkOut } = event.payload as any;
-
-    if (!userEmail) {
-        logger.warn("No userEmail for BOOKING_CONFIRMED, skipping email", { bookingId });
-        return;
-    }
-
-    try {
-        const emailContent = await renderMailTemplate("confirm-booking", {
-            userName: userEmail.split("@")[0],
-            bookingId: bookingId,
-            hotelName: `Hotel ${hotelId}`,
-            roomName: `Room ${roomId}`,
-            checkIn: checkIn || "N/A",
-            checkOut: checkOut || "N/A",
-        });
-
-        await sendEmail(
-            userEmail,
-            "Booking Confirmed - Haven Booking",
-            emailContent
-        );
-
-        logger.info("Booking confirmation email sent", {
-            to: userEmail,
-            bookingId: bookingId,
-        });
-    } catch (error) {
-        logger.error("Failed to send booking confirmation email", {
-            error: (error as Error).message,
-            bookingId,
-        });
-    }
-}
-
-async function handleBookingCancelled(event: BookingEvent) {
-    const { userEmail, bookingId, reason } = event.payload as any;
-
-    if (!userEmail) {
-        logger.warn("No userEmail for BOOKING_CANCELLED, skipping email", { bookingId });
-        return;
-    }
-
-    try {
-        const emailContent = await renderMailTemplate("booking-cancelled", {
-            userName: userEmail.split("@")[0],
-            bookingId: bookingId,
-            reason: reason || "",
-        });
-
-        await sendEmail(
-            userEmail,
-            "Booking Cancelled - Haven Booking",
-            emailContent
-        );
-
-        logger.info("Booking cancellation email sent", {
-            to: userEmail,
-            bookingId: bookingId,
-        });
-    } catch (error) {
-        logger.error("Failed to send booking cancellation email", {
-            error: (error as Error).message,
-            bookingId,
-        });
-    }
-}
-
-async function handleBookingExpired(event: BookingEvent) {
-    const { userEmail, bookingId } = event.payload as any;
-
-    if (!userEmail) {
-        logger.warn("No userEmail for BOOKING_EXPIRED, skipping email", { bookingId });
-        return;
-    }
-
-    try {
-        const emailContent = await renderMailTemplate("booking-expired", {
-            userName: userEmail.split("@")[0],
-            bookingId: bookingId,
-        });
-
-        await sendEmail(
-            userEmail,
-            "Booking Expired - Haven Booking",
-            emailContent
-        );
-
-        logger.info("Booking expiry email sent", {
-            to: userEmail,
-            bookingId: bookingId,
-        });
-    } catch (error) {
-        logger.error("Failed to send booking expiry email", {
-            error: (error as Error).message,
-            bookingId,
-        });
-    }
-}

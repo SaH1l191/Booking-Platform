@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"goPayment/dto"
+	"goPayment/pkg/logger"
 	"goPayment/services"
 	"goPayment/utils"
 	"io"
@@ -144,10 +145,10 @@ func (pc *PaymentController) HandleWebhook(w http.ResponseWriter, r *http.Reques
 
 	err = pc.PaymentService.HandleWebhook(rawBody, signature)
 	if err != nil {
-		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Webhook processing failed", err)
-		return
+		logger.Log.Error("Webhook processing failed", "error", err)
 	}
 
-	// Always return 200 to Razorpay
+	// Always return 200 to Razorpay to prevent infinite retry loops.
+	// Errors are logged above; Razorpay retries won't help if our DB is down.
 	utils.WriteJsonSuccessResponse(w, http.StatusOK, "Webhook processed", nil)
 }

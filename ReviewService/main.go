@@ -40,3 +40,28 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+
+            //   BOOKING_STAY_COMPLETED
+            //            │
+            //            ▼
+            //   Is eventId processed?
+            //            │
+            //      ┌─────┴─────┐
+            //     YES          NO
+            //      │            │
+            //      ▼            ▼
+            //    ACK       Is booking already
+            //    return    review-eligible?
+            //                   │
+            //            ┌──────┴──────┐
+            //           YES            NO
+            //            │              │
+            //            ▼              ▼
+            //           ACK        INSERT eligibility
+            //           return           │
+            //                            ▼
+            //                   INSERT eventId
+            //                            │
+            //                            ▼
+            //                           ACK

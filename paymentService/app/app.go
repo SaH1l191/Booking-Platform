@@ -72,6 +72,14 @@ func (a *App) Start(ctx context.Context) error {
 	}
 	logger.Log.Info("Database migrations completed")
 
+	// Run database seeds
+	logger.Log.Info("Running database seeds")
+	if err := runSeeds(db); err != nil {
+		logger.Log.Error("Failed to run database seeds", "error", err)
+		return fmt.Errorf("failed to run database seeds: %w", err)
+	}
+	logger.Log.Info("Database seeds completed")
+
 	logger.Log.Info("Connecting to RabbitMQ")
 	if err := rabbitmqconfig.Connect(); err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
@@ -199,11 +207,120 @@ func runMigrationsDirect(db *sql.DB, migrationsDir string) error {
 		if sqlContent == "" {
 			continue
 		}
-		if _, err := db.Exec(sqlContent); err != nil {
-			logger.Log.Warn("Migration query warning (may already be applied)", "file", filepath.Base(file), "error", err)
-		} else {
-			logger.Log.Info("Migration applied", "file", filepath.Base(file))
+
+		sqlContent = stripGooseDirectives(sqlContent)
+		if sqlContent == "" {
+			continue
 		}
+
+		statements := splitStatements(sqlContent)
+		applied := 0
+		for _, stmt := range statements {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" {
+				continue
+			}
+			if _, err := db.Exec(stmt); err != nil {
+				logger.Log.Warn("Migration statement warning (may already be applied)", "file", filepath.Base(file), "error", err)
+			} else {
+				applied++
+			}
+		}
+		if applied > 0 {
+			logger.Log.Info("Migration applied", "file", filepath.Base(file), "statements", applied)
+		}
+	}
+	return nil
+}
+
+func splitStatements(sql string) []string {
+	var statements []string
+	var current strings.Builder
+	lines := strings.Split(sql, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == ";" {
+			statements = append(statements, current.String())
+			current.Reset()
+			continue
+		}
+		if strings.HasSuffix(trimmed, ";") {
+			current.WriteString(line)
+			statements = append(statements, current.String())
+			current.Reset()
+			continue
+		}
+		current.WriteString(line)
+		current.WriteString("\n")
+	}
+	if s := strings.TrimSpace(current.String()); s != "" {
+		statements = append(statements, s)
+	}
+	return statements
+}
+
+func stripGooseDirectives(sql string) string {
+	lines := strings.Split(sql, "\n")
+	var result []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "-- +goose Down") {
+			break
+		}
+		if strings.HasPrefix(trimmed, "-- +goose") {
+			continue
+		}
+		result = append(result, line)
+	}
+	return strings.TrimSpace(strings.Join(result, "\n"))
+}
+
+func runSeeds(db *sql.DB) error {
+	_, currentFile, _, _ := runtime.Caller(0)
+	seedsDir := filepath.Join(filepath.Dir(currentFile), "..", "db", "seeds")
+
+	if _, err := os.Stat(seedsDir); os.IsNotExist(err) {
+		logger.Log.Info("No seeds directory found, skipping seeds")
+		return nil
+	}
+
+	glob := filepath.Join(seedsDir, "*.sql")
+	files, err := filepath.Glob(glob)
+	if err != nil {
+		return fmt.Errorf("failed to list seed files: %w", err)
+	}
+
+	if len(files) == 0 {
+		logger.Log.Info("No seed files found")
+		return nil
+	}
+
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return fmt.Errorf("failed to read seed file %s: %w", file, err)
+		}
+		sqlContent := strings.TrimSpace(string(content))
+		if sqlContent == "" {
+			continue
+		}
+
+		sqlContent = stripGooseDirectives(sqlContent)
+		if sqlContent == "" {
+			continue
+		}
+
+		statements := splitStatements(sqlContent)
+		for _, stmt := range statements {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" {
+				continue
+			}
+			if _, err := db.Exec(stmt); err != nil {
+				logger.Log.Warn("Seed statement warning (may already be applied)", "file", filepath.Base(file), "error", err)
+			}
+		}
+		logger.Log.Info("Seed applied", "file", filepath.Base(file))
 	}
 	return nil
 }

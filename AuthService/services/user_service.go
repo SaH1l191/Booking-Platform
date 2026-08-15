@@ -18,6 +18,7 @@ type UserService interface {
 	CreateUser(payload *dto.CreateUserRequestDTO) (*models.User, error)
 	LoginUser(payload *dto.LoginUserRequestDTO) (dto.AuthTokens, error)
 	GetUserByEmail(email string) (*models.User, error)
+	GetUserRoles(userId int64) ([]string, error)
 	DeleteUser(idStr string) error
 	RefreshTokens(email string) (dto.AuthTokens, error)
 	GetAllUsers() ([]*models.User, error)
@@ -125,6 +126,10 @@ func (u *UserServiceImpl) generateRefreshToken(user *models.User) (string, error
 
 func (u *UserServiceImpl) GetUserByEmail(email string) (*models.User, error) {
     return u.userRepo.GetByEmail(email)
+}
+
+func (u *UserServiceImpl) GetUserRoles(userId int64) ([]string, error) {
+    return u.userRepo.GetUserRoles(userId)
 }
 
 func (u *UserServiceImpl) DeleteUser(idStr string) error {

@@ -59,6 +59,22 @@ func (a *App) Start(ctx context.Context) error {
 	a.database = db
 	logger.Log.Info("Database connection established")
 
+	// Run migrations
+	logger.Log.Info("Running database migrations")
+	if err := config.RunMigrations(db); err != nil {
+		logger.Log.Error("Failed to run database migrations", "error", err)
+		return fmt.Errorf("failed to run database migrations: %w", err)
+	}
+	logger.Log.Info("Database migrations completed")
+
+	// Run seeds
+	logger.Log.Info("Running database seeds")
+	if err := config.RunSeeds(db); err != nil {
+		logger.Log.Error("Failed to run database seeds", "error", err)
+		return fmt.Errorf("failed to run database seeds: %w", err)
+	}
+	logger.Log.Info("Database seeds completed")
+
 	// Repositories
 	logger.Log.Info("Initializing repositories")
 	a.UserRepo = repo.NewUserRepository(db)

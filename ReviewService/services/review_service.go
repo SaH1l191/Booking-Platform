@@ -12,8 +12,8 @@ import (
 type ReviewService interface {
 	GetReviewById(id string) (*models.Review, error)
 	CreateReview(payload *dto.CreateReviewRequestDTO) (*models.Review, error)
-	UpdateReview(id string, payload *dto.UpdateReviewRequestDTO) (*models.Review, error)
-	DeleteReview(id string) error
+	UpdateReview(id string, userId int64, payload *dto.UpdateReviewRequestDTO) (*models.Review, error)
+	DeleteReview(id string, userId int64) error
 	GetAllReviews() ([]*models.Review, error)
 	GetReviewsByUserId(userId string) ([]*models.Review, error)
 	GetReviewsByHotelId(hotelId string) ([]*models.Review, error)
@@ -85,7 +85,7 @@ func (r *ReviewServiceImpl) CreateReview(payload *dto.CreateReviewRequestDTO) (*
 	return review, nil
 }
 
-func (r *ReviewServiceImpl) UpdateReview(id string, payload *dto.UpdateReviewRequestDTO) (*models.Review, error) {
+func (r *ReviewServiceImpl) UpdateReview(id string, userId int64, payload *dto.UpdateReviewRequestDTO) (*models.Review, error) {
 	fmt.Println("Updating review", "reviewId", id)
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
@@ -94,23 +94,29 @@ func (r *ReviewServiceImpl) UpdateReview(id string, payload *dto.UpdateReviewReq
 		return nil, fmt.Errorf("invalid review ID")
 	}
 
-	// Validate rating range
+	review, err := r.reviewRepository.GetByID(idInt)
+	if err != nil {
+		return nil, fmt.Errorf("review not found")
+	}
+	if review.UserId != userId {
+		return nil, fmt.Errorf("not authorized to update this review")
+	}
+
 	if payload.Rating < 1 || payload.Rating > 5 {
 		return nil, fmt.Errorf("rating must be between 1 and 5")
 	}
 
-	// Call the repository to update the review
-	review, err := r.reviewRepository.Update(idInt, payload.Comment, payload.Rating)
+	updated, err := r.reviewRepository.Update(idInt, payload.Comment, payload.Rating)
 	if err != nil {
 		logger.Log.Error("Error updating review", "error", err, "reviewId", id)
 		return nil, err
 	}
 
-	logger.Log.Info("Review updated successfully", "reviewId", review.Id)
-	return review, nil
+	logger.Log.Info("Review updated successfully", "reviewId", updated.Id)
+	return updated, nil
 }
 
-func (r *ReviewServiceImpl) DeleteReview(id string) error {
+func (r *ReviewServiceImpl) DeleteReview(id string, userId int64) error {
 	fmt.Println("Deleting review", "reviewId", id)
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
@@ -119,7 +125,14 @@ func (r *ReviewServiceImpl) DeleteReview(id string) error {
 		return fmt.Errorf("invalid review ID")
 	}
 
-	// Call the repository to delete the review
+	review, err := r.reviewRepository.GetByID(idInt)
+	if err != nil {
+		return fmt.Errorf("review not found")
+	}
+	if review.UserId != userId {
+		return fmt.Errorf("not authorized to delete this review")
+	}
+
 	err = r.reviewRepository.Delete(idInt)
 	if err != nil {
 		logger.Log.Error("Error deleting review", "error", err, "reviewId", id)

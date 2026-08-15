@@ -785,19 +785,20 @@ func TestHandleWebhook_PaymentFailed_UpdatesStatus(t *testing.T) {
 	}
 }
  
-func TestHandleWebhook_UnknownOrder_ReturnsErrorForRazorpayRetry(t *testing.T) {
+func TestHandleWebhook_UnknownOrder_ReturnsError(t *testing.T) {
 	truncateAll()
 	setPaymentSecrets(t)
 	mock := &mockRazorpayClient{}
 	svc := newTestService(mock)
- 
+
 	// No matching payment row exists for this order at all.
 	body := buildWebhookPayload(t, "payment.captured", "order_does_not_exist", "pay_x")
 	sig := ComputeHmacSha256(string(body), testWebhookSecret)
- 
+
+	// Service-level returns error; controller logs it and returns 200 to Razorpay
 	err := svc.HandleWebhook(body, sig)
 	if err == nil {
-		t.Fatal("expected error so Razorpay retries delivery, got nil")
+		t.Fatal("expected error from service for unknown order, got nil")
 	}
 }
  

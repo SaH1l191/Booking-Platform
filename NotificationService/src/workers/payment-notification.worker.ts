@@ -1,7 +1,5 @@
 import { getRabbitMQChannel } from '../queues/mail.queue';
 import logger from '../config/logger';
-import { renderMailTemplate } from '../templates/template.hanlder';
-import { sendEmail } from '../services/mail.service';
 import { getDB } from '../lib/db';
 
 const PAYMENT_QUEUE = "payment-events";
@@ -21,6 +19,38 @@ interface PaymentEvent {
     };
 }
 
+function resolveTemplate(event: PaymentEvent): { templateId: string; subject: string; params: Record<string, any> } | null {
+    const { userEmail, bookingId, amount, currency, paymentId, failureReason } = event.payload;
+
+    if (!userEmail) {
+        logger.warn("No userEmail, skipping", { eventType: event.eventType, bookingId });
+        return null;
+    }
+
+    switch (event.eventType) {
+        case "PAYMENT_CAPTURED":
+            return {
+                templateId: "payment-confirmation",
+                subject: "Payment Confirmed - Haven Booking",
+                params: { userEmail, bookingId, amount, currency, paymentId },
+            };
+        case "PAYMENT_FAILED":
+            return {
+                templateId: "payment-failed",
+                subject: "Payment Failed - Haven Booking",
+                params: { userEmail, bookingId, amount, currency, failureReason: failureReason || "Payment failed" },
+            };
+        case "PAYMENT_REFUNDED":
+            return {
+                templateId: "payment-refunded",
+                subject: "Payment Refunded - Haven Booking",
+                params: { userEmail, bookingId, amount, currency, paymentId },
+            };
+        default:
+            return null;
+    }
+}
+
 export const paymentNotificationWorker = async () => {
     const channel = await getRabbitMQChannel();
     await channel.assertExchange("payment_events_exchange", "fanout", { durable: true });
@@ -34,34 +64,42 @@ export const paymentNotificationWorker = async () => {
 
         try {
             const event: PaymentEvent = JSON.parse(msg.content.toString());
+            const db = await getDB();
 
+            // Dedup: already received?
             if (event.eventId) {
-                const db = await getDB();
                 const [rows]: any = await db.execute("SELECT 1 FROM processed_events WHERE event_id = ?", [event.eventId]);
                 if (rows.length > 0) {
-                    logger.info("Event already processed, skipping", { eventId: event.eventId, eventType: event.eventType });
                     channel.ack(msg);
                     return;
                 }
             }
 
-            switch (event.eventType) {
-                case "PAYMENT_CAPTURED":
-                    await handlePaymentCaptured(event);
-                    break;
-                case "PAYMENT_FAILED":
-                    await handlePaymentFailed(event);
-                    break;
-                case "PAYMENT_REFUNDED":
-                    await handlePaymentRefunded(event);
-                    break;
-                default:
-                    logger.info("Unhandled payment event", { eventType: event.eventType });
+            // Resolve template
+            const resolved = resolveTemplate(event);
+            if (!resolved) {
+                if (event.eventId) {
+                    await db.execute("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", [event.eventId]);
+                }
+                channel.ack(msg);
+                return;
             }
 
-            if (event.eventId) {
-                const db = await getDB();
-                await db.execute("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", [event.eventId]);
+            // DB transaction: mark received + enqueue email
+            const conn = await db.getConnection();
+            try {
+                await conn.beginTransaction();
+                await conn.execute("INSERT IGNORE INTO processed_events (event_id) VALUES (?)", [event.eventId]);
+                await conn.execute(
+                    "INSERT IGNORE INTO email_outbox (event_id, to_email, subject, template_id, template_params) VALUES (?, ?, ?, ?, ?)",
+                    [event.eventId, resolved.params.userEmail, resolved.subject, resolved.templateId, JSON.stringify(resolved.params)]
+                );
+                await conn.commit();
+            } catch (txErr) {
+                await conn.rollback();
+                throw txErr;
+            } finally {
+                conn.release();
             }
 
             channel.ack(msg);
@@ -73,105 +111,3 @@ export const paymentNotificationWorker = async () => {
 
     logger.info("Payment notification worker started");
 };
-
-async function handlePaymentCaptured(event: PaymentEvent) {
-    const { userEmail, bookingId, amount, currency, paymentId } = event.payload;
-
-    if (!userEmail) {
-        logger.warn("No userEmail for PAYMENT_CAPTURED, skipping email", { bookingId });
-        return;
-    }
-
-    try {
-        const emailContent = await renderMailTemplate("payment-confirmation", {
-            bookingId: bookingId,
-            amount: amount,
-            currency: currency,
-            paymentId: paymentId,
-        });
-
-        await sendEmail(
-            userEmail,
-            "Payment Confirmed - Haven Booking",
-            emailContent
-        );
-
-        logger.info("Payment confirmation email sent", {
-            to: userEmail,
-            bookingId: bookingId,
-        });
-    } catch (error) {
-        logger.error("Failed to send payment confirmation email", {
-            error: (error as Error).message,
-            bookingId,
-        });
-    }
-}
-
-async function handlePaymentFailed(event: PaymentEvent) {
-    const { userEmail, bookingId, failureReason } = event.payload;
-
-    if (!userEmail) {
-        logger.warn("No userEmail for PAYMENT_FAILED, skipping email", { bookingId });
-        return;
-    }
-
-    try {
-        const emailContent = await renderMailTemplate("payment-failed", {
-            bookingId: bookingId,
-            amount: 0,
-            currency: "INR",
-            failureReason: failureReason || "Payment failed",
-        });
-
-        await sendEmail(
-            userEmail,
-            "Payment Failed - Haven Booking",
-            emailContent
-        );
-
-        logger.info("Payment failure email sent", {
-            to: userEmail,
-            bookingId: bookingId,
-        });
-    } catch (error) {
-        logger.error("Failed to send payment failure email", {
-            error: (error as Error).message,
-            bookingId,
-        });
-    }
-}
-
-async function handlePaymentRefunded(event: PaymentEvent) {
-    const { userEmail, bookingId, amount } = event.payload;
-
-    if (!userEmail) {
-        logger.warn("No userEmail for PAYMENT_REFUNDED, skipping email", { bookingId });
-        return;
-    }
-
-    try {
-        const emailContent = await renderMailTemplate("payment-refunded", {
-            bookingId: bookingId,
-            amount: amount,
-            currency: "INR",
-            paymentId: event.payload.paymentId,
-        });
-
-        await sendEmail(
-            userEmail,
-            "Payment Refunded - Haven Booking",
-            emailContent
-        );
-
-        logger.info("Payment refund email sent", {
-            to: userEmail,
-            bookingId: bookingId,
-        });
-    } catch (error) {
-        logger.error("Failed to send payment refund email", {
-            error: (error as Error).message,
-            bookingId,
-        });
-    }
-}

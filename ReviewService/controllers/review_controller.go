@@ -64,7 +64,17 @@ func (rc *ReviewController) CreateReview(w http.ResponseWriter, r *http.Request)
 	review, err := rc.ReviewService.CreateReview(&payload)
 
 	if err != nil {
-		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to create review", err)
+		errMsg := err.Error()
+		switch {
+		case errMsg == "not eligible to review this booking":
+			utils.WriteJsonErrorResponse(w, http.StatusForbidden, errMsg, err)
+		case errMsg == "already reviewed this booking":
+			utils.WriteJsonErrorResponse(w, http.StatusConflict, errMsg, err)
+		case errMsg == "rating must be between 1 and 5":
+			utils.WriteJsonErrorResponse(w, http.StatusBadRequest, errMsg, err)
+		default:
+			utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to create review", err)
+		}
 		return
 	}
 
@@ -81,6 +91,13 @@ func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	jwtUserID, ok := r.Context().Value("userID").(string)
+	if !ok || jwtUserID == "" {
+		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid user context", fmt.Errorf("invalid user ID"))
+		return
+	}
+	userId, _ := strconv.ParseInt(jwtUserID, 10, 64)
+
 	payload, ok := r.Context().Value("payload").(dto.UpdateReviewRequestDTO)
 	if !ok {
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "Invalid request payload", fmt.Errorf("invalid payload type"))
@@ -89,10 +106,20 @@ func (rc *ReviewController) UpdateReview(w http.ResponseWriter, r *http.Request)
 
 	fmt.Println("Payload received", "payload", payload)
 
-	review, err := rc.ReviewService.UpdateReview(reviewId, &payload)
+	review, err := rc.ReviewService.UpdateReview(reviewId, userId, &payload)
 
 	if err != nil {
-		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to update review", err)
+		errMsg := err.Error()
+		switch {
+		case errMsg == "review not found":
+			utils.WriteJsonErrorResponse(w, http.StatusNotFound, errMsg, err)
+		case errMsg == "not authorized to update this review":
+			utils.WriteJsonErrorResponse(w, http.StatusForbidden, errMsg, err)
+		case errMsg == "rating must be between 1 and 5":
+			utils.WriteJsonErrorResponse(w, http.StatusBadRequest, errMsg, err)
+		default:
+			utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to update review", err)
+		}
 		return
 	}
 
@@ -109,10 +136,25 @@ func (rc *ReviewController) DeleteReview(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err := rc.ReviewService.DeleteReview(reviewId)
+	jwtUserID, ok := r.Context().Value("userID").(string)
+	if !ok || jwtUserID == "" {
+		utils.WriteJsonErrorResponse(w, http.StatusUnauthorized, "Invalid user context", fmt.Errorf("invalid user ID"))
+		return
+	}
+	userId, _ := strconv.ParseInt(jwtUserID, 10, 64)
+
+	err := rc.ReviewService.DeleteReview(reviewId, userId)
 
 	if err != nil {
-		utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to delete review", err)
+		errMsg := err.Error()
+		switch {
+		case errMsg == "review not found":
+			utils.WriteJsonErrorResponse(w, http.StatusNotFound, errMsg, err)
+		case errMsg == "not authorized to delete this review":
+			utils.WriteJsonErrorResponse(w, http.StatusForbidden, errMsg, err)
+		default:
+			utils.WriteJsonErrorResponse(w, http.StatusInternalServerError, "Failed to delete review", err)
+		}
 		return
 	}
 
