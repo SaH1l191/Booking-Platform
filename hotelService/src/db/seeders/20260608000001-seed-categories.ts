@@ -2,6 +2,7 @@ import type { QueryInterface } from "sequelize";
 
 module.exports = {
   async up(queryInterface: QueryInterface): Promise<void> {
+    await queryInterface.bulkDelete("categories", {}, {});
     const now = new Date();
 
     await queryInterface.bulkInsert("categories", [
@@ -20,7 +21,7 @@ module.exports = {
       { id: 13, name: "Modern",       slug: "modern",       icon: "🏢",  created_at: now, updated_at: now },
       { id: 14, name: "Treehouse",    slug: "treehouse",    icon: "🌳",  created_at: now, updated_at: now },
       { id: 15, name: "Boat",         slug: "boat",         icon: "🛥️",  created_at: now, updated_at: now },
-    ]);
+    ], { raw: true });
   },
 
   async down(queryInterface: QueryInterface): Promise<void> {

@@ -2,7 +2,7 @@ import {
     DataTypes,
     Model,
     type CreationOptional,
-    type InferAttributes,
+    type InferAttributes,literal,
     type InferCreationAttributes,
 } from 'sequelize';
 import sequelize from './sequelize';
@@ -14,6 +14,7 @@ class Hotel extends Model<InferAttributes<Hotel>, InferCreationAttributes<Hotel>
     declare location: string;
     declare latitude: number | null;
     declare longitude: number | null;
+    declare locationPoint: CreationOptional<{ type: string; coordinates: [number, number] } | null>;
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
     declare rating: number;
@@ -48,6 +49,11 @@ Hotel.init(
         longitude: {
             type: DataTypes.DECIMAL(11, 8),
             allowNull: true,
+        },
+        locationPoint: {
+            type: DataTypes.GEOMETRY('POINT', 4326),
+            allowNull: false,
+            defaultValue: literal("(ST_SRID(POINT(0, 0), 4326))"),
         },
         rating: {
             type: DataTypes.FLOAT,
@@ -84,7 +90,7 @@ Hotel.init(
             { fields: ['deleted_at'] },
             { fields: ['latitude', 'longitude'] },
             { fields: ['rating'] },
-
+            { fields: ['location_point'], using: 'SPATIAL' },
         ]
     },
 );

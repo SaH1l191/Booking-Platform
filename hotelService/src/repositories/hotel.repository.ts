@@ -17,6 +17,9 @@ export async function createHotel(hotelData: createHotelDto) {
         location: hotelData.location,
         latitude: hotelData.latitude,
         longitude: hotelData.longitude,
+        locationPoint: hotelData.latitude && hotelData.longitude
+            ? { type: "Point", coordinates: [hotelData.longitude, hotelData.latitude] }
+            : { type: "Point", coordinates: [0, 0] },
         rating: hotelData.rating || 0,
         ratingCount: hotelData.ratingCount || 0,
         amenities: hotelData.amenities || null,
@@ -45,7 +48,8 @@ export async function createHotel(hotelData: createHotelDto) {
 }
 
 export async function getHotelById(hotelId: number) {
-    const hotel = await Hotel.findByPk(hotelId, {
+    const hotel = await Hotel.findOne({
+        where: { id: hotelId, deletedAt: null },
         include: [
             {
                 model: HotelCategory,
@@ -86,9 +90,10 @@ const limit = Math.max(1, Math.min(100, parseInt(query.limit, 10) || 10));
     const order: any[] = [];
 
     if (query.search) {
+        const escapedSearch = query.search.replace(/[%_]/g, '\\$&');
         where[Op.or] = [
-            { name: { [Op.like]: `%${query.search}%` } },
-            { location: { [Op.like]: `%${query.search}%` } },
+            { name: { [Op.like]: `%${escapedSearch}%` } },
+            { location: { [Op.like]: `%${escapedSearch}%` } },
         ];
     }
 
@@ -111,26 +116,23 @@ const limit = Math.max(1, Math.min(100, parseInt(query.limit, 10) || 10));
     if (query.latitude && query.longitude) {
         const lat = parseFloat(query.latitude);
         const lng = parseFloat(query.longitude);
-        const r = parseFloat(query.radius) || 10;
+        const r = query.radius !== undefined ? parseFloat(query.radius) : 10;
 
-        if (!isNaN(lat) && !isNaN(lng)) {
-            const latDelta = r / 111;
-            const lngDelta = r / (111 * Math.cos((lat * Math.PI) / 180));
-
-            andClauses.push(
-                literal(`${sequelize.escape(lat - latDelta)} <= CAST(latitude AS DECIMAL(10,8)) AND CAST(latitude AS DECIMAL(10,8)) <= ${sequelize.escape(lat + latDelta)}`),
-                literal(`${sequelize.escape(lng - lngDelta)} <= CAST(longitude AS DECIMAL(11,8)) AND CAST(longitude AS DECIMAL(11,8)) <= ${sequelize.escape(lng + lngDelta)}`)
-            );
+        if (!isNaN(lat) && !isNaN(lng) && !isNaN(r) && r > 0) {
+            const userPoint = `ST_SRID(POINT(${sequelize.escape(lng)}, ${sequelize.escape(lat)}), 4326)`;
 
             distanceField = literal(`
-                ST_Distance_Sphere(
-                    POINT(longitude, latitude),
-                    POINT(${sequelize.escape(lng)}, ${sequelize.escape(lat)})
-                ) / 1000
+                ST_Distance(location_point, ${userPoint}) / 1000
             `);
 
             andClauses.push(sequelizeWhere(distanceField, { [Op.lte]: r }));
         }
+    }
+
+    if (query.category) {
+        andClauses.push(
+            literal(`EXISTS (SELECT 1 FROM hotel_categories hc INNER JOIN categories c ON hc.category_id = c.id WHERE hc.hotel_id = Hotel.id AND c.slug = ${sequelize.escape(query.category)})`)
+        );
     }
 
     if (andClauses.length > 0) {
@@ -147,12 +149,6 @@ const limit = Math.max(1, Math.min(100, parseInt(query.limit, 10) || 10));
         '-price': [literal(`(SELECT COALESCE(MIN(price), 0) FROM room_categories WHERE hotel_id = Hotel.id AND deleted_at IS NULL)`), 'DESC'],
     };
     order.push(sortMap[sortBy] || sortMap['-createdAt']!);
-
-    if (query.category) {
-        andClauses.push(
-            literal(`EXISTS (SELECT 1 FROM hotel_categories hc INNER JOIN categories c ON hc.category_id = c.id WHERE hc.hotel_id = Hotel.id AND c.slug = ${sequelize.escape(query.category)})`)
-        );
-    }
 
     const hotelCategoryInclude: any = {
         model: HotelCategory,
@@ -210,8 +206,13 @@ export async function updateHotel(hotelId: number, hotelData: Partial<createHote
     if (hotelData.name) hotelRecord!.name = hotelData.name;
     if (hotelData.address) hotelRecord!.address = hotelData.address;
     if (hotelData.location) hotelRecord!.location = hotelData.location;
-    if (hotelData.latitude !== undefined) hotelRecord!.latitude = hotelData.latitude;
-    if (hotelData.longitude !== undefined) hotelRecord!.longitude = hotelData.longitude;
+    if (hotelData.latitude !== undefined || hotelData.longitude !== undefined) {
+        const latitude = hotelData.latitude ?? Number(hotelRecord!.latitude);
+        const longitude = hotelData.longitude ?? Number(hotelRecord!.longitude);
+        hotelRecord!.latitude = latitude;
+        hotelRecord!.longitude = longitude;
+        hotelRecord!.locationPoint = { type: "Point", coordinates: [longitude, latitude] };
+    }
     if (hotelData.rating !== undefined) hotelRecord!.rating = hotelData.rating;
     if (hotelData.ratingCount !== undefined) hotelRecord!.ratingCount = hotelData.ratingCount;
     if (hotelData.amenities !== undefined) hotelRecord!.amenities = hotelData.amenities;

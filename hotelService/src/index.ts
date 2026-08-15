@@ -1,8 +1,9 @@
 import "./db/models/associations";
 import express from "express";
-import helmet from "helmet"; 
+import helmet from "helmet";
+import mysql from "mysql2/promise";
 import logger from "./config/logger";
-import { serverConfig } from "./config";
+import { serverConfig, dbConfig } from "./config";
 import {
   appErrorHandler,
   genericErrorHandler,
@@ -14,11 +15,11 @@ import { register } from "./metrics/metrics";
 import { metricsMiddleware } from "./middlewares/metrics.middleware";
 
 const app = express();
-const PORT = serverConfig.PORT; 
+const PORT = serverConfig.PORT;
 
 app.use(express.json({ limit: '10mb' }));
 app.use(helmet());
-app.use(requestContextMiddleware); 
+app.use(requestContextMiddleware);
 app.use(metricsMiddleware);
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
@@ -33,14 +34,52 @@ app.use("/api/v1", v1Router);
 app.use(appErrorHandler);
 app.use(genericErrorHandler);
 
+async function ensureDatabase() {
+  const conn = await mysql.createConnection({
+    host: dbConfig.DB_HOST,
+    user: dbConfig.DB_USER,
+    password: dbConfig.DB_PASSWORD,
+  });
+  await conn.query(
+    `CREATE DATABASE IF NOT EXISTS \`${dbConfig.DB_NAME}\``
+  );
+  await conn.end();
+  logger.info("Database ensured");
+}
+
+async function runMigrations() {
+  const { execSync } = require("child_process");
+  try {
+    execSync("npx sequelize-cli db:migrate", { stdio: "inherit" });
+    logger.info("Sequelize migrations completed");
+  } catch (error) {
+    logger.error("Failed to run Sequelize migrations", { error: (error as Error).message });
+    throw error;
+  }
+}
+
+async function runSeeds() {
+  const { execSync } = require("child_process");
+  try {
+    execSync("npx sequelize-cli db:seed:all", { stdio: "inherit" });
+    logger.info("Sequelize seeds completed");
+  } catch (error) {
+    logger.warn("Seed warning (may already be seeded)", { error: (error as Error).message });
+  }
+}
+
 const server = app.listen(PORT, async () => {
-  logger.info("Hotel Service started successfully", { port: PORT });
+  logger.info("Hotel Service starting...", { port: PORT });
 
   try {
+    await ensureDatabase();
+    await runMigrations();
+    await runSeeds();
     await sequelize.authenticate();
     logger.info("Database connected successfully");
   } catch (error) {
     logger.error("Unable to connect to the database", { error: (error as Error).message });
+    process.exit(1);
   }
 });
 

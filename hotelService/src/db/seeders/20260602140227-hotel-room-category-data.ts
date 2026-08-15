@@ -60,7 +60,14 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-    ]);
+    ], { raw: true });
+
+    // Populate location_point from latitude/longitude
+    await queryInterface.sequelize.query(`
+      UPDATE hotels
+      SET location_point = ST_SRID(POINT(longitude, latitude), 4326)
+      WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+    `);
 
     // ROOM CATEGORIES
     await queryInterface.bulkInsert("room_categories", [
@@ -215,7 +222,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-    ]);
+    ], { raw: true });
 
     // ROOMS
     await queryInterface.bulkInsert("rooms", [
@@ -722,7 +729,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-    ]);
+    ], { raw: true });
 
     // ROOM AVAILABILITIES
     await queryInterface.bulkInsert("room_availabilities", [
@@ -857,7 +864,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-    ]);
+    ], { raw: true });
   },
 
   async down(queryInterface: QueryInterface): Promise<void> {

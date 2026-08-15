@@ -2,6 +2,7 @@ import type { QueryInterface } from "sequelize";
 
 module.exports = {
   async up(queryInterface: QueryInterface): Promise<void> {
+    await queryInterface.bulkDelete("hotel_images", {}, {});
     const now = new Date();
 
     await queryInterface.bulkInsert("hotel_images", [
@@ -28,7 +29,7 @@ module.exports = {
       { id: 14, hotel_id: 4, url: "https://images.unsplash.com/photo-1590381105924-c72589b1ef3f?w=800", alt_text: "City Center Inn room", display_order: 1, created_at: now },
       { id: 15, hotel_id: 4, url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", alt_text: "City Center Inn bathroom", display_order: 2, created_at: now },
       { id: 16, hotel_id: 4, url: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800", alt_text: "City Center Inn lounge", display_order: 3, created_at: now },
-    ]);
+    ], { raw: true });
   },
 
   async down(queryInterface: QueryInterface): Promise<void> {

@@ -2,6 +2,7 @@ import type { QueryInterface } from "sequelize";
 
 module.exports = {
   async up(queryInterface: QueryInterface): Promise<void> {
+    await queryInterface.bulkDelete("hotel_categories", {}, {});
     const now = new Date();
 
     await queryInterface.bulkInsert("hotel_categories", [
@@ -16,7 +17,7 @@ module.exports = {
       { id: 6, hotel_id: 3, category_id: 4,  created_at: now },
       // City Center Inn (Chicago) → Modern
       { id: 7, hotel_id: 4, category_id: 13, created_at: now },
-    ]);
+    ], { raw: true });
   },
 
   async down(queryInterface: QueryInterface): Promise<void> {
