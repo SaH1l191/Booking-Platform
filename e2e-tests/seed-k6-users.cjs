@@ -21,7 +21,7 @@ async function main() {
       process.exit(1);
     }
     const [u] = await conn.execute('SELECT id FROM users WHERE email = ?', [email]);
-    await conn.execute('INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 3)', [u[0].id]);
+    await conn.execute('INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 4)', [u[0].id]);
   }
   console.log('Seeded 50 k6 users via API with customer role');
   await conn.end();

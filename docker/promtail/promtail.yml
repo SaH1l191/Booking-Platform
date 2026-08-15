@@ -14,13 +14,23 @@ scrape_configs:
           expressions:
             level: level
             msg: msg
+            message: message
             service: service
             time: time
+            timestamp: timestamp
+            requestId: requestId
+            method: method
+            route: route
+            status: status
+            latency: latency
       - labels:
           service:
       - timestamp:
           source: time
-          format: RFC3339Nano
+          format: "2006-01-02 15:04:05"
+      - timestamp:
+          source: timestamp
+          format: "YYYY-MM-DD HH:mm:ss"
     static_configs:
       - targets:
           - localhost

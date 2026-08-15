@@ -10,5 +10,6 @@ export default defineConfig({
     fileParallelism: false,
     sequence: { concurrent: false },
     globalSetup: ['api-flows/global-setup.ts'],
+    pool: 'forks',
   },
 });
