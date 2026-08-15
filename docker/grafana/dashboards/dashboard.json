@@ -264,7 +264,7 @@
       "gridPos": { "h": 16, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "{job=~\".+\"}",
+          "expr": "{job=~\".+\"} | route !~ \"/metrics|/health\"",
           "refId": "A"
         }
       ],
@@ -622,7 +622,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
       "targets": [
         {
-          "expr": "{job=~\".+\"} | level=\"error\"",
+          "expr": "{job=~\".+\"} | level=\"error\" | route !~ \"/metrics|/health\"",
           "refId": "A"
         }
       ],
@@ -752,7 +752,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
       "targets": [
         {
-          "expr": "{job=~\".+\"} | requestId=~\"$Request ID\"",
+          "expr": "{job=~\".+\"} | requestId=~\"$Request ID\" | route !~ \"/metrics|/health\"",
           "refId": "A"
         }
       ],
