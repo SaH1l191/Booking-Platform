@@ -20,8 +20,8 @@ export function makeBookingDTO(overrides: Record<string, any> = {}) {
     hotelId: 1,
     roomId: 10,
     totalGuests: 2,
-    checkIn: futureDate(5),
-    checkOut: futureDate(9),
+    checkIn: futureDateStr(5),
+    checkOut: futureDateStr(9),
     ...overrides,
   };
 }
