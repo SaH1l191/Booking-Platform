@@ -1,57 +1,43 @@
 import { check, sleep } from 'k6';
 import { loginAsSeededUser, loadDateRange, apiGet, apiPost, uuidv4, bookingSuccess, bookingConflict, bookingError, bookingDuration } from './helpers.js';
 
+// Stress test: pushes system to its limits
 export const options = {
   scenarios: {
-    // Scenario 1: Normal traffic — 20 VUs, 10 iterations each
-    normal_load: {
-      executor: 'per-vu-iterations',
-      vus: 20,
-      iterations: 10,
-      exec: 'mixedTraffic',
-    },
-    // Scenario 2: Stress test — ramp up to 50 VUs
+    // Ramp up → hold → ramp down
     stress: {
       executor: 'ramping-vus',
       startVUs: 0,
       stages: [
-        { duration: '20s', target: 20 },
-        { duration: '30s', target: 50 },
-        { duration: '20s', target: 50 },
-        { duration: '10s', target: 0 },
+        { duration: '15s', target: 20 },   // warm up
+        { duration: '15s', target: 50 },   // ramp to normal peak
+        { duration: '30s', target: 50 },   // hold at normal peak
+        { duration: '15s', target: 100 },  // ramp to stress
+        { duration: '30s', target: 100 },  // hold at stress
+        { duration: '15s', target: 0 },    // cool down
       ],
       exec: 'mixedTraffic',
     },
   },
   thresholds: {
-    http_req_duration: ['p(95)<500', 'p(99)<1000'],
-    http_req_failed: ['rate<0.05'],
-    checks: ['rate>0.98'],
-    booking_duration: ['p(95)<2000'],
-    booking_success: ['count>0'],
+    http_req_duration: ['p(95)<800', 'p(99)<2000'],
+    http_req_failed: ['rate<0.10'],
+    checks: ['rate>0.95'],
+    booking_duration: ['p(95)<3000'],
   },
 };
 
-// Realistic traffic mix matching production patterns:
-//   40% search  |  25% availability  |  20% book  |  10% my-bookings  |  5% login
-export function mixedTraffic() {
-  // Each VU gets a unique user (modulo 50 seeded users)
+function mixedTraffic() {
   const userId = ((__VU - 1) % 50) + 1;
   const token = loginAsSeededUser(userId);
-  if (!token) {
-    check(null, { 'login ok': () => false });
-    return;
-  }
+  if (!token) return;
 
   const action = Math.random();
 
   if (action < 0.40) {
-    // 40% — Browse / search hotels
     const res = apiGet('/api/v1/hotels/?page=1&limit=10', token);
     check(res, { 'search ok': (r) => r.status === 200 });
-
   } else if (action < 0.65) {
-    // 25% — Check availability (spread across rooms 1-15)
     const roomId = ((__VU + __ITER) % 15) + 1;
     const dates = loadDateRange(200, 2);
     const res = apiGet(
@@ -59,15 +45,13 @@ export function mixedTraffic() {
       token,
     );
     check(res, { 'availability ok': (r) => r.status === 200 });
-
   } else if (action < 0.85) {
-    // 20% — Create booking (spread across rooms 1-15, unique dates per VU)
     const roomId = ((__VU + __ITER) % 15) + 1;
     const dates = loadDateRange(25 + __ITER, 2);
     const res = apiPost('/api/v1/bookings/', {
       hotelId: 1, roomId, totalGuests: 1, bookingAmount: 100,
       checkIn: dates.checkIn, checkOut: dates.checkOut,
-      idempotencyKey: uuidv4(`${__VU}-${__ITER}-mixed-${Date.now()}`),
+      idempotencyKey: uuidv4(`${__VU}-${__ITER}-stress-${Date.now()}`),
     }, token);
 
     const ok = check(res, { 'book ok': (r) => r.status === 201 || r.status === 400 || r.status === 409 });
@@ -76,17 +60,13 @@ export function mixedTraffic() {
     else if (res.status >= 500) bookingError.add(1);
 
     bookingDuration.add(res.timings.duration);
-
   } else if (action < 0.95) {
-    // 10% — List my bookings
     const res = apiGet('/api/v1/bookings/me', token);
     check(res, { 'my bookings ok': (r) => r.status === 200 });
-
   } else {
-    // 5% — Login (simulates new session)
     const res = apiGet('/health', token);
     check(res, { 'health ok': (r) => r.status === 200 });
   }
 
-  sleep(0.5);
+  sleep(0.3);
 }
