@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useBookingsStore, useHotelsStore, usePaymentStore, useAuthStore, openRazorpayCheckout } from "@/stores";
 import { toast } from "sonner";
 import type { BookingStatus } from "@/stores/types";
+import { useBookingSSE } from "../../../hooks/useBookingSSE";
 
 const statusConfig: Record<BookingStatus, { label: string; color: string }> = {
   CONFIRMED: { label: "Confirmed", color: "bg-success-light text-success" },
@@ -17,6 +18,7 @@ export default function HotelBookingsPage() {
   const { hotels, fetchHotels } = useHotelsStore();
   const { verifyPayment, getPaymentByBookingId, isLoading: paymentLoading } = usePaymentStore();
   const { user } = useAuthStore();
+  useBookingSSE();
 
   useEffect(() => {
     fetchAllBookings();

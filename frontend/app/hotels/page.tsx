@@ -84,9 +84,7 @@ function HotelsContent() {
   useEffect(() => {
     debounceRef.current = setTimeout(() => {
       setSearchQuery(searchInput);
-      if (searchInput) {
-        setCoordinates(null, null);
-      }
+      setCoordinates(null, null);
       setPage(1);
       fetchHotels();
     }, 400);

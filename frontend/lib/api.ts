@@ -22,36 +22,16 @@ async function getAuthStore() {
   return authStore;
 }
 
-const processQueue = (error: unknown, token: string | null = null) => {
+const processQueue = (error: unknown) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve(undefined);
     }
   });
   failedQueue = [];
 };
-
-function getAuthState() {
-  try {
-    const stored = localStorage.getItem("auth-storage");
-    return stored ? JSON.parse(stored).state : null;
-  } catch {
-    return null;
-  }
-}
-
-async function setAuthTokens(accessToken: string, refreshToken: string) {
-  try {
-    const store = await getAuthStore();
-    store.setState({ tokens: { accessToken, refreshToken } });
-  } catch {
-    const stored = JSON.parse(localStorage.getItem("auth-storage") || "{}");
-    stored.state = { ...stored.state, tokens: { accessToken, refreshToken } };
-    localStorage.setItem("auth-storage", JSON.stringify(stored));
-  }
-}
 
 async function clearAuth() {
   try {
@@ -62,18 +42,6 @@ async function clearAuth() {
   }
   window.location.href = "/login";
 }
-
-api.interceptors.request.use((config) => {
-  if (config.url?.includes("/users/refresh")) {
-    return config;
-  }
-
-  const auth = getAuthState();
-  if (auth?.tokens?.accessToken) {
-    config.headers.Authorization = `Bearer ${auth.tokens.accessToken}`;
-  }
-  return config;
-});
 
 api.interceptors.response.use(
   (response) => {
@@ -102,50 +70,22 @@ api.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
-          })
+          .then(() => api(originalRequest))
           .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const auth = getAuthState();
-      if (!auth?.tokens?.refreshToken) {
-        // No refresh token means there was never a session to begin with —
-        // this is an anonymous visitor hitting an endpoint that returned
-        // 401, not an expired session. Forcibly redirecting them to /login
-        // is wrong here: it was previously firing on the home page just
-        // from an anonymous category/hotel fetch. Let the request fail and
-        // let the calling store decide how to degrade (empty list, etc.)
-        // rather than hijacking navigation.
-        isRefreshing = false;
-        processQueue(new Error("No refresh token"), null);
-        return Promise.reject(new Error(message || "Unauthorized"));
-      }
-
       try {
-        const { data } = await axios.post(`${BASE_URL}/users/refresh`, null, {
+        await axios.post(`${BASE_URL}/users/refresh`, null, {
           withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${auth.tokens.refreshToken}`,
-          },
         });
 
-        const res = data.data || data;
-        if (!res.accessToken || !res.refreshToken) {
-          throw new Error("Invalid refresh response: missing tokens");
-        }
-
-        await setAuthTokens(res.accessToken, res.refreshToken);
-        processQueue(null, res.accessToken);
-
-        originalRequest.headers.Authorization = `Bearer ${res.accessToken}`;
+        processQueue(null);
         return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
+        processQueue(refreshError);
         toast.error("Session expired. Please login again.");
         clearAuth();
         return Promise.reject(

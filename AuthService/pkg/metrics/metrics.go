@@ -71,6 +71,13 @@ func MetricsMiddleware(next http.Handler) http.Handler {
 		statusCode := strconv.Itoa(rw.statusCode)
 
 		routePatterns := chi.RouteContext(r.Context()).RoutePatterns // route based route patterns for prometheus metrics
+		//Routepatterns tells us which route patterns and returns in array of strings 
+		//below converts to a single string to be used as a label in prometheus metrics
+
+		//[]string{
+    // "/api",
+    // "/bookings/{id}",
+// } leads to low cardinality metrics in prometheus as it will be a single string "/api/bookings/{id}" instead of multiple strings "/api" and "/bookings/{id}" which will lead to high cardinality metrics in prometheus
 		route := strings.Join(routePatterns, "")
 
 		HTTPRequestsTotal.WithLabelValues(r.Method, route, statusCode).Inc()

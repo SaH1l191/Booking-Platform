@@ -271,14 +271,14 @@ services:
     image: prom/prometheus:latest
     container_name: booking-prometheus
     restart: unless-stopped
-    network_mode: host
+    network_mode: host #Container uses host's network (linux here)
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
       interval: 10s
       timeout: 5s
       retries: 5
     volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml #where Prometheus expects its configuration inside the container.
       - prometheus_data:/prometheus
 
   grafana:
@@ -291,9 +291,9 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_SERVER_HTTP_PORT: "3010"
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./docker/grafana/provisioning:/etc/grafana/provisioning
-      - ./docker/grafana/dashboards:/etc/grafana/dashboards
+      - grafana_data:/var/lib/grafana  #stores Grafana's persistent data
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning # stores grafana's configuration files for datasources and dashboards
+      - ./docker/grafana/dashboards:/etc/grafana/dashboards #dashbaord JSON files
 
   loki:
     image: grafana/loki:latest
@@ -323,8 +323,8 @@ services:
     container_name: booking-rabbitmq
     restart: unless-stopped
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5672:5672" # AMQP protocol
+      - "15672:15672" # web management console
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -347,3 +347,30 @@ volumes:
 networks:
   booking-network:
     driver: bridge
+
+
+
+# Grafana
+#    ↓
+# host network
+
+# Prometheus
+#    ↓
+# host network
+
+# Loki
+#    ↓
+# booking-network
+
+# Promtail (depends on Loki & both on same docker network so it uses http://loki:3100/loki/api/v1/push and not localhost)
+#    ↓
+# booking-network
+
+# RabbitMQ
+#    ↓
+# booking-network
+
+
+# App outside Docker → localhost:5672
+
+# App inside Docker → rabbitmq:5672

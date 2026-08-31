@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { DayPicker } from "react-day-picker";
 import { format, differenceInCalendarDays, startOfDay } from "date-fns";
 import Navbar from "../../components/Navbar";
@@ -48,7 +48,14 @@ export default function HotelDetailPage() {
   const { rooms, fetchRoomsByHotel } = useRoomsStore();
   const { hotelReviews, averageRating, totalReviews, fetchReviewsByHotelId, clearReviews } = useReviewsStore();
   const { createBooking, isLoading: bookingLoading } = useBookingsStore();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const [authRehydrated, setAuthRehydrated] = useState(false);
+
+  useEffect(() => {
+    const unsub = useAuthStore.persist.onFinishHydration(() => setAuthRehydrated(true));
+    if (useAuthStore.persist.hasHydrated()) setAuthRehydrated(true);
+    return () => unsub();
+  }, []);
 
   const [checkIn, setCheckIn] = useState<Date | undefined>();
   const [checkOut, setCheckOut] = useState<Date | undefined>();
@@ -59,6 +66,8 @@ export default function HotelDetailPage() {
   const [availability, setAvailability] = useState<Record<number, boolean>>({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [usernames, setUsernames] = useState<Record<number, string>>({});
+  const roomsRef = useRef(rooms);
+  roomsRef.current = rooms;
 
   useEffect(() => {
     if (hotelId) {
@@ -106,13 +115,12 @@ export default function HotelDetailPage() {
     }
 
     let cancelled = false;
-
-    const checkAll = async () => {
+    const timer = setTimeout(async () => {
       setCheckingAvailability(true);
       const results: Record<number, boolean> = {};
 
       await Promise.all(
-        rooms.map(async (room) => {
+        roomsRef.current.map(async (room) => {
           const available = await checkRoomAvailability(room.id, checkIn, checkOut);
           if (!cancelled) results[room.id] = available;
         })
@@ -122,11 +130,10 @@ export default function HotelDetailPage() {
         setAvailability(results);
         setCheckingAvailability(false);
       }
-    };
+    }, 300);
 
-    checkAll();
-    return () => { cancelled = true; };
-  }, [checkIn, checkOut, nights, rooms, checkRoomAvailability]);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [checkIn, checkOut, nights, checkRoomAvailability]);
 
   const availableRoomsByCategory = roomCategories.map((rc) => {
     const categoryRooms = rooms.filter((r) => r.roomCategoryId === rc.id);
@@ -149,7 +156,7 @@ export default function HotelDetailPage() {
   const totalPrice = effectiveCategory && nights > 0 ? effectiveCategory.price * nights : 0;
 
   const handleReserve = async () => {
-    if (!user) { router.push("/login"); return; }
+    if (!authRehydrated || !isAuthenticated) { router.push("/login"); return; }
     if (!effectiveCategory || !checkIn || !checkOut || nights <= 0) {
       setBookingError("Please select dates and a room type"); return;
     }

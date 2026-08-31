@@ -5,24 +5,6 @@ import type { User } from "./types";
 
 interface AuthResponse {
   user: User;
-  accessToken: string;
-  refreshToken: string;
-}
-
-function decodeToken(token: string): User | null {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return {
-      id: Number(payload.userId),
-      username: payload.username || "",
-      email: payload.email || "",
-      roles: payload.roles || [],
-      createdAt: "",
-      updatedAt: "",
-    };
-  } catch {
-    return null;
-  }
 }
 
 export interface AuthState {
@@ -48,10 +30,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const { data } = await api.post<AuthResponse>("/users/signup", { username, email, password });
-          const user = data.user || decodeToken(data.accessToken);
           set({
-            user,
-            tokens: { accessToken: data.accessToken, refreshToken: data.refreshToken },
+            user: data.user,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -65,10 +45,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const { data } = await api.post<AuthResponse>("/users/login", { email, password });
-          const user = data.user || decodeToken(data.accessToken);
           set({
-            user,
-            tokens: { accessToken: data.accessToken, refreshToken: data.refreshToken },
+            user: data.user,
             isAuthenticated: true,
             isLoading: false,
           });

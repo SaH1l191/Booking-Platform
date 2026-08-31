@@ -8,6 +8,7 @@ import Footer from "../../components/Footer";
 import AuthGuard from "../../../components/AuthGuard";
 import { useBookingsStore, useHotelsStore, usePaymentStore, useAuthStore, openRazorpayCheckout } from "@/stores";
 import { toast } from "sonner";
+import { useBookingSSE } from "../../../hooks/useBookingSSE";
 
 export default function BookingDetailPage() {
   const params = useParams();
@@ -17,6 +18,7 @@ export default function BookingDetailPage() {
   const { hotels, fetchHotels, setLimit } = useHotelsStore();
   const { verifyPayment, getPaymentByBookingId, isLoading: paymentLoading } = usePaymentStore();
   const { user } = useAuthStore();
+  useBookingSSE();
 
   useEffect(() => {
     setLimit(100);

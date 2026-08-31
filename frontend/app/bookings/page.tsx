@@ -11,6 +11,7 @@ import BookingFilters from "./components/BookingFilters";
 import BookingSkeleton from "./components/BookingSkeleton";
 import ReviewModal from "./components/ReviewModal";
 import EmptyBookings from "./components/EmptyBookings";
+import { useBookingSSE } from "../../hooks/useBookingSSE";
 
 export default function BookingsPage() {
   const {
@@ -26,6 +27,7 @@ export default function BookingsPage() {
   const { verifyPayment, getPaymentByBookingId, isLoading: paymentLoading } = usePaymentStore();
   const { user } = useAuthStore();
   const { hotels, fetchHotels, setLimit } = useHotelsStore();
+  useBookingSSE();
 
   const [reviewTarget, setReviewTarget] = useState<{ bookingId: number; hotelId: number } | null>(null);
 
